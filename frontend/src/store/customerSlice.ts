@@ -5,6 +5,7 @@ interface Customer {
   id: string;
   name: string;
   category: string;
+  status?: string;
   phone?: string;
   email?: string;
   is_active: boolean;
@@ -23,6 +24,14 @@ export const createCustomer = createAsyncThunk("customers/create", async (payloa
   return data as Customer;
 });
 
+export const updateCustomer = createAsyncThunk(
+  "customers/update",
+  async ({ id, changes }: { id: string; changes: Partial<Customer> }) => {
+    const { data } = await apiClient.patch(`/customers/${id}`, changes);
+    return data as Customer;
+  },
+);
+
 const customerSlice = createSlice({
   name: "customers",
   initialState,
@@ -32,7 +41,11 @@ const customerSlice = createSlice({
       .addCase(fetchCustomers.pending, (s) => { s.loading = true; })
       .addCase(fetchCustomers.fulfilled, (s, a) => { s.loading = false; s.items = a.payload; })
       .addCase(fetchCustomers.rejected, (s, a) => { s.loading = false; s.error = a.error.message ?? null; })
-      .addCase(createCustomer.fulfilled, (s, a) => { s.items.push(a.payload); });
+      .addCase(createCustomer.fulfilled, (s, a) => { s.items.push(a.payload); })
+      .addCase(updateCustomer.fulfilled, (s, a) => {
+        const i = s.items.findIndex(c => c.id === a.payload.id);
+        if (i !== -1) s.items[i] = a.payload;
+      });
   },
 });
 

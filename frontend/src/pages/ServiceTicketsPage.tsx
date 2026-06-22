@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message } from "antd";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTickets } from "../store/ticketSlice";
 import apiClient from "../api/client";
@@ -9,31 +9,61 @@ import type { AppDispatch, RootState } from "../store";
 const { Title } = Typography;
 const { Option } = Select;
 
+interface Ticket {
+  id: string;
+  ticket_number: string;
+  customer_id: string;
+  status: string;
+  priority: string;
+  complaint: string;
+  resolution_notes?: string | null;
+  sla_breached: boolean;
+}
+
+const STATUSES = ["open", "assigned", "in_progress", "pending_parts", "resolved", "closed"];
+const PRIORITIES = ["low", "medium", "high", "critical"];
+
 export default function ServiceTicketsPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((s: RootState) => s.tickets);
   const customers = useSelector((s: RootState) => s.customers.items);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Ticket | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => { dispatch(fetchTickets()); }, [dispatch]);
 
-  const handleAdd = async () => {
+  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ priority: "medium" }); setOpen(true); };
+  const openEdit = (row: Ticket) => { setEditing(row); form.setFieldsValue(row); setOpen(true); };
+
+  const handleSave = async () => {
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await apiClient.post("/service-tickets", values);
+      if (editing) {
+        await apiClient.patch(`/service-tickets/${editing.id}`, {
+          status: values.status, priority: values.priority, resolution_notes: values.resolution_notes,
+        });
+        message.success("Ticket updated");
+      } else {
+        await apiClient.post("/service-tickets", values);
+        message.success("Ticket raised");
+      }
       form.resetFields();
       setOpen(false);
       dispatch(fetchTickets());
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Save failed");
     } finally {
       setSaving(false);
     }
   };
 
   const priorityColor: Record<string, string> = { low: "blue", medium: "orange", high: "red", critical: "purple" };
-  const statusColor: Record<string, string> = { open: "blue", in_progress: "orange", resolved: "green", closed: "default", cancelled: "red" };
+  const statusColor: Record<string, string> = {
+    open: "blue", assigned: "cyan", in_progress: "orange", pending_parts: "gold", resolved: "green", closed: "default",
+  };
 
   const columns = [
     { title: "Ticket #", dataIndex: "ticket_number", key: "ticket_number" },
@@ -50,36 +80,52 @@ export default function ServiceTicketsPage() {
       title: "SLA", dataIndex: "sla_breached", key: "sla_breached",
       render: (v: boolean) => v ? <Tag color="red">Breached</Tag> : <Tag color="green">OK</Tag>,
     },
-    { title: "Raised", dataIndex: "created_at", key: "created_at", render: (v: string) => new Date(v).toLocaleDateString("en-IN") },
+    {
+      title: "Actions", key: "actions",
+      render: (_: unknown, row: Ticket) => (
+        <Space><Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button></Space>
+      ),
+    },
   ];
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Service Tickets</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Raise Ticket</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Raise Ticket</Button>
       </div>
 
       <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
 
-      <Modal title="Raise Service Ticket" open={open} onOk={handleAdd} onCancel={() => setOpen(false)} confirmLoading={saving}>
+      <Modal
+        title={editing ? `Edit ${editing.ticket_number}` : "Raise Service Ticket"}
+        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
+        okText={editing ? "Save" : "Create"}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="children" placeholder="Select customer">
-              {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
-            </Select>
+          {!editing && (
+            <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
+              <Select showSearch optionFilterProp="children" placeholder="Select customer">
+                {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
+              </Select>
+            </Form.Item>
+          )}
+          {editing && (
+            <Form.Item name="status" label="Status">
+              <Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
+            </Form.Item>
+          )}
+          <Form.Item name="priority" label="Priority">
+            <Select>{PRIORITIES.map(p => <Option key={p} value={p}>{p}</Option>)}</Select>
           </Form.Item>
-          <Form.Item name="priority" label="Priority" initialValue="medium">
-            <Select>
-              <Option value="low">Low</Option>
-              <Option value="medium">Medium</Option>
-              <Option value="high">High</Option>
-              <Option value="critical">Critical</Option>
-            </Select>
+          <Form.Item name="complaint" label="Complaint / Description" rules={[{ required: !editing }]}>
+            <Input.TextArea rows={3} disabled={!!editing} />
           </Form.Item>
-          <Form.Item name="complaint" label="Complaint / Description" rules={[{ required: true }]}>
-            <Input.TextArea rows={3} />
-          </Form.Item>
+          {editing && (
+            <Form.Item name="resolution_notes" label="Resolution Notes">
+              <Input.TextArea rows={3} />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>
