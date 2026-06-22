@@ -1,3 +1,4 @@
+import os
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
@@ -11,12 +12,23 @@ from app.models.tenant import Tenant
 from app.models.user import User, TenantRole
 import uuid
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+# Use a real Postgres when TEST_DATABASE_URL is set (CI / RLS tests); otherwise
+# an in-memory SQLite for fast unit/integration runs.
+TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+IS_POSTGRES = TEST_DB_URL.startswith("postgresql")
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def engine():
-    e = create_async_engine(TEST_DB_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    # Function-scoped so the async engine is created in each test's event loop
+    # (required for asyncpg; harmless for SQLite). For SQLite this also yields a
+    # fresh in-memory DB per test.
+    if IS_POSTGRES:
+        e = create_async_engine(TEST_DB_URL)
+    else:
+        e = create_async_engine(
+            TEST_DB_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
+        )
     async with e.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield e

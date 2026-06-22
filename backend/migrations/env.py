@@ -50,6 +50,9 @@ import app.models.sales_order
 import app.models.invoice
 import app.models.payment
 import app.models.notification
+import app.models.sequence
+import app.models.auth_session
+import app.models.rbac
 
 config = context.config
 config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL_SYNC"])

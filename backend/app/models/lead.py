@@ -23,6 +23,18 @@ class LeadSource(str, Enum):
     OTHER = "other"
 
 
+class LeadCategory(str, Enum):
+    CHS = "chs"
+    COMMERCIAL = "commercial"
+    SINGLE_SHOP = "single_shop"
+
+
+class InterestType(str, Enum):
+    NEW_INSTALLATION = "new_installation"
+    AMC = "amc"
+    UPGRADE = "upgrade"
+
+
 class Lead(Base, TenantMixin):
     __tablename__ = "leads"
 
@@ -30,6 +42,9 @@ class Lead(Base, TenantMixin):
     phone: Mapped[str] = mapped_column(String(20), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     address: Mapped[str] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(String(50), nullable=True)
+    interest_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    lost_reason: Mapped[str] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(50), default=LeadSource.OTHER)
     status: Mapped[str] = mapped_column(String(50), default=LeadStatus.NEW)
     notes: Mapped[str] = mapped_column(Text, nullable=True)

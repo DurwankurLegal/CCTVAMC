@@ -19,8 +19,19 @@ async def create_lead(db: AsyncSession, tenant_id: UUID, payload: LeadCreate) ->
     return await _create_lead(db, tenant_id, payload)
 
 
+_LEAD_TO_CUSTOMER_CATEGORY = {
+    "chs": CustomerCategory.CHS,
+    "commercial": CustomerCategory.COMMERCIAL,
+    "single_shop": CustomerCategory.SINGLE_SHOP,
+}
+
+
 async def convert_to_customer(db: AsyncSession, tenant_id: UUID, lead_id: UUID) -> Customer:
-    """One-click lead → customer conversion."""
+    """One-click lead → customer conversion.
+
+    Carries the lead's category through to the Customer Master and creates an
+    initial draft Quotation in the same action (SRS 4.2), with no data re-entry.
+    """
     repo = LeadRepository(db, tenant_id)
     lead = await repo.get(lead_id)
     if not lead:
@@ -28,20 +39,24 @@ async def convert_to_customer(db: AsyncSession, tenant_id: UUID, lead_id: UUID) 
     if lead.status == LeadStatus.CONVERTED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Lead already converted")
 
-    from app.repositories.base import TenantRepository as TR
-    from app.models.customer import Customer
+    from app.services.customer import CustomerRepository
 
-    class CustRepo(TR[Customer]):
-        model = Customer
-
+    category = _LEAD_TO_CUSTOMER_CATEGORY.get(lead.category, CustomerCategory.COMMERCIAL)
     customer = Customer(
         name=lead.name,
-        category=CustomerCategory.COMMERCIAL,
+        category=category,
         phone=lead.phone,
         email=lead.email,
         address=lead.address,
     )
-    customer = await CustRepo(db, tenant_id).create(customer)
+    customer = await CustomerRepository(db, tenant_id).create(customer)
+
+    # Create an initial draft quotation linked to both the customer and the lead.
+    from app.services.quotation import create_quotation
+    from app.schemas.quotation import QuotationCreate
+    await create_quotation(db, tenant_id, QuotationCreate(
+        customer_id=customer.id, lead_id=lead.id, line_items=[],
+    ))
 
     lead.status = LeadStatus.CONVERTED
     lead.converted_customer_id = customer.id

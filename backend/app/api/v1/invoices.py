@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceResponse
 from app.services import invoice as invoice_service
 
@@ -22,7 +22,7 @@ async def list_invoices(
 @router.post("", response_model=InvoiceResponse, status_code=201)
 async def create_invoice(
     payload: InvoiceCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("invoices:write")),
 ):
     return await invoice_service.create_invoice(db, current_user.tenant_id, payload)
 
@@ -38,7 +38,7 @@ async def get_invoice(
 @router.patch("/{invoice_id}", response_model=InvoiceResponse)
 async def update_invoice(
     invoice_id: UUID, payload: InvoiceUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("invoices:write")),
 ):
     return await invoice_service.update_invoice(db, current_user.tenant_id, invoice_id, payload)
 
@@ -46,7 +46,7 @@ async def update_invoice(
 @router.post("/{invoice_id}/credit-note", response_model=InvoiceResponse, status_code=201)
 async def create_credit_note(
     invoice_id: UUID, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin")),
+    current_user: CurrentUser = Depends(require_permission("invoices:write")),
 ):
     """Raise a GST credit note against an existing invoice."""
     return await invoice_service.create_credit_note(db, current_user.tenant_id, invoice_id)

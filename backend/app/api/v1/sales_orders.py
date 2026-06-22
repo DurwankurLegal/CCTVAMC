@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.models.sales_order import SalesOrder, SalesOrderStatus
 
 router = APIRouter()
@@ -57,7 +57,7 @@ async def list_orders(
 @router.post("", response_model=SalesOrderResponse, status_code=201)
 async def create_order(
     payload: SalesOrderCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("sales_orders:write")),
 ):
     subtotal = sum(
         float(i.get("amount", i.get("unit_price", 0) * i.get("quantity", 1)))

@@ -1,0 +1,23 @@
+"""Import all models so they register with ``Base.metadata`` (used by Alembic
+autogenerate and by the test harness' ``create_all``)."""
+from app.models import (  # noqa: F401
+    tenant,
+    user,
+    audit_log,
+    customer,
+    asset,
+    lead,
+    vendor,
+    amc,
+    service_ticket,
+    engineer_visit,
+    inventory,
+    quotation,
+    sales_order,
+    invoice,
+    payment,
+    notification,
+    sequence,
+    auth_session,
+    rbac,
+)

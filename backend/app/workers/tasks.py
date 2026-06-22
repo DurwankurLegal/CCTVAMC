@@ -33,7 +33,10 @@ def deliver_notification(self, log_id: str):
                         await _send_email(log.recipient, log.subject, log.body)
                     elif log.channel == NotificationChannel.SMS:
                         await _send_sms(log.recipient, log.body)
-                    # WhatsApp and in_app channels: implement similarly
+                    elif log.channel == NotificationChannel.WHATSAPP:
+                        await _send_whatsapp(log.recipient, log.body)
+                    elif log.channel == NotificationChannel.IN_APP:
+                        pass  # in-app messages are served from the DB; nothing to deliver
 
                     log.status = NotificationStatus.SENT
                 except Exception as exc:
@@ -78,6 +81,21 @@ async def _send_sms(phone: str, body: str):
         )
 
 
+async def _send_whatsapp(phone: str, body: str):
+    import httpx
+    from app.core.config import get_settings
+    settings = get_settings()
+    if not settings.WHATSAPP_API_URL:
+        logger.warning("WhatsApp not configured; skipping", recipient=phone)
+        return
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            settings.WHATSAPP_API_URL,
+            json={"to": phone, "type": "text", "text": {"body": body}},
+            headers={"Authorization": f"Bearer {settings.WHATSAPP_API_KEY}"},
+        )
+
+
 @celery_app.task
 def check_amc_renewals():
     """Send renewal reminders for AMC contracts expiring in 30 or 7 days."""
@@ -101,9 +119,30 @@ def check_amc_renewals():
                 )
                 contracts = result.scalars().all()
                 for c in contracts:
-                    logger.info("AMC renewal reminder needed", contract_id=str(c.id), days=days_ahead)
+                    await _notify_amc_expiry(db, c, days_ahead)
 
     asyncio.run(_check())
+
+
+async def _notify_amc_expiry(db, contract, days_ahead):
+    from sqlalchemy import select
+    from app.models.customer import Customer
+    from app.services.notification import NotificationService
+    from app.services.notification_events import AMC_EXPIRY
+    from app.models.notification import NotificationChannel
+
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == contract.customer_id)
+    )).scalar_one_or_none()
+    recipient = (customer.email if customer else None) or ""
+    await NotificationService(db, contract.tenant_id).send(
+        AMC_EXPIRY,
+        recipient=recipient,
+        context={"contract_number": contract.contract_number, "days": days_ahead,
+                 "end_date": str(contract.end_date)},
+        channel=NotificationChannel.EMAIL,
+    )
+    await db.commit()
 
 
 @celery_app.task
@@ -129,6 +168,60 @@ def check_sla_breaches():
             for t in tickets:
                 t.sla_breached = True
                 logger.warning("SLA breached", ticket_id=str(t.id))
+                await _notify_sla_breach(db, t)
+            await db.commit()
+
+    asyncio.run(_check())
+
+
+async def _notify_sla_breach(db, ticket):
+    from app.services.notification import NotificationService
+    from app.services.notification_events import SLA_BREACH
+    from app.models.notification import NotificationChannel
+    await NotificationService(db, ticket.tenant_id).send(
+        SLA_BREACH,
+        recipient=str(ticket.assigned_to or ""),
+        context={"ticket_number": ticket.ticket_number, "priority": ticket.priority},
+        channel=NotificationChannel.IN_APP,
+        recipient_user_id=ticket.assigned_to,
+    )
+
+
+@celery_app.task
+def check_payment_due():
+    """Send reminders for invoices that are overdue or due soon."""
+    import asyncio
+
+    async def _check():
+        from sqlalchemy import select
+        from datetime import date, timedelta
+        from app.models.invoice import Invoice, InvoiceStatus
+        from app.models.customer import Customer
+        from app.services.notification import NotificationService
+        from app.services.notification_events import PAYMENT_DUE
+        from app.models.notification import NotificationChannel
+
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            soon = date.today() + timedelta(days=3)
+            result = await db.execute(
+                select(Invoice).where(
+                    Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
+                    Invoice.due_date <= soon,
+                )
+            )
+            for inv in result.scalars().all():
+                customer = (await db.execute(
+                    select(Customer).where(Customer.id == inv.customer_id)
+                )).scalar_one_or_none()
+                await NotificationService(db, inv.tenant_id).send(
+                    PAYMENT_DUE,
+                    recipient=(customer.email if customer else None) or "",
+                    context={"invoice_number": inv.invoice_number,
+                             "amount_due": float(inv.total_amount - (inv.amount_paid or 0)),
+                             "due_date": str(inv.due_date)},
+                    channel=NotificationChannel.EMAIL,
+                )
             await db.commit()
 
     asyncio.run(_check())

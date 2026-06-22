@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.vendor import VendorCreate, VendorUpdate, VendorResponse
 from app.services import vendor as vendor_service
 
@@ -22,7 +22,7 @@ async def list_vendors(
 @router.post("", response_model=VendorResponse, status_code=201)
 async def create_vendor(
     payload: VendorCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("vendors:write")),
 ):
     return await vendor_service.create_vendor(db, current_user.tenant_id, payload)
 
@@ -38,6 +38,6 @@ async def get_vendor(
 @router.patch("/{vendor_id}", response_model=VendorResponse)
 async def update_vendor(
     vendor_id: UUID, payload: VendorUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("vendors:write")),
 ):
     return await vendor_service.update_vendor(db, current_user.tenant_id, vendor_id, payload)

@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse
 from app.services import customer as customer_service
 
@@ -24,7 +24,7 @@ async def list_customers(
 async def create_customer(
     payload: CustomerCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("customers:write")),
 ):
     return await customer_service.create_customer(db, current_user.tenant_id, payload)
 
@@ -43,6 +43,6 @@ async def update_customer(
     customer_id: UUID,
     payload: CustomerUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("customers:write")),
 ):
     return await customer_service.update_customer(db, current_user.tenant_id, customer_id, payload)

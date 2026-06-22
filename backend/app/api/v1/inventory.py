@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse, StockAdjustment
 from app.services import inventory as inv_service
 
@@ -30,7 +30,7 @@ async def low_stock_alert(
 @router.post("", response_model=InventoryItemResponse, status_code=201)
 async def create_item(
     payload: InventoryItemCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("inventory:write")),
 ):
     return await inv_service.create_item(db, current_user.tenant_id, payload)
 
@@ -46,7 +46,7 @@ async def get_item(
 @router.patch("/{item_id}", response_model=InventoryItemResponse)
 async def update_item(
     item_id: UUID, payload: InventoryItemUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("inventory:write")),
 ):
     return await inv_service.update_item(db, current_user.tenant_id, item_id, payload)
 
@@ -54,6 +54,6 @@ async def update_item(
 @router.post("/adjust", response_model=InventoryItemResponse)
 async def adjust_stock(
     payload: StockAdjustment, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("inventory:write")),
 ):
     return await inv_service.adjust_stock(db, current_user.tenant_id, payload)

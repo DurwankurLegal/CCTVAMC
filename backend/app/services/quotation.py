@@ -3,36 +3,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.quotation import Quotation
 from app.repositories.base import TenantRepository
 from app.schemas.quotation import QuotationCreate, QuotationUpdate
+from app.services.gst import compute_gst_totals, grand_total
+from app.services.sequences import next_number
 
 
 class QuotationRepository(TenantRepository[Quotation]):
     model = Quotation
 
 
-def _compute_gst_totals(line_items: list, supply_state_code, tenant_state_code):
-    """Compute CGST+SGST for intra-state, IGST for inter-state."""
-    subtotal = 0.0
-    cgst = sgst = igst = 0.0
-    is_intra = (supply_state_code and tenant_state_code and supply_state_code == tenant_state_code)
-    for item in line_items:
-        amt = float(item.get("amount", item.get("unit_price", 0) * item.get("quantity", 1)))
-        rate = float(item.get("gst_rate", 18.0)) / 100
-        subtotal += amt
-        tax = amt * rate
-        if is_intra:
-            cgst += tax / 2
-            sgst += tax / 2
-        else:
-            igst += tax
-    return round(subtotal, 2), round(cgst, 2), round(sgst, 2), round(igst, 2)
-
-
-_QUOTATION_SEQ: dict[UUID, int] = {}
-
-
-def _next_quotation_number(tenant_id: UUID) -> str:
-    _QUOTATION_SEQ[tenant_id] = _QUOTATION_SEQ.get(tenant_id, 0) + 1
-    return f"QT-{str(tenant_id)[:4].upper()}-{_QUOTATION_SEQ[tenant_id]:05d}"
+# Backwards-compatible alias (GST logic now lives in app.services.gst).
+_compute_gst_totals = compute_gst_totals
 
 
 async def list_quotations(db, tenant_id, offset=0, limit=50):
@@ -49,11 +29,11 @@ async def get_quotation(db, tenant_id, qid):
 
 async def create_quotation(db: AsyncSession, tenant_id: UUID, payload: QuotationCreate) -> Quotation:
     items = [i.model_dump() for i in payload.line_items]
-    subtotal, cgst, sgst, igst = _compute_gst_totals(items, None, None)
+    subtotal, cgst, sgst, igst = compute_gst_totals(items, None, None)
     obj = Quotation(
         customer_id=payload.customer_id,
         lead_id=payload.lead_id,
-        quotation_number=_next_quotation_number(tenant_id),
+        quotation_number=await next_number(db, tenant_id, "quotation", "QT"),
         line_items=items,
         terms=payload.terms,
         valid_until=payload.valid_until,
@@ -62,7 +42,7 @@ async def create_quotation(db: AsyncSession, tenant_id: UUID, payload: Quotation
         cgst_amount=cgst,
         sgst_amount=sgst,
         igst_amount=igst,
-        total_amount=round(subtotal + cgst + sgst + igst, 2),
+        total_amount=grand_total(subtotal, cgst, sgst, igst),
     )
     return await QuotationRepository(db, tenant_id).create(obj)
 
@@ -76,13 +56,13 @@ async def update_quotation(db, tenant_id, qid, payload: QuotationUpdate):
     for k, v in payload.model_dump(exclude_none=True).items():
         if k == "line_items":
             items = [i.model_dump() for i in v]
-            subtotal, cgst, sgst, igst = _compute_gst_totals(items, None, None)
+            subtotal, cgst, sgst, igst = compute_gst_totals(items, None, None)
             obj.line_items = items
             obj.subtotal = subtotal
             obj.cgst_amount = cgst
             obj.sgst_amount = sgst
             obj.igst_amount = igst
-            obj.total_amount = round(subtotal + cgst + sgst + igst, 2)
+            obj.total_amount = grand_total(subtotal, cgst, sgst, igst)
         else:
             setattr(obj, k, v)
     return await repo.save(obj)

@@ -29,5 +29,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.aggregate_dashboard_kpis",
             "schedule": 3600.0,  # hourly
         },
+        "check-payment-due": {
+            "task": "app.workers.tasks.check_payment_due",
+            "schedule": 86400.0,  # daily
+        },
     },
 )
