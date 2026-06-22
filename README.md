@@ -91,6 +91,20 @@ docker compose up -d --build
 The app is then served at **http://localhost** (port 80). nginx serves the built
 SPA and proxies `/api/*` to the backend.
 
+## Seeding the Database
+
+A fresh database has no users. Create a starter tenant and an admin user with the
+seed script (idempotent — safe to run more than once):
+
+```bash
+cd backend
+source venv/bin/activate
+python -m scripts.seed
+```
+
+Default login created: `admin@durwankur.ai` / `Admin@1234`
+(override via `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` env vars).
+
 ## Environment Variables
 
 All configuration lives in `.env` (never commit this file). See
