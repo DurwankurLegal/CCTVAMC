@@ -1,4 +1,4 @@
-"""Seed the database with a starter tenant and an admin user.
+"""Seed the database with a starter tenant, an admin user, and sample data.
 
 Idempotent: running it multiple times will not create duplicates.
 
@@ -14,15 +14,32 @@ Default admin credentials (override with env vars):
     SEED_ADMIN_EMAIL    (default: admin@durwankur.ai)
     SEED_ADMIN_PASSWORD (default: Admin@1234)
     SEED_TENANT_NAME    (default: Durwankur)
+
+Set SEED_SAMPLE_DATA=false to seed only the tenant + admin user.
 """
 
 import asyncio
 import os
+from datetime import date, timedelta
 
 from sqlalchemy import select, text
 
+import importlib
+import pkgutil
+
 import app.core.database as db
+import app.models
 from app.core.security import hash_password
+from app.models.amc import AMCContract, AMCStatus
+
+# Load every model module so SQLAlchemy can resolve all relationships
+for _m in pkgutil.iter_modules(app.models.__path__):
+    importlib.import_module(f"app.models.{_m.name}")
+from app.models.customer import Customer, CustomerCategory
+from app.models.invoice import Invoice, InvoiceStatus, InvoiceType
+from app.models.lead import Lead, LeadSource, LeadStatus
+from app.models.payment import Payment, PaymentMode
+from app.models.service_ticket import ServiceTicket, TicketPriority, TicketStatus
 from app.models.tenant import Tenant
 from app.models.user import TenantRole, User
 
@@ -31,6 +48,178 @@ ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "Admin@1234")
 ADMIN_NAME = os.getenv("SEED_ADMIN_NAME", "Admin")
 TENANT_NAME = os.getenv("SEED_TENANT_NAME", "Durwankur")
 TENANT_SLUG = os.getenv("SEED_TENANT_SLUG", "durwankur")
+SAMPLE_DATA = os.getenv("SEED_SAMPLE_DATA", "true").lower() != "false"
+
+TODAY = date.today()
+
+
+def gst_split(subtotal: float) -> dict:
+    """Compute 18% GST (9% CGST + 9% SGST) for an intra-state supply."""
+    cgst = round(subtotal * 0.09, 2)
+    sgst = round(subtotal * 0.09, 2)
+    return {
+        "subtotal": subtotal,
+        "cgst_amount": cgst,
+        "sgst_amount": sgst,
+        "igst_amount": 0,
+        "total_amount": round(subtotal + cgst + sgst, 2),
+    }
+
+
+async def seed_sample_data(session, tenant_id) -> None:
+    """Create customers, leads, AMC contracts, invoices, payments, tickets."""
+
+    # Skip if customers already exist (idempotency guard for sample data)
+    existing = (
+        await session.execute(select(Customer).limit(1))
+    ).scalar_one_or_none()
+    if existing is not None:
+        print("• Sample data already present — skipping")
+        return
+
+    # ── 5 Customers ───────────────────────────────────────────
+    customers = [
+        Customer(tenant_id=tenant_id, name="Green Valley CHS", category=CustomerCategory.CHS,
+                 phone="9820011001", email="office@greenvalley.in", state_code="27",
+                 address="Andheri West, Mumbai", contact_person_name="Mr. Rao"),
+        Customer(tenant_id=tenant_id, name="Sunrise Apartments", category=CustomerCategory.CHS,
+                 phone="9820011002", email="admin@sunrise.in", state_code="27",
+                 address="Powai, Mumbai", contact_person_name="Mrs. Iyer"),
+        Customer(tenant_id=tenant_id, name="MegaMart Retail", category=CustomerCategory.COMMERCIAL,
+                 phone="9820011003", email="facilities@megamart.in", state_code="27",
+                 address="Lower Parel, Mumbai", contact_person_name="Mr. Shah"),
+        Customer(tenant_id=tenant_id, name="TechPark Offices", category=CustomerCategory.COMMERCIAL,
+                 phone="9820011004", email="security@techpark.in", state_code="27",
+                 address="BKC, Mumbai", contact_person_name="Ms. Nair"),
+        Customer(tenant_id=tenant_id, name="Corner Electronics", category=CustomerCategory.SINGLE_SHOP,
+                 phone="9820011005", email="owner@cornerelec.in", state_code="27",
+                 address="Dadar, Mumbai", contact_person_name="Mr. Khan"),
+    ]
+    session.add_all(customers)
+    await session.flush()
+    print(f"✔ Created {len(customers)} customers")
+
+    # ── 10 Leads (5 converted to the customers above) ─────────
+    leads = []
+    for i, cust in enumerate(customers):
+        leads.append(Lead(
+            tenant_id=tenant_id, name=cust.name, phone=cust.phone, email=cust.email,
+            source=LeadSource.REFERRAL, status=LeadStatus.CONVERTED,
+            converted_customer_id=cust.id, notes="Converted to customer",
+        ))
+    pending_leads = [
+        ("Riverside Mall", LeadSource.WEBSITE, LeadStatus.QUOTED),
+        ("City Hospital", LeadSource.COLD_CALL, LeadStatus.CONTACTED),
+        ("Lotus School", LeadSource.WALK_IN, LeadStatus.NEW),
+        ("Star Hotel", LeadSource.SOCIAL_MEDIA, LeadStatus.QUOTED),
+        ("Metro Warehouse", LeadSource.REFERRAL, LeadStatus.LOST),
+    ]
+    for name, src, st in pending_leads:
+        leads.append(Lead(
+            tenant_id=tenant_id, name=name, phone="98200200" + str(len(leads)),
+            source=src, status=st, follow_up_date=TODAY + timedelta(days=7),
+        ))
+    session.add_all(leads)
+    await session.flush()
+    print(f"✔ Created {len(leads)} leads (5 converted)")
+
+    # ── 5 AMC Contracts (4 active, 1 draft/pending) ───────────
+    contracts = [
+        AMCContract(tenant_id=tenant_id, customer_id=customers[0].id, contract_number="AMC-2026-001",
+                    status=AMCStatus.ACTIVE, start_date=TODAY - timedelta(days=60),
+                    end_date=TODAY + timedelta(days=305), annual_amount=24000,
+                    payment_frequency="quarterly", preventive_visits_per_year=4),
+        AMCContract(tenant_id=tenant_id, customer_id=customers[1].id, contract_number="AMC-2026-002",
+                    status=AMCStatus.ACTIVE, start_date=TODAY - timedelta(days=30),
+                    end_date=TODAY + timedelta(days=335), annual_amount=18000,
+                    payment_frequency="annual", preventive_visits_per_year=2),
+        AMCContract(tenant_id=tenant_id, customer_id=customers[2].id, contract_number="AMC-2026-003",
+                    status=AMCStatus.ACTIVE, start_date=TODAY - timedelta(days=90),
+                    end_date=TODAY + timedelta(days=275), annual_amount=48000,
+                    payment_frequency="quarterly", preventive_visits_per_year=4),
+        AMCContract(tenant_id=tenant_id, customer_id=customers[3].id, contract_number="AMC-2026-004",
+                    status=AMCStatus.ACTIVE, start_date=TODAY - timedelta(days=15),
+                    end_date=TODAY + timedelta(days=350), annual_amount=60000,
+                    payment_frequency="monthly", preventive_visits_per_year=6),
+        AMCContract(tenant_id=tenant_id, customer_id=customers[4].id, contract_number="AMC-2026-005",
+                    status=AMCStatus.DRAFT, start_date=TODAY,
+                    end_date=TODAY + timedelta(days=365), annual_amount=12000,
+                    payment_frequency="annual", preventive_visits_per_year=2),
+    ]
+    session.add_all(contracts)
+    await session.flush()
+    print(f"✔ Created {len(contracts)} AMC contracts (4 active, 1 draft)")
+
+    # ── 6 Invoices (3 paid on time, 2 follow-up, 1 default) ───
+    def make_invoice(num, cust, amc, subtotal, status, inv_date, due_date, paid, notes=""):
+        g = gst_split(subtotal)
+        return Invoice(
+            tenant_id=tenant_id, invoice_number=num, invoice_type=InvoiceType.TAX_INVOICE,
+            customer_id=cust.id, amc_contract_id=amc.id if amc else None, status=status,
+            invoice_date=inv_date, due_date=due_date, supply_state_code="27",
+            line_items=[{"description": "CCTV AMC Service", "qty": 1, "rate": subtotal, "amount": subtotal}],
+            amount_paid=paid, notes=notes, **g,
+        )
+
+    invoices = [
+        # 3 paid on time
+        make_invoice("INV-2026-001", customers[0], contracts[0], 6000, InvoiceStatus.PAID,
+                     TODAY - timedelta(days=50), TODAY - timedelta(days=35), gst_split(6000)["total_amount"]),
+        make_invoice("INV-2026-002", customers[1], contracts[1], 18000, InvoiceStatus.PAID,
+                     TODAY - timedelta(days=25), TODAY - timedelta(days=10), gst_split(18000)["total_amount"]),
+        make_invoice("INV-2026-003", customers[2], contracts[2], 12000, InvoiceStatus.PAID,
+                     TODAY - timedelta(days=80), TODAY - timedelta(days=65), gst_split(12000)["total_amount"]),
+        # 2 needs follow-up (issued, due soon / recently overdue, unpaid)
+        make_invoice("INV-2026-004", customers[3], contracts[3], 5000, InvoiceStatus.ISSUED,
+                     TODAY - timedelta(days=20), TODAY - timedelta(days=5), 0,
+                     notes="Follow-up: payment reminder sent"),
+        make_invoice("INV-2026-005", customers[2], contracts[2], 12000, InvoiceStatus.ISSUED,
+                     TODAY - timedelta(days=15), TODAY + timedelta(days=10), 0,
+                     notes="Follow-up: awaiting PO confirmation"),
+        # 1 in default (very overdue, unpaid)
+        make_invoice("INV-2026-006", customers[4], None, 9000, InvoiceStatus.ISSUED,
+                     TODAY - timedelta(days=90), TODAY - timedelta(days=60), 0,
+                     notes="DEFAULTER: no response after multiple reminders"),
+    ]
+    session.add_all(invoices)
+    await session.flush()
+    print(f"✔ Created {len(invoices)} invoices (3 paid, 2 follow-up, 1 default)")
+
+    # ── 4 Payments (one per paid invoice + a partial) ─────────
+    payments = [
+        Payment(tenant_id=tenant_id, invoice_id=invoices[0].id, customer_id=customers[0].id,
+                amount=invoices[0].total_amount, payment_date=TODAY - timedelta(days=40),
+                mode=PaymentMode.UPI, reference_number="UPI-7781"),
+        Payment(tenant_id=tenant_id, invoice_id=invoices[1].id, customer_id=customers[1].id,
+                amount=invoices[1].total_amount, payment_date=TODAY - timedelta(days=12),
+                mode=PaymentMode.NEFT, reference_number="NEFT-4421"),
+        Payment(tenant_id=tenant_id, invoice_id=invoices[2].id, customer_id=customers[2].id,
+                amount=invoices[2].total_amount, payment_date=TODAY - timedelta(days=70),
+                mode=PaymentMode.CHEQUE, reference_number="CHQ-009812"),
+        Payment(tenant_id=tenant_id, invoice_id=invoices[2].id, customer_id=customers[2].id,
+                amount=1000, payment_date=TODAY - timedelta(days=68),
+                mode=PaymentMode.CASH, reference_number=None, notes="Adjustment"),
+    ]
+    session.add_all(payments)
+    print(f"✔ Created {len(payments)} payments")
+
+    # ── 3 Service Tickets ─────────────────────────────────────
+    tickets = [
+        ServiceTicket(tenant_id=tenant_id, ticket_number="TKT-2026-001", customer_id=customers[0].id,
+                      amc_contract_id=contracts[0].id, status=TicketStatus.OPEN,
+                      priority=TicketPriority.HIGH, complaint="Camera 3 in lobby not recording"),
+        ServiceTicket(tenant_id=tenant_id, ticket_number="TKT-2026-002", customer_id=customers[2].id,
+                      amc_contract_id=contracts[2].id, status=TicketStatus.IN_PROGRESS,
+                      priority=TicketPriority.MEDIUM, complaint="DVR storage full, footage overwriting early"),
+        ServiceTicket(tenant_id=tenant_id, ticket_number="TKT-2026-003", customer_id=customers[3].id,
+                      amc_contract_id=contracts[3].id, status=TicketStatus.RESOLVED,
+                      priority=TicketPriority.LOW, complaint="Night vision blurry on gate camera",
+                      resolution_notes="Cleaned lens and adjusted IR settings"),
+    ]
+    session.add_all(tickets)
+    print(f"✔ Created {len(tickets)} service tickets")
+
+    await session.commit()
 
 
 async def seed() -> None:
@@ -81,6 +270,15 @@ async def seed() -> None:
             print(f"• Admin user already exists: {ADMIN_EMAIL}")
 
         await session.commit()
+
+        # ── Sample data ───────────────────────────────────────
+        if SAMPLE_DATA:
+            # Re-assert RLS context for the new transaction
+            await session.execute(
+                text("SELECT set_config('app.tenant_id', :tid, false)"),
+                {"tid": str(tenant.id)},
+            )
+            await seed_sample_data(session, tenant.id)
 
     print("\nSeed complete.")
     print(f"  Login: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
