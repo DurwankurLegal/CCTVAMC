@@ -21,11 +21,32 @@ class VendorPaymentRepository(TenantRepository[VendorPayment]):
     model = VendorPayment
 
 
-list_vendors, get_vendor, create_vendor_raw, update_vendor = make_crud(VendorRepository, Vendor)
+list_vendors, get_vendor, create_vendor_raw, _update_vendor_raw = make_crud(VendorRepository, Vendor)
 
 
 async def create_vendor(db, tenant_id, payload):
-    return await create_vendor_raw(db, tenant_id, payload)
+    from app.core.crypto import encrypt
+    data = payload.model_dump()
+    bank = data.pop("bank_account", None)
+    vendor = Vendor(**data)
+    if bank:
+        vendor.bank_account_encrypted = encrypt(bank)
+    return await VendorRepository(db, tenant_id).create(vendor)
+
+
+async def update_vendor(db, tenant_id, vendor_id, payload):
+    from app.core.crypto import encrypt
+    repo = VendorRepository(db, tenant_id)
+    obj = await repo.get(vendor_id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vendor not found")
+    data = payload.model_dump(exclude_none=True)
+    bank = data.pop("bank_account", None)
+    for k, v in data.items():
+        setattr(obj, k, v)
+    if bank:
+        obj.bank_account_encrypted = encrypt(bank)
+    return await repo.save(obj)
 
 
 async def create_purchase_order(db: AsyncSession, tenant_id: UUID, vendor_id: UUID,

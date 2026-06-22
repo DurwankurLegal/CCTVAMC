@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Column-level encryption (Fernet). If unset, a key is derived from
+    # JWT_SECRET_KEY so dev/test work without extra config.
+    ENCRYPTION_KEY: str = ""
+
+    # Per-tenant/IP API rate limiting (requests per window). 0 disables.
+    RATE_LIMIT_PER_MINUTE: int = 0
+
     # Object storage
     S3_ENDPOINT_URL: str = ""
     S3_ACCESS_KEY: str = ""

@@ -40,6 +40,29 @@ async def record_payment(db: AsyncSession, tenant_id: UUID, payload: PaymentCrea
     return payment
 
 
+async def get_payment(db: AsyncSession, tenant_id: UUID, payment_id: UUID) -> Payment:
+    obj = await PaymentRepository(db, tenant_id).get(payment_id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    return obj
+
+
+def render_receipt(payment: Payment) -> bytes:
+    """Render a payment receipt PDF (SRS 4.14)."""
+    from weasyprint import HTML
+    html = f"""<html><head><style>
+      body{{font-family:sans-serif;font-size:13px}} h1{{font-size:18px}}
+      td{{padding:4px 8px}}</style></head>
+      <body><h1>Payment Receipt</h1>
+      <table>
+        <tr><td>Receipt for invoice</td><td>{payment.invoice_id}</td></tr>
+        <tr><td>Amount</td><td>{payment.amount}</td></tr>
+        <tr><td>Method</td><td>{getattr(payment, 'method', '')}</td></tr>
+        <tr><td>Date</td><td>{getattr(payment, 'payment_date', '')}</td></tr>
+      </table></body></html>"""
+    return HTML(string=html).write_pdf()
+
+
 async def get_payment_ageing(db: AsyncSession, tenant_id: UUID) -> list:
     """Return unpaid invoice ageing buckets: current, 30d, 60d, 90d+"""
     from datetime import date, timedelta

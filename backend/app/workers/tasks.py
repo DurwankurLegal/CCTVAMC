@@ -228,6 +228,21 @@ def check_payment_due():
 
 
 @celery_app.task
+def generate_recurring_invoices():
+    """Generate AMC billing invoices for active contracts whose cycle is due."""
+    import asyncio
+
+    async def _run():
+        from app.services.invoice import generate_recurring_amc_invoices
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            n = await generate_recurring_amc_invoices(db)
+            logger.info("Recurring AMC invoices generated", count=n)
+
+    asyncio.run(_run())
+
+
+@celery_app.task
 def aggregate_dashboard_kpis():
     """Pre-aggregate KPI metrics into dashboard_snapshots for fast dashboard loads."""
     import asyncio

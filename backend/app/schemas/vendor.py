@@ -14,6 +14,7 @@ class VendorCreate(BaseModel):
     address: Optional[str] = None
     contact_person: Optional[str] = None
     payment_terms: Optional[str] = None
+    bank_account: Optional[str] = None   # encrypted at rest
 
 
 class VendorUpdate(BaseModel):
@@ -25,6 +26,7 @@ class VendorUpdate(BaseModel):
     address: Optional[str] = None
     contact_person: Optional[str] = None
     payment_terms: Optional[str] = None
+    bank_account: Optional[str] = None
     is_active: Optional[bool] = None
 
 

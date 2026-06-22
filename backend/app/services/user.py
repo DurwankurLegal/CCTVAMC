@@ -31,6 +31,10 @@ async def create_user(db: AsyncSession, tenant_id: UUID, payload: UserCreate) ->
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    # Enforce subscription plan limits (SRS 4.1).
+    from app.services.tenant import enforce_limit
+    await enforce_limit(db, tenant_id, "users")
+
     user = User(
         email=payload.email,
         full_name=payload.full_name,
