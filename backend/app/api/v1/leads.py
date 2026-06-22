@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.lead import LeadCreate, LeadUpdate, LeadResponse
 from app.schemas.customer import CustomerResponse
 from app.services import lead as lead_service
@@ -24,7 +24,7 @@ async def list_leads(
 async def create_lead(
     payload: LeadCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("leads:write")),
 ):
     return await lead_service.create_lead(db, current_user.tenant_id, payload)
 
@@ -41,7 +41,7 @@ async def get_lead(
 async def update_lead(
     lead_id: UUID, payload: LeadUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("leads:write")),
 ):
     return await lead_service.update_lead(db, current_user.tenant_id, lead_id, payload)
 
@@ -49,7 +49,7 @@ async def update_lead(
 @router.post("/{lead_id}/convert", response_model=CustomerResponse)
 async def convert_lead(
     lead_id: UUID, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("leads:write")),
 ):
     """One-click lead → customer conversion."""
     return await lead_service.convert_to_customer(db, current_user.tenant_id, lead_id)

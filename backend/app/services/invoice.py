@@ -5,20 +5,12 @@ from fastapi import HTTPException, status
 from app.models.invoice import Invoice, InvoiceStatus
 from app.repositories.base import TenantRepository
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate
-from app.services.quotation import _compute_gst_totals
-
-_INV_SEQ: dict[UUID, int] = {}
+from app.services.gst import compute_gst_totals, grand_total
+from app.services.sequences import next_number
 
 
 class InvoiceRepository(TenantRepository[Invoice]):
     model = Invoice
-
-
-def _next_invoice_number(tenant_id: UUID, prefix: str = "") -> str:
-    _INV_SEQ[tenant_id] = _INV_SEQ.get(tenant_id, 0) + 1
-    year = datetime.now(timezone.utc).year
-    pfx = prefix or str(tenant_id)[:4].upper()
-    return f"{pfx}-{year}-{_INV_SEQ[tenant_id]:05d}"
 
 
 async def list_invoices(db, tenant_id, offset=0, limit=50):
@@ -39,8 +31,9 @@ async def create_invoice(db: AsyncSession, tenant_id: UUID, payload: InvoiceCrea
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = result.scalar_one_or_none()
     prefix = (tenant.invoice_prefix or "") if tenant else ""
+    prefix = prefix or str(tenant_id)[:4].upper()
 
-    subtotal, cgst, sgst, igst = _compute_gst_totals(
+    subtotal, cgst, sgst, igst = compute_gst_totals(
         payload.line_items or [],
         payload.supply_state_code,
         tenant.settings.get("state_code") if tenant else None,
@@ -48,7 +41,7 @@ async def create_invoice(db: AsyncSession, tenant_id: UUID, payload: InvoiceCrea
 
     inv = Invoice(
         customer_id=payload.customer_id,
-        invoice_number=_next_invoice_number(tenant_id, prefix),
+        invoice_number=await next_number(db, tenant_id, "invoice", prefix),
         invoice_type=payload.invoice_type,
         amc_contract_id=payload.amc_contract_id,
         invoice_date=payload.invoice_date,
@@ -60,7 +53,7 @@ async def create_invoice(db: AsyncSession, tenant_id: UUID, payload: InvoiceCrea
         cgst_amount=cgst,
         sgst_amount=sgst,
         igst_amount=igst,
-        total_amount=round(subtotal + cgst + sgst + igst, 2),
+        total_amount=grand_total(subtotal, cgst, sgst, igst),
     )
     return await InvoiceRepository(db, tenant_id).create(inv)
 
@@ -85,7 +78,7 @@ async def create_credit_note(db: AsyncSession, tenant_id: UUID, original_invoice
     from app.models.invoice import InvoiceStatus as IS, InvoiceType
     credit = Invoice(
         customer_id=original.customer_id,
-        invoice_number=_next_invoice_number(tenant_id, "CN"),
+        invoice_number=await next_number(db, tenant_id, "credit_note", "CN"),
         invoice_type=InvoiceType.TAX_INVOICE,
         reference_invoice_id=original_invoice_id,
         invoice_date=datetime.now(timezone.utc).date(),

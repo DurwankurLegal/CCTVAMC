@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 from enum import Enum
-from sqlalchemy import UUID, String, Text, Boolean, JSON
+from sqlalchemy import UUID, String, Text, Boolean, JSON, DateTime
 from sqlalchemy.orm import mapped_column, Mapped
 from app.core.database import Base
 from app.models.base import TenantMixin
@@ -42,3 +43,6 @@ class NotificationLog(Base, TenantMixin):
     retry_count: Mapped[int] = mapped_column(default=0)
     error_detail: Mapped[str] = mapped_column(Text, nullable=True)
     context_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    # In-app notification center: target user + read tracking.
+    recipient_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

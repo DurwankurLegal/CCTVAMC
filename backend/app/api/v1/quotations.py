@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.quotation import QuotationCreate, QuotationUpdate, QuotationResponse
 from app.services import quotation as quotation_service
 
@@ -22,7 +22,7 @@ async def list_quotations(
 @router.post("", response_model=QuotationResponse, status_code=201)
 async def create_quotation(
     payload: QuotationCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("quotations:write")),
 ):
     return await quotation_service.create_quotation(db, current_user.tenant_id, payload)
 
@@ -38,6 +38,6 @@ async def get_quotation(
 @router.patch("/{qid}", response_model=QuotationResponse)
 async def update_quotation(
     qid: UUID, payload: QuotationUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("quotations:write")),
 ):
     return await quotation_service.update_quotation(db, current_user.tenant_id, qid, payload)

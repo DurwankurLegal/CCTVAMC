@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from app.models.amc import AMCContract, AMCAsset, AMCStatus
 from app.repositories.base import TenantRepository
 from app.schemas.amc import AMCContractCreate, AMCContractUpdate
+from app.services.sequences import next_number
 
 
 class AMCRepository(TenantRepository[AMCContract]):
@@ -13,15 +14,6 @@ class AMCRepository(TenantRepository[AMCContract]):
 
 class AMCAssetRepository(TenantRepository[AMCAsset]):
     model = AMCAsset
-
-
-_AMC_SEQ: dict[UUID, int] = {}
-
-
-def _next_contract_number(tenant_id: UUID) -> str:
-    _AMC_SEQ[tenant_id] = _AMC_SEQ.get(tenant_id, 0) + 1
-    year = datetime.now(timezone.utc).year
-    return f"AMC-{str(tenant_id)[:4].upper()}-{year}-{_AMC_SEQ[tenant_id]:04d}"
 
 
 async def list_amc(db, tenant_id, offset=0, limit=50):
@@ -41,7 +33,7 @@ async def create_amc(db: AsyncSession, tenant_id: UUID, payload: AMCContractCrea
 
     contract = AMCContract(
         customer_id=payload.customer_id,
-        contract_number=_next_contract_number(tenant_id),
+        contract_number=await next_number(db, tenant_id, "amc", "AMC", width=4),
         start_date=payload.start_date,
         end_date=payload.end_date,
         annual_amount=payload.annual_amount,

@@ -17,14 +17,18 @@ class NotificationService:
         self.db = db
         self.tenant_id = tenant_id
 
-    async def send(self, event_type: str, recipient: str, context: dict, channel: str = NotificationChannel.EMAIL):
+    async def send(self, event_type: str, recipient: str, context: dict,
+                   channel: str = NotificationChannel.EMAIL, recipient_user_id=None):
         template = await self._get_template(event_type, channel)
-        if not template:
-            logger.warning("No notification template", event_type=event_type, channel=channel)
-            return
-
-        body = self._render(template.body, context)
-        subject = self._render(template.subject or "", context)
+        if template:
+            body = self._render(template.body, context)
+            subject = self._render(template.subject or "", context)
+        else:
+            # Fall back to a generic message so events are never silently dropped.
+            logger.warning("No notification template; using fallback",
+                           event_type=event_type, channel=channel)
+            subject = event_type.replace("_", " ").title()
+            body = self._render_fallback(event_type, context)
 
         log = NotificationLog(
             tenant_id=self.tenant_id,
@@ -35,13 +39,26 @@ class NotificationService:
             body=body,
             status=NotificationStatus.PENDING,
             context_data=context,
+            recipient_user_id=recipient_user_id,
         )
         self.db.add(log)
         await self.db.flush()
 
+        # In-app messages are read from the DB directly; no external delivery.
+        if channel == NotificationChannel.IN_APP:
+            log.status = NotificationStatus.SENT
+            await self.db.flush()
+            return log
+
         # Dispatch to Celery worker (import here to avoid circular deps)
         from app.workers.tasks import deliver_notification
         deliver_notification.delay(str(log.id))
+        return log
+
+    @staticmethod
+    def _render_fallback(event_type: str, context: dict) -> str:
+        parts = ", ".join(f"{k}={v}" for k, v in context.items())
+        return f"[{event_type}] {parts}"
 
     async def _get_template(self, event_type: str, channel: str):
         result = await self.db.execute(

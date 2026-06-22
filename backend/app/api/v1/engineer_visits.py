@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.engineer_visit import (
     EngineerVisitCreate, EngineerVisitResponse,
     CheckinRequest, CheckoutRequest,
@@ -25,7 +25,7 @@ async def list_visits(
 @router.post("", response_model=EngineerVisitResponse, status_code=201)
 async def create_visit(
     payload: EngineerVisitCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager", "technician")),
+    current_user: CurrentUser = Depends(require_permission("engineer_visits:write")),
 ):
     return await visit_service.create_visit(
         db, current_user.tenant_id, current_user.user_id, payload
@@ -43,7 +43,7 @@ async def get_visit(
 @router.post("/{visit_id}/checkin", response_model=EngineerVisitResponse)
 async def checkin(
     visit_id: UUID, payload: CheckinRequest, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("technician", "admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("engineer_visits:write")),
 ):
     return await visit_service.checkin(db, current_user.tenant_id, visit_id, payload)
 
@@ -51,6 +51,6 @@ async def checkin(
 @router.post("/{visit_id}/checkout", response_model=EngineerVisitResponse)
 async def checkout(
     visit_id: UUID, payload: CheckoutRequest, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("technician", "admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("engineer_visits:write")),
 ):
     return await visit_service.checkout(db, current_user.tenant_id, visit_id, payload)

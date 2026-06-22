@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.services import user as user_service
 
@@ -14,7 +14,7 @@ router = APIRouter()
 async def list_users(
     offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin")),
+    current_user: CurrentUser = Depends(require_permission("users:write")),
 ):
     return await user_service.list_users(db, current_user.tenant_id, offset, limit)
 
@@ -22,7 +22,7 @@ async def list_users(
 @router.post("", response_model=UserResponse, status_code=201)
 async def create_user(
     payload: UserCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin")),
+    current_user: CurrentUser = Depends(require_permission("users:write")),
 ):
     return await user_service.create_user(db, current_user.tenant_id, payload)
 
@@ -38,7 +38,7 @@ async def me(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin")),
+    current_user: CurrentUser = Depends(require_permission("users:write")),
 ):
     return await user_service.get_user(db, current_user.tenant_id, user_id)
 
@@ -46,6 +46,6 @@ async def get_user(
 @router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: UUID, payload: UserUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin")),
+    current_user: CurrentUser = Depends(require_permission("users:write")),
 ):
     return await user_service.update_user(db, current_user.tenant_id, user_id, payload)

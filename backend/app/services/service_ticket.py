@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from app.models.service_ticket import ServiceTicket, TicketStatus
 from app.repositories.base import TenantRepository
 from app.schemas.service_ticket import ServiceTicketCreate, ServiceTicketUpdate
+from app.services.sequences import next_number
 
 # SLA hours by priority
 SLA_HOURS = {"critical": 4, "high": 8, "medium": 24, "low": 48}
@@ -12,11 +13,6 @@ SLA_HOURS = {"critical": 4, "high": 8, "medium": 24, "low": 48}
 
 class ServiceTicketRepository(TenantRepository[ServiceTicket]):
     model = ServiceTicket
-
-
-def _next_ticket_number(tenant_id: UUID) -> str:
-    prefix = str(tenant_id)[:4].upper()
-    return f"TKT-{prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
 
 async def list_tickets(db: AsyncSession, tenant_id: UUID, offset: int, limit: int):
@@ -37,7 +33,7 @@ async def create_ticket(db: AsyncSession, tenant_id: UUID, payload: ServiceTicke
     sla_hours = SLA_HOURS.get(payload.priority.value, 24)
     obj = ServiceTicket(
         **payload.model_dump(),
-        ticket_number=_next_ticket_number(tenant_id),
+        ticket_number=await next_number(db, tenant_id, "ticket", "TKT"),
         sla_due_at=datetime.now(timezone.utc) + timedelta(hours=sla_hours),
     )
     return await repo.create(obj)
@@ -48,10 +44,25 @@ async def update_ticket(db: AsyncSession, tenant_id: UUID, ticket_id: UUID, payl
     obj = await repo.get(ticket_id)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    previous_assignee = obj.assigned_to
     for key, val in payload.model_dump(exclude_none=True).items():
         setattr(obj, key, val)
     if payload.status == TicketStatus.RESOLVED:
         obj.resolved_at = datetime.now(timezone.utc)
     elif payload.status == TicketStatus.CLOSED:
         obj.closed_at = datetime.now(timezone.utc)
-    return await repo.save(obj)
+    saved = await repo.save(obj)
+
+    # Notify the technician when a ticket is (re)assigned.
+    if obj.assigned_to and obj.assigned_to != previous_assignee:
+        from app.services.notification import NotificationService
+        from app.services.notification_events import TICKET_ASSIGNED
+        from app.models.notification import NotificationChannel
+        await NotificationService(db, tenant_id).send(
+            TICKET_ASSIGNED,
+            recipient=str(obj.assigned_to),
+            context={"ticket_number": obj.ticket_number, "priority": obj.priority},
+            channel=NotificationChannel.IN_APP,
+            recipient_user_id=obj.assigned_to,
+        )
+    return saved

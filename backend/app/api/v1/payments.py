@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.payment import PaymentCreate, PaymentResponse
 from app.services import payment as payment_service
 
@@ -21,7 +21,7 @@ async def list_payments(
 @router.post("", response_model=PaymentResponse, status_code=201)
 async def record_payment(
     payload: PaymentCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("payments:write")),
 ):
     return await payment_service.record_payment(db, current_user.tenant_id, payload)
 

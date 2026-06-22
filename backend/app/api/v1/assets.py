@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_roles
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.asset import AssetCreate, AssetUpdate, AssetResponse
 from app.services import asset as asset_service
 
@@ -22,7 +22,7 @@ async def list_assets(
 @router.post("", response_model=AssetResponse, status_code=201)
 async def create_asset(
     payload: AssetCreate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("assets:write")),
 ):
     return await asset_service.create_asset(db, current_user.tenant_id, payload)
 
@@ -38,6 +38,6 @@ async def get_asset(
 @router.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset(
     asset_id: UUID, payload: AssetUpdate, db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_roles("admin", "manager")),
+    current_user: CurrentUser = Depends(require_permission("assets:write")),
 ):
     return await asset_service.update_asset(db, current_user.tenant_id, asset_id, payload)
