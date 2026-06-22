@@ -24,4 +24,5 @@ from app.models import (  # noqa: F401
     pm_schedule,
     installation,
     dashboard_snapshot,
+    ticket_comment,
 )

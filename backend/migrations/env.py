@@ -57,6 +57,7 @@ import app.models.document
 import app.models.pm_schedule
 import app.models.installation
 import app.models.dashboard_snapshot
+import app.models.ticket_comment
 
 config = context.config
 config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL_SYNC"])
