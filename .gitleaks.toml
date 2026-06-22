@@ -1,0 +1,26 @@
+# gitleaks configuration
+# Extends the default ruleset and adds project-specific allowlists.
+# Docs: https://github.com/gitleaks/gitleaks
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for known-safe placeholder values"
+
+# Files that legitimately contain placeholder/dummy credentials.
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''CONTRIBUTING\.md$''',
+]
+
+# Placeholder/test values that are not real secrets.
+regexes = [
+  '''change_me''',
+  '''your[-_].*[-_](key|secret|token|password)''',
+  '''test_secret_key_for_ci''',
+  '''test_pass''',
+  '''minioadmin''',
+  '''dev-secret-change-in-production.*''',
+]
