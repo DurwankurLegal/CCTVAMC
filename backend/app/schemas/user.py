@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 from app.models.user import TenantRole
 
@@ -17,6 +17,11 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     role: Optional[TenantRole] = None
     is_active: Optional[bool] = None
+    # Technician profile (SRS 4.10)
+    skills: Optional[List[str]] = None
+    certifications: Optional[List[str]] = None
+    territory: Optional[str] = None
+    availability: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -28,3 +33,7 @@ class UserResponse(BaseModel):
     phone: Optional[str]
     role: str
     is_active: bool
+    skills: Optional[List[str]] = None
+    certifications: Optional[List[str]] = None
+    territory: Optional[str] = None
+    availability: Optional[str] = None

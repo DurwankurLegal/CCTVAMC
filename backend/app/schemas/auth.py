@@ -6,6 +6,7 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     tenant_slug: Optional[str] = None  # disambiguates when the email exists in multiple tenants
+    otp_code: Optional[str] = None     # required when the account has 2FA enabled
 
 
 class TokenResponse(BaseModel):
