@@ -13,9 +13,10 @@ class SubscriptionPlan(str, Enum):
 
 
 class TenantStatus(str, Enum):
+    TRIAL = "trial"
     ACTIVE = "active"
     SUSPENDED = "suspended"
-    TRIAL = "trial"
+    CANCELLED = "cancelled"
 
 
 class Tenant(Base, TimestampMixin):

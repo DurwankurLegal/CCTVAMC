@@ -57,6 +57,26 @@ async def update_amc(db, tenant_id, amc_id, payload: AMCContractUpdate):
     obj = await repo.get(amc_id)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AMC contract not found")
+    was_active = obj.status == AMCStatus.ACTIVE
     for k, v in payload.model_dump(exclude_none=True).items():
         setattr(obj, k, v)
-    return await repo.save(obj)
+    saved = await repo.save(obj)
+
+    # On activation, auto-generate the preventive-maintenance schedule (SRS 4.9).
+    if not was_active and saved.status == AMCStatus.ACTIVE:
+        from app.services.pm_schedule import generate_for_contract
+        await generate_for_contract(db, tenant_id, saved)
+    return saved
+
+
+async def activate_amc(db, tenant_id, amc_id):
+    """Convenience: set contract ACTIVE and generate its PM schedule."""
+    repo = AMCRepository(db, tenant_id)
+    obj = await repo.get(amc_id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AMC contract not found")
+    obj.status = AMCStatus.ACTIVE
+    saved = await repo.save(obj)
+    from app.services.pm_schedule import generate_for_contract
+    await generate_for_contract(db, tenant_id, saved)
+    return saved

@@ -1,13 +1,25 @@
 from typing import List
+from datetime import date
 from uuid import UUID
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.amc import AMCContractCreate, AMCContractUpdate, AMCContractResponse
 from app.services import amc as amc_service
+from app.services import pm_schedule as pm_service
 
 router = APIRouter()
+
+
+class RescheduleRequest(BaseModel):
+    new_date: date
+    reason: str
+
+
+class SkipRequest(BaseModel):
+    reason: str
 
 
 @router.get("", response_model=List[AMCContractResponse])
@@ -41,3 +53,43 @@ async def update_amc(
     current_user: CurrentUser = Depends(require_permission("amc:write")),
 ):
     return await amc_service.update_amc(db, current_user.tenant_id, amc_id, payload)
+
+
+@router.post("/{amc_id}/activate", response_model=AMCContractResponse)
+async def activate_amc(
+    amc_id: UUID, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("amc:write")),
+):
+    """Activate a contract and auto-generate its preventive-maintenance schedule."""
+    return await amc_service.activate_amc(db, current_user.tenant_id, amc_id)
+
+
+# ── Preventive maintenance schedule (SRS 4.9) ─────────────────
+@router.get("/{amc_id}/pm-schedule")
+async def list_pm_schedule(
+    amc_id: UUID, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    rows = await pm_service.list_for_contract(db, current_user.tenant_id, amc_id)
+    summary = await pm_service.completion_summary(db, current_user.tenant_id, amc_id)
+    return {"summary": summary, "visits": [
+        {"id": str(r.id), "sequence_no": r.sequence_no, "scheduled_date": str(r.scheduled_date),
+         "status": r.status, "reason_code": r.reason_code} for r in rows]}
+
+
+@router.post("/pm-schedule/{pm_id}/reschedule")
+async def reschedule_pm(
+    pm_id: UUID, payload: RescheduleRequest, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("amc:write")),
+):
+    pm = await pm_service.reschedule(db, current_user.tenant_id, pm_id, payload.new_date, payload.reason)
+    return {"id": str(pm.id), "status": pm.status, "scheduled_date": str(pm.scheduled_date)}
+
+
+@router.post("/pm-schedule/{pm_id}/skip")
+async def skip_pm(
+    pm_id: UUID, payload: SkipRequest, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("amc:write")),
+):
+    pm = await pm_service.skip(db, current_user.tenant_id, pm_id, payload.reason)
+    return {"id": str(pm.id), "status": pm.status}

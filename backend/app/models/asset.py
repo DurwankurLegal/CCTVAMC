@@ -10,6 +10,7 @@ from app.models.base import TenantMixin
 class AssetStatus(str, Enum):
     ACTIVE = "active"
     FAULTY = "faulty"
+    UNDER_REPAIR = "under_repair"
     REPLACED = "replaced"
     DECOMMISSIONED = "decommissioned"
 

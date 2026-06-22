@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.v1 import auth, tenants, users, customers, leads, vendors, assets
 from app.api.v1 import quotations, amc, service_tickets, engineer_visits
 from app.api.v1 import inventory, sales_orders, invoices, payments, notifications, reports
+from app.api.v1 import documents
 
 router = APIRouter()
 
@@ -22,3 +23,4 @@ router.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
 router.include_router(payments.router, prefix="/payments", tags=["payments"])
 router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 router.include_router(reports.router, prefix="/reports", tags=["reports"])
+router.include_router(documents.router, prefix="/documents", tags=["documents"])
