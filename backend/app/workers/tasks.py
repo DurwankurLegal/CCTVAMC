@@ -229,6 +229,28 @@ def check_payment_due():
 
 @celery_app.task
 def aggregate_dashboard_kpis():
-    """Pre-aggregate KPI metrics into dashboard_snapshots to support fast dashboard loads."""
-    logger.info("Dashboard KPI aggregation started")
-    # TODO: implement per-tenant KPI aggregation
+    """Pre-aggregate KPI metrics into dashboard_snapshots for fast dashboard loads."""
+    import asyncio
+
+    async def _aggregate():
+        from sqlalchemy import select
+        from app.models.tenant import Tenant
+        from app.models.dashboard_snapshot import DashboardSnapshot
+        from app.services.reports import dashboard_kpis
+
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            tenants = (await db.execute(select(Tenant.id))).scalars().all()
+            for tid in tenants:
+                metrics = await dashboard_kpis(db, tid)
+                existing = (await db.execute(
+                    select(DashboardSnapshot).where(DashboardSnapshot.tenant_id == tid)
+                )).scalar_one_or_none()
+                if existing:
+                    existing.metrics = metrics
+                else:
+                    db.add(DashboardSnapshot(tenant_id=tid, metrics=metrics))
+            await db.commit()
+        logger.info("Dashboard KPI aggregation complete", tenants=len(tenants))
+
+    asyncio.run(_aggregate())

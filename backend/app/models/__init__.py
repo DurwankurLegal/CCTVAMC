@@ -22,4 +22,6 @@ from app.models import (  # noqa: F401
     rbac,
     document,
     pm_schedule,
+    installation,
+    dashboard_snapshot,
 )

@@ -55,6 +55,8 @@ import app.models.auth_session
 import app.models.rbac
 import app.models.document
 import app.models.pm_schedule
+import app.models.installation
+import app.models.dashboard_snapshot
 
 config = context.config
 config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL_SYNC"])
