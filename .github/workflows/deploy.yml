@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-production:
+    name: Blue-green deploy to production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & push images
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY }}/cctv-api:latest
+            ${{ secrets.REGISTRY }}/cctv-api:${{ github.sha }}
+
+      - name: Deploy (blue-green)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "$DEPLOY_KEY" > /tmp/deploy_key && chmod 600 /tmp/deploy_key
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no deploy@$DEPLOY_HOST \
+            "cd /opt/cctvapp && IMAGE_TAG=$IMAGE_TAG docker stack deploy -c docker-stack.yml cctv --with-registry-auth"
+
+      - name: Smoke test
+        run: |
+          sleep 15
+          curl -f https://${{ secrets.PROD_DOMAIN }}/health || exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deploy failed — trigger rollback or alert oncall"
