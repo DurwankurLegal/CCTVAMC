@@ -14,7 +14,21 @@ _REPORTS = {
     "revenue-by-customer": ("Revenue by Customer", lambda db, t: report_service.revenue_by_customer(db, t)),
     "technician-productivity": ("Technician Productivity", lambda db, t: report_service.technician_productivity(db, t)),
     "inventory-consumption": ("Inventory Consumption", lambda db, t: report_service.inventory_consumption(db, t)),
+    "amc-renewal-pipeline": ("AMC Renewal Pipeline", lambda db, t: report_service.amc_renewal_pipeline(db, t)),
+    "overdue-receivables": ("Overdue Receivables", lambda db, t: report_service.overdue_receivables(db, t)),
+    "payment-collection": ("Payment Collection", lambda db, t: report_service.payment_collection(db, t)),
+    "installation-pipeline": ("Installation Pipeline", lambda db, t: report_service.installation_pipeline(db, t)),
+    "purchase-orders": ("Purchase Orders", lambda db, t: report_service.purchase_orders_report(db, t)),
+    "inventory-valuation": ("Inventory Valuation", lambda db, t: report_service.inventory_valuation(db, t)),
 }
+
+
+@router.get("/catalogue")
+async def catalogue(
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List of available standard reports (key + title) for the reports UI."""
+    return {"reports": [{"key": k, "title": title} for k, (title, _p) in _REPORTS.items()]}
 
 
 @router.get("/dashboard")
@@ -76,5 +90,14 @@ async def export_report(
             report_service.to_xlsx(rows, title),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f'attachment; filename="{report_key}.xlsx"'})
-    return Response(report_service.to_pdf(title, rows), media_type="application/pdf",
+    try:
+        pdf = report_service.to_pdf(title, rows)
+    except (OSError, ImportError) as exc:
+        # weasyprint needs native libs (pango/cairo/gobject). If they're absent,
+        # fail cleanly instead of a 500 stack trace; CSV/XLSX remain available.
+        raise HTTPException(
+            status_code=503,
+            detail="PDF rendering is unavailable in this environment; use CSV or Excel export.",
+        ) from exc
+    return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{report_key}.pdf"'})

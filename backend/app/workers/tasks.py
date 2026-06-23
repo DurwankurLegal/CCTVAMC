@@ -73,9 +73,13 @@ async def _send_sms(phone: str, body: str):
     import httpx
     from app.core.config import get_settings
     settings = get_settings()
+    # Provider URL must come from configuration — never a hardcoded placeholder.
+    if not settings.SMS_PROVIDER_URL:
+        logger.warning("SMS provider not configured; skipping", recipient=phone)
+        return
     async with httpx.AsyncClient() as client:
         await client.post(
-            "https://sms.example.com/send",
+            settings.SMS_PROVIDER_URL,
             json={"to": phone, "message": body},
             headers={"Authorization": f"Bearer {settings.SMS_PROVIDER_API_KEY}"},
         )

@@ -4,6 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import LoginScreen from "../screens/LoginScreen";
 import TicketListScreen from "../screens/TicketListScreen";
 import VisitDetailScreen from "../screens/VisitDetailScreen";
+import SyncStatusScreen from "../screens/SyncStatusScreen";
 
 const Stack = createStackNavigator();
 
@@ -21,6 +22,11 @@ export default function AppNavigator() {
           name="VisitDetail"
           component={VisitDetailScreen}
           options={{ title: "Service Visit", headerStyle: { backgroundColor: "#1e3a5f" }, headerTintColor: "#fff" }}
+        />
+        <Stack.Screen
+          name="SyncStatus"
+          component={SyncStatusScreen}
+          options={{ title: "Sync Status", headerStyle: { backgroundColor: "#1e3a5f" }, headerTintColor: "#fff" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

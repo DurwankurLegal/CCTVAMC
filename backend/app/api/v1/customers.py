@@ -31,6 +31,22 @@ async def create_customer(
     return await customer_service.create_customer(db, current_user.tenant_id, payload)
 
 
+@router.get("/sites")
+async def list_all_sites(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """All sites across the tenant (for asset/ticket site pickers). Declared
+    before /{customer_id} so the literal path wins over the UUID param."""
+    from sqlalchemy import select
+    from app.models.customer import CustomerSite
+    rows = (await db.execute(
+        select(CustomerSite).where(CustomerSite.tenant_id == current_user.tenant_id)
+    )).scalars().all()
+    return [{"id": str(s.id), "name": s.name, "customer_id": str(s.customer_id),
+             "address": s.address} for s in rows]
+
+
 @router.get("/{customer_id}", response_model=CustomerResponse)
 async def get_customer(
     customer_id: UUID,

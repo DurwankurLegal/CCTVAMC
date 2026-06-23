@@ -64,6 +64,15 @@ async def create_purchase_order(db: AsyncSession, tenant_id: UUID, vendor_id: UU
     vendor = await VendorRepository(db, tenant_id).get(vendor_id)
     vendor.outstanding_payable = float(vendor.outstanding_payable or 0) + total
     await VendorRepository(db, tenant_id).save(vendor)
+
+    # Record a notification so procurement activity is visible to staff.
+    from app.services.notification import NotificationService
+    from app.services.notification_events import PURCHASE_ORDER_CREATED
+    from app.models.notification import NotificationChannel
+    await NotificationService(db, tenant_id).send(
+        PURCHASE_ORDER_CREATED, recipient="staff",
+        context={"po_number": po.po_number, "vendor": vendor.name, "total": total},
+        channel=NotificationChannel.IN_APP)
     return po
 
 

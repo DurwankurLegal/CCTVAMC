@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
 
     # SMS / WhatsApp
+    SMS_PROVIDER_URL: str = ""
     SMS_PROVIDER_API_KEY: str = ""
     WHATSAPP_API_URL: str = ""
     WHATSAPP_API_KEY: str = ""

@@ -56,7 +56,19 @@ async def set_status(db, tenant_id, qid, new_status):
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quotation not found")
     obj.status = QuotationStatus(new_status)
-    return await repo.save(obj)
+    saved = await repo.save(obj)
+
+    # Notify staff on approval/rejection (in-app), so the sales pipeline is visible.
+    if new_status in ("approved", "rejected"):
+        from app.services.notification import NotificationService
+        from app.services import notification_events as ev
+        from app.models.notification import NotificationChannel
+        event = ev.QUOTE_APPROVED if new_status == "approved" else ev.QUOTE_REJECTED
+        await NotificationService(db, tenant_id).send(
+            event, recipient="staff",
+            context={"quotation_number": obj.quotation_number, "status": new_status},
+            channel=NotificationChannel.IN_APP)
+    return saved
 
 
 async def convert_to_amc(db, tenant_id, qid, start_date, end_date, preventive_visits_per_year=2):

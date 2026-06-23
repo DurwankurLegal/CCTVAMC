@@ -25,6 +25,9 @@ async def get_current_user(
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    # Portal-scoped tokens must never reach staff/back-office APIs.
+    if payload.get("scope") == "portal":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for staff APIs")
 
     user_id = payload.get("sub")
     tenant_id = payload.get("tenant_id")
@@ -103,3 +106,33 @@ def require_platform_admin(current_user: CurrentUser = Depends(get_current_user)
     if not current_user.is_platform_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform admin access required")
     return current_user
+
+
+class PortalUser:
+    """Authenticated customer self-service portal user. Carries the customer_id
+    that scopes every portal query in addition to tenant_id."""
+    def __init__(self, user_id: UUID, tenant_id: UUID, customer_id: UUID):
+        self.user_id = user_id
+        self.tenant_id = tenant_id
+        self.customer_id = customer_id
+
+
+async def get_current_portal_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> PortalUser:
+    """Validate a portal-scoped token. Rejects staff tokens (no portal scope)."""
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access" or payload.get("scope") != "portal":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid portal token")
+    user_id = payload.get("sub")
+    tenant_id = payload.get("tenant_id")
+    customer_id = payload.get("customer_id")
+    if not user_id or not tenant_id or not customer_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid portal token")
+    uid, tid, cid = UUID(user_id), UUID(tenant_id), UUID(customer_id)
+    # Bind actor + tenant for audit/RLS and structured logging.
+    set_actor(uid, tid)
+    structlog.contextvars.bind_contextvars(
+        portal_user_id=str(uid), tenant_id=str(tid), customer_id=str(cid)
+    )
+    return PortalUser(user_id=uid, tenant_id=tid, customer_id=cid)
