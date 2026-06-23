@@ -25,6 +25,13 @@ import PaymentsPage from "./pages/PaymentsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
+import PortalLoginPage from "./pages/portal/PortalLoginPage";
+import PortalLayout from "./pages/portal/PortalLayout";
+import PortalDashboardPage from "./pages/portal/PortalDashboardPage";
+import PortalTicketsPage from "./pages/portal/PortalTicketsPage";
+import PortalTicketDetailPage from "./pages/portal/PortalTicketDetailPage";
+import PortalCoveragePage from "./pages/portal/PortalCoveragePage";
+import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import { logout, fetchMe } from "./store/authSlice";
 import type { AppDispatch, RootState } from "./store";
 
@@ -119,6 +126,17 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Customer self-service portal — separate identity/token from staff app */}
+        <Route path="/portal/login" element={<PortalLoginPage />} />
+        <Route path="/portal" element={<PortalLayout />}>
+          <Route index element={<PortalDashboardPage />} />
+          <Route path="tickets" element={<PortalTicketsPage />} />
+          <Route path="tickets/:id" element={<PortalTicketDetailPage />} />
+          <Route path="coverage" element={<PortalCoveragePage />} />
+          <Route path="invoices" element={<PortalInvoicesPage />} />
+        </Route>
+
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/customers" element={<CustomersPage />} />

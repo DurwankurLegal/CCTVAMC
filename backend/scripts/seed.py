@@ -252,6 +252,19 @@ async def seed_sample_data(session, tenant_id) -> None:
     session.add_all(tickets)
     print(f"✔ Created {len(tickets)} service tickets")
 
+    # ── Customer portal user (self-service) — linked to first customer ──
+    from app.models.customer_portal_user import CustomerPortalUser
+    portal_email = "portal@greenvalley.in"
+    existing_portal = (await session.execute(
+        select(CustomerPortalUser).where(CustomerPortalUser.email == portal_email)
+    )).scalar_one_or_none()
+    if existing_portal is None:
+        session.add(CustomerPortalUser(
+            tenant_id=tenant_id, customer_id=customers[0].id, email=portal_email,
+            full_name="Green Valley Portal", hashed_password=hash_password(DEFAULT_PASSWORD),
+        ))
+        print(f"✔ Created portal user: {portal_email} (customer: {customers[0].name})")
+
     await session.commit()
 
 
@@ -333,6 +346,8 @@ async def seed() -> None:
     print(f"  Technician:     tech@durwankur.ai / {DEFAULT_PASSWORD}")
     print(f"  Accounts:       billing@durwankur.ai / {DEFAULT_PASSWORD}")
     print(f"  Tenant 2 admin: {TENANT2_ADMIN_EMAIL} / {DEFAULT_PASSWORD}")
+    if SAMPLE_DATA:
+        print(f"  Portal user:    portal@greenvalley.in / {DEFAULT_PASSWORD} (tenant_slug: {TENANT_SLUG})")
 
 
 if __name__ == "__main__":

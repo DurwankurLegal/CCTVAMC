@@ -25,4 +25,5 @@ from app.models import (  # noqa: F401
     installation,
     dashboard_snapshot,
     ticket_comment,
+    customer_portal_user,
 )

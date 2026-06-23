@@ -11,7 +11,7 @@ Evidence paths are repo-relative.
 | # | Area | Status | Backend evidence | UI evidence | Gap / acceptance |
 |---|---|---|---|---|---|
 | 1 | Platform / tenant admin | **Done** | `api/v1/tenants.py`, `services/tenant.py`, `test_platform_admin.py` | `pages/platform/*` | ✅ Step 2: list/create/suspend/activate/cancel, usage, metrics, sub-invoices, UI + guard. Live-verified on Postgres+RLS. |
-| 2 | Customer self-service portal | Not started | partial (customer/ticket APIs are staff-scoped) | — | No customer identity/scope or portal UI. **Step 3** |
+| 2 | Customer self-service portal | **Done** | `models/customer_portal_user.py`, mig `012`, `services/portal.py`, `api/v1/portal.py`, `test_customer_portal.py` | `pages/portal/*` | ✅ Step 3: separate identity (scope=portal), customer+tenant scoping, raise/track tickets, AMC/assets/invoices, responsive UI. Live-verified on Postgres+RLS. |
 | 3 | User & RBAC admin | Backend only | `api/v1/users.py`, `models/rbac.py`, `core/permissions.py` | — | No users/roles UI. **Step 4.1** |
 | 4 | Leads | Partial | `api/v1/leads.py` | `pages/LeadsPage.tsx` | Convert flow in UI; follow-up notif. |
 | 5 | Customers & sites | Partial | `api/v1/customers.py` | `pages/CustomersPage.tsx` | Sites/contacts UI depth. |
