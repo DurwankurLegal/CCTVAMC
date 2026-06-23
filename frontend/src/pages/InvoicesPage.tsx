@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Typography, Button, Modal, Form, Input, Select, DatePicker, InputNumber } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Table, Tag, Typography, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Space, message } from "antd";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
 
@@ -22,9 +22,10 @@ interface Invoice {
 interface Customer { id: string; name: string; }
 
 const statusColor: Record<string, string> = {
-  draft: "default", sent: "blue", paid: "green",
-  partially_paid: "orange", overdue: "red", cancelled: "volcano",
+  draft: "default", issued: "blue", paid: "green",
+  partially_paid: "orange", cancelled: "volcano", credit_note: "purple",
 };
+const STATUSES = ["draft", "issued", "paid", "partially_paid", "cancelled"];
 
 export default function InvoicesPage() {
   const [items, setItems] = useState<Invoice[]>([]);
@@ -32,6 +33,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Invoice | null>(null);
   const [form] = Form.useForm();
 
   const load = async () => {
@@ -47,19 +49,39 @@ export default function InvoicesPage() {
 
   const custMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
 
-  const handleAdd = async () => {
+  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ invoice_date: dayjs() }); setOpen(true); };
+  const openEdit = (row: Invoice) => {
+    setEditing(row);
+    form.setFieldsValue({ status: row.status, due_date: row.due_date ? dayjs(row.due_date) : null, notes: row.notes });
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await apiClient.post("/invoices", {
-        ...values,
-        invoice_date: values.invoice_date.format("YYYY-MM-DD"),
-        due_date: values.due_date?.format("YYYY-MM-DD") ?? null,
-        line_items: [{ description: values.description, quantity: 1, unit_price: values.amount, amount: values.amount }],
-      });
+      if (editing) {
+        // InvoiceUpdate accepts status / due_date / notes only.
+        await apiClient.patch(`/invoices/${editing.id}`, {
+          status: values.status,
+          due_date: values.due_date?.format("YYYY-MM-DD") ?? null,
+          notes: values.notes,
+        });
+        message.success("Invoice updated");
+      } else {
+        await apiClient.post("/invoices", {
+          ...values,
+          invoice_date: values.invoice_date.format("YYYY-MM-DD"),
+          due_date: values.due_date?.format("YYYY-MM-DD") ?? null,
+          line_items: [{ description: values.description, quantity: 1, unit_price: values.amount, amount: values.amount }],
+        });
+        message.success("Invoice created");
+      }
       form.resetFields();
       setOpen(false);
       load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Save failed");
     } finally { setSaving(false); }
   };
 
@@ -82,35 +104,59 @@ export default function InvoicesPage() {
       },
     },
     { title: "Notes", dataIndex: "notes", key: "notes", ellipsis: true, render: (v: string) => v || "—" },
+    {
+      title: "Actions", key: "actions",
+      render: (_: any, row: Invoice) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
+        </Space>
+      ),
+    },
   ];
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Invoices</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New Invoice</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Invoice</Button>
       </div>
       <Table rowKey="id" columns={columns} dataSource={items} loading={loading} scroll={{ x: true }} />
 
-      <Modal title="New Invoice" open={open} onOk={handleAdd} onCancel={() => setOpen(false)} confirmLoading={saving} width={520}>
+      <Modal
+        title={editing ? `Edit ${editing.invoice_number}` : "New Invoice"}
+        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving} width={520}
+        okText={editing ? "Save" : "Create"}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="children" placeholder="Select customer">
-              {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
-            </Select>
-          </Form.Item>
-          <Form.Item name="invoice_date" label="Invoice Date" rules={[{ required: true }]} initialValue={dayjs()}>
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
+          {editing ? (
+            <Form.Item name="status" label="Status">
+              <Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
+            </Form.Item>
+          ) : (
+            <>
+              <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
+                <Select showSearch optionFilterProp="children" placeholder="Select customer">
+                  {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
+                </Select>
+              </Form.Item>
+              <Form.Item name="invoice_date" label="Invoice Date" rules={[{ required: true }]} initialValue={dayjs()}>
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </>
+          )}
           <Form.Item name="due_date" label="Due Date">
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="description" label="Description" rules={[{ required: true }]}>
-            <Input placeholder="e.g. AMC Q2 charges" />
-          </Form.Item>
-          <Form.Item name="amount" label="Amount (₹)" rules={[{ required: true }]}>
-            <InputNumber style={{ width: "100%" }} min={0} precision={2} />
-          </Form.Item>
+          {!editing && (
+            <>
+              <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+                <Input placeholder="e.g. AMC Q2 charges" />
+              </Form.Item>
+              <Form.Item name="amount" label="Amount (₹)" rules={[{ required: true }]}>
+                <InputNumber style={{ width: "100%" }} min={0} precision={2} />
+              </Form.Item>
+            </>
+          )}
           <Form.Item name="notes" label="Notes"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>

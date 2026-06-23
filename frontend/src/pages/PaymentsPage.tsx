@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Typography, Button, Modal, Form, Select, DatePicker, InputNumber, Input } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Table, Tag, Typography, Button, Modal, Form, Select, DatePicker, InputNumber, Input, Space, message } from "antd";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
 
@@ -21,7 +21,11 @@ interface Payment {
 interface Customer { id: string; name: string; }
 interface Invoice { id: string; invoice_number: string; customer_id: string; total_amount: number; }
 
-const modeColor: Record<string, string> = { cash: "gold", neft: "blue", upi: "purple", cheque: "cyan", rtgs: "geekblue" };
+// Must match backend PaymentMode enum.
+const MODES = ["cash", "cheque", "neft", "upi", "card", "other"];
+const modeColor: Record<string, string> = {
+  cash: "gold", neft: "blue", upi: "purple", cheque: "cyan", card: "geekblue", other: "default",
+};
 
 export default function PaymentsPage() {
   const [items, setItems] = useState<Payment[]>([]);
@@ -30,6 +34,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Payment | null>(null);
   const [form] = Form.useForm();
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
 
@@ -50,17 +55,41 @@ export default function PaymentsPage() {
   const custMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
   const invMap = Object.fromEntries(invoices.map(i => [i.id, i.invoice_number]));
 
-  const handleAdd = async () => {
+  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ payment_date: dayjs(), mode: "upi" }); setOpen(true); };
+  const openEdit = (row: Payment) => {
+    setEditing(row);
+    form.setFieldsValue({
+      amount: row.amount,
+      payment_date: row.payment_date ? dayjs(row.payment_date) : null,
+      mode: row.mode,
+      reference_number: row.reference_number,
+      notes: row.notes,
+    });
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await apiClient.post("/payments", {
-        ...values,
-        payment_date: values.payment_date.format("YYYY-MM-DD"),
-      });
+      if (editing) {
+        await apiClient.patch(`/payments/${editing.id}`, {
+          amount: values.amount,
+          payment_date: values.payment_date?.format("YYYY-MM-DD"),
+          mode: values.mode,
+          reference_number: values.reference_number,
+          notes: values.notes,
+        });
+        message.success("Payment updated");
+      } else {
+        await apiClient.post("/payments", { ...values, payment_date: values.payment_date.format("YYYY-MM-DD") });
+        message.success("Payment recorded");
+      }
       form.resetFields();
       setOpen(false);
       load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Save failed");
     } finally { setSaving(false); }
   };
 
@@ -77,42 +106,50 @@ export default function PaymentsPage() {
     { title: "Mode", dataIndex: "mode", key: "mode", render: (v: string) => <Tag color={modeColor[v] ?? "default"}>{v.toUpperCase()}</Tag> },
     { title: "Reference", dataIndex: "reference_number", key: "ref", render: (v: string) => v || "—" },
     { title: "Notes", dataIndex: "notes", key: "notes", ellipsis: true, render: (v: string) => v || "—" },
+    {
+      title: "Actions", key: "actions",
+      render: (_: any, row: Payment) => (
+        <Space><Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button></Space>
+      ),
+    },
   ];
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Payments</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Record Payment</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Record Payment</Button>
       </div>
       <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
 
-      <Modal title="Record Payment" open={open} onOk={handleAdd} onCancel={() => { setOpen(false); setFilteredInvoices([]); }} confirmLoading={saving}>
+      <Modal
+        title={editing ? "Edit Payment" : "Record Payment"}
+        open={open} onOk={handleSave} onCancel={() => { setOpen(false); setFilteredInvoices([]); }} confirmLoading={saving}
+        okText={editing ? "Save" : "Record"}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="children" placeholder="Select customer" onChange={onCustomerChange}>
-              {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
-            </Select>
-          </Form.Item>
-          <Form.Item name="invoice_id" label="Invoice" rules={[{ required: true }]}>
-            <Select placeholder="Select invoice" disabled={filteredInvoices.length === 0}>
-              {filteredInvoices.map(i => <Option key={i.id} value={i.id}>{i.invoice_number} — ₹{Number(i.total_amount).toLocaleString("en-IN")}</Option>)}
-            </Select>
-          </Form.Item>
+          {!editing && (
+            <>
+              <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
+                <Select showSearch optionFilterProp="children" placeholder="Select customer" onChange={onCustomerChange}>
+                  {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
+                </Select>
+              </Form.Item>
+              <Form.Item name="invoice_id" label="Invoice" rules={[{ required: true }]}>
+                <Select placeholder="Select invoice" disabled={filteredInvoices.length === 0}>
+                  {filteredInvoices.map(i => <Option key={i.id} value={i.id}>{i.invoice_number} — ₹{Number(i.total_amount).toLocaleString("en-IN")}</Option>)}
+                </Select>
+              </Form.Item>
+            </>
+          )}
           <Form.Item name="amount" label="Amount (₹)" rules={[{ required: true }]}>
             <InputNumber style={{ width: "100%" }} min={0} precision={2} />
           </Form.Item>
-          <Form.Item name="payment_date" label="Payment Date" rules={[{ required: true }]} initialValue={dayjs()}>
+          <Form.Item name="payment_date" label="Payment Date" rules={[{ required: true }]}>
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="mode" label="Payment Mode" initialValue="upi">
-            <Select>
-              <Option value="cash">Cash</Option>
-              <Option value="upi">UPI</Option>
-              <Option value="neft">NEFT</Option>
-              <Option value="rtgs">RTGS</Option>
-              <Option value="cheque">Cheque</Option>
-            </Select>
+          <Form.Item name="mode" label="Payment Mode">
+            <Select>{MODES.map(m => <Option key={m} value={m}>{m.toUpperCase()}</Option>)}</Select>
           </Form.Item>
           <Form.Item name="reference_number" label="Reference Number">
             <Input placeholder="UTR / Cheque no." />

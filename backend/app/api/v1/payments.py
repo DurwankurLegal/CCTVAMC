@@ -5,7 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
-from app.schemas.payment import PaymentCreate, PaymentResponse
+from app.schemas.payment import PaymentCreate, PaymentResponse, PaymentUpdate
 from app.services import payment as payment_service
 
 router = APIRouter()
@@ -35,6 +35,14 @@ async def payment_ageing(
 ):
     """Receivables ageing buckets: current / 30d / 60d / 90d+"""
     return await payment_service.get_payment_ageing(db, current_user.tenant_id)
+
+
+@router.patch("/{payment_id}", response_model=PaymentResponse)
+async def update_payment(
+    payment_id: UUID, payload: PaymentUpdate, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("payments:write")),
+):
+    return await payment_service.update_payment(db, current_user.tenant_id, payment_id, payload)
 
 
 @router.get("/{payment_id}/receipt")

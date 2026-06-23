@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.models.payment import Payment
 from app.models.invoice import Invoice, InvoiceStatus
 from app.repositories.base import TenantRepository
-from app.schemas.payment import PaymentCreate
+from app.schemas.payment import PaymentCreate, PaymentUpdate
 
 
 class PaymentRepository(TenantRepository[Payment]):
@@ -45,6 +45,38 @@ async def get_payment(db: AsyncSession, tenant_id: UUID, payment_id: UUID) -> Pa
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
     return obj
+
+
+def _recompute_invoice_status(invoice) -> None:
+    paid = float(invoice.amount_paid or 0)
+    if paid >= float(invoice.total_amount) and float(invoice.total_amount) > 0:
+        invoice.status = InvoiceStatus.PAID
+    elif paid > 0:
+        invoice.status = InvoiceStatus.PARTIALLY_PAID
+    else:
+        invoice.status = InvoiceStatus.ISSUED
+
+
+async def update_payment(db: AsyncSession, tenant_id: UUID, payment_id: UUID, payload: PaymentUpdate) -> Payment:
+    repo = PaymentRepository(db, tenant_id)
+    payment = await repo.get(payment_id)
+    if not payment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+
+    data = payload.model_dump(exclude_none=True)
+    new_amount = data.get("amount")
+    # If the amount changed, adjust the linked invoice's paid total + status by the delta.
+    if new_amount is not None and float(new_amount) != float(payment.amount):
+        invoice = await InvoiceRepository(db, tenant_id).get(payment.invoice_id)
+        if invoice:
+            delta = float(new_amount) - float(payment.amount)
+            invoice.amount_paid = float(invoice.amount_paid or 0) + delta
+            _recompute_invoice_status(invoice)
+            await InvoiceRepository(db, tenant_id).save(invoice)
+
+    for k, v in data.items():
+        setattr(payment, k, v)
+    return await repo.save(payment)
 
 
 def render_receipt(payment: Payment) -> bytes:
