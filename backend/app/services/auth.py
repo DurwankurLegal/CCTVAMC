@@ -82,6 +82,19 @@ async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
     if user.tenant_id:
         tenant_slug = (await db.execute(
             select(Tenant.slug).where(Tenant.id == user.tenant_id))).scalar_one_or_none()
+
+    # Effective permissions drive permission-aware menu/route visibility in the UI.
+    from app.core.deps import get_effective_permissions
+    from app.core.permissions import ALL_PERMISSIONS
+
+    class _Principal:
+        user_id = user.id
+        role = user.role
+    if user.is_platform_admin:
+        permissions = sorted(ALL_PERMISSIONS)
+    else:
+        permissions = sorted(await get_effective_permissions(db, _Principal()))
+
     return {
         "id": str(user.id),
         "email": user.email,
@@ -91,6 +104,7 @@ async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
         "tenant_id": str(user.tenant_id) if user.tenant_id else None,
         "tenant_slug": tenant_slug,
         "totp_enabled": user.totp_enabled,
+        "permissions": permissions,
     }
 
 

@@ -10,6 +10,22 @@ from app.services import user as user_service
 router = APIRouter()
 
 
+@router.get("/roles")
+async def list_roles(
+    _: CurrentUser = Depends(require_permission("users:write")),
+):
+    """Built-in role catalogue with the module permissions each role grants —
+    lets the admin UI explain module visibility per role (SRS 4.3)."""
+    from app.core.permissions import DEFAULT_ROLE_MATRIX, MODULES
+    return {
+        "modules": MODULES,
+        "roles": [
+            {"key": role, "permissions": sorted(perms)}
+            for role, perms in DEFAULT_ROLE_MATRIX.items()
+        ],
+    }
+
+
 @router.get("", response_model=List[UserResponse])
 async def list_users(
     offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),

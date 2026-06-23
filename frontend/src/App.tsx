@@ -11,6 +11,7 @@ import {
   ShoppingCartOutlined,
   CloudServerOutlined,
   ApartmentOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +23,7 @@ import ServiceTicketsPage from "./pages/ServiceTicketsPage";
 import LeadsPage from "./pages/LeadsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import PaymentsPage from "./pages/PaymentsPage";
+import UsersPage from "./pages/UsersPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -37,14 +39,17 @@ import type { AppDispatch, RootState } from "./store";
 
 const { Header, Sider, Content } = Layout;
 
+// `perm` gates menu visibility against the user's effective permissions from
+// /auth/me. Items without a perm are always shown (e.g. Dashboard).
 const tenantMenu = [
   { key: "/dashboard",        icon: <DashboardOutlined />,    label: "Dashboard" },
-  { key: "/customers",        icon: <TeamOutlined />,         label: "Customers" },
-  { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts" },
-  { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets" },
-  { key: "/leads",            icon: <AuditOutlined />,        label: "Leads" },
-  { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices" },
-  { key: "/payments",         icon: <DollarOutlined />,       label: "Payments" },
+  { key: "/customers",        icon: <TeamOutlined />,         label: "Customers",       perm: "customers:read" },
+  { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts",   perm: "amc:read" },
+  { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
+  { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
+  { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
+  { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
+  { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
 ];
 
 const platformMenu = [
@@ -69,7 +74,15 @@ function ProtectedLayout() {
 
   const isPlatformAdmin = !!user?.is_platform_admin;
   const onPlatform = location.pathname.startsWith("/platform");
-  const items = isPlatformAdmin && onPlatform ? platformMenu : tenantMenu;
+  const perms = user?.permissions;
+  // Show items the user has permission for; if permissions haven't loaded yet,
+  // fall back to the legacy role check for the one admin-only item.
+  const filteredTenantMenu = tenantMenu.filter((m) => {
+    if (!m.perm) return true;
+    if (perms) return perms.includes(m.perm);
+    return isPlatformAdmin || user?.role === "admin" || user?.role === "manager";
+  });
+  const items = isPlatformAdmin && onPlatform ? platformMenu : filteredTenantMenu;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -145,6 +158,7 @@ export default function App() {
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />

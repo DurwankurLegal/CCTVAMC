@@ -9,6 +9,8 @@ from app.models.base import TenantMixin
 class TenantRole(str, Enum):
     ADMIN = "admin"
     MANAGER = "manager"
+    COORDINATOR = "coordinator"
+    ACCOUNTS = "accounts"
     TECHNICIAN = "technician"
     VIEWER = "viewer"
 

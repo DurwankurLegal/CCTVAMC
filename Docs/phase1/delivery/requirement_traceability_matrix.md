@@ -12,7 +12,7 @@ Evidence paths are repo-relative.
 |---|---|---|---|---|---|
 | 1 | Platform / tenant admin | **Done** | `api/v1/tenants.py`, `services/tenant.py`, `test_platform_admin.py` | `pages/platform/*` | ✅ Step 2: list/create/suspend/activate/cancel, usage, metrics, sub-invoices, UI + guard. Live-verified on Postgres+RLS. |
 | 2 | Customer self-service portal | **Done** | `models/customer_portal_user.py`, mig `012`, `services/portal.py`, `api/v1/portal.py`, `test_customer_portal.py` | `pages/portal/*` | ✅ Step 3: separate identity (scope=portal), customer+tenant scoping, raise/track tickets, AMC/assets/invoices, responsive UI. Live-verified on Postgres+RLS. |
-| 3 | User & RBAC admin | Backend only | `api/v1/users.py`, `models/rbac.py`, `core/permissions.py` | — | No users/roles UI. **Step 4.1** |
+| 3 | User & RBAC admin | **Done** | `api/v1/users.py` (+roles catalogue), `core/permissions.py`, `test_user_admin.py` | `pages/UsersPage.tsx` | ✅ Step 4.1: users CRUD UI, role assign, activate/deactivate, role→permission catalogue, permission-aware menu via `/auth/me`. TenantRole enum aligned w/ matrix. Live-verified. |
 | 4 | Leads | Partial | `api/v1/leads.py` | `pages/LeadsPage.tsx` | Convert flow in UI; follow-up notif. |
 | 5 | Customers & sites | Partial | `api/v1/customers.py` | `pages/CustomersPage.tsx` | Sites/contacts UI depth. |
 | 6 | Vendors & procurement | Backend only | `api/v1/vendors.py`, `services/vendor.py` | — | No vendor/PO/payable UI. **Step 4.2** |
