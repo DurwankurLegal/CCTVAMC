@@ -54,7 +54,7 @@ Evidence paths are repo-relative.
 |---|---|---|
 | Backend integration | Done | `backend/tests/integration/*` (33 passing) |
 | Backend unit | Partial | `backend/tests/unit/*` |
-| Frontend | Not started | none — harness gap (**Step 9**) |
+| Frontend | **Started** | Vitest + RTL + jsdom harness; `utils/menu.test.ts` (6), `pages/LoginPage.test.tsx` (1). Expand per-form next. |
 | Mobile | Not started | none (**Step 9**) |
 | E2E | Not started | none (**Step 9/10**) |
 

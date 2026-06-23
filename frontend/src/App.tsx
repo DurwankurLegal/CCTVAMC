@@ -51,6 +51,7 @@ import PortalCoveragePage from "./pages/portal/PortalCoveragePage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import { logout, fetchMe } from "./store/authSlice";
 import type { AppDispatch, RootState } from "./store";
+import { filterTenantMenu } from "./utils/menu";
 
 const { Header, Sider, Content } = Layout;
 
@@ -96,15 +97,7 @@ function ProtectedLayout() {
 
   const isPlatformAdmin = !!user?.is_platform_admin;
   const onPlatform = location.pathname.startsWith("/platform");
-  const perms = user?.permissions;
-  // Show items the user has permission for; if permissions haven't loaded yet,
-  // fall back to the legacy role check for the one admin-only item.
-  const filteredTenantMenu = tenantMenu.filter((m) => {
-    if (!m.perm) return true;
-    if (perms) return perms.includes(m.perm);
-    return isPlatformAdmin || user?.role === "admin" || user?.role === "manager";
-  });
-  const items = isPlatformAdmin && onPlatform ? platformMenu : filteredTenantMenu;
+  const items = isPlatformAdmin && onPlatform ? platformMenu : filterTenantMenu(tenantMenu, user);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
