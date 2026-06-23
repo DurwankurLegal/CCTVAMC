@@ -17,6 +17,7 @@ import {
   SolutionOutlined,
   BuildOutlined,
   CarOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -34,6 +35,7 @@ import InventoryPage from "./pages/InventoryPage";
 import QuotationsPage from "./pages/QuotationsPage";
 import InstallationsPage from "./pages/InstallationsPage";
 import EngineerVisitsPage from "./pages/EngineerVisitsPage";
+import ReportsPage from "./pages/ReportsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -64,6 +66,7 @@ const tenantMenu = [
   { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
   { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
+  { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
 ];
 
@@ -179,6 +182,7 @@ export default function App() {
           <Route path="/quotations" element={<QuotationsPage />} />
           <Route path="/installations" element={<InstallationsPage />} />
           <Route path="/visits" element={<EngineerVisitsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />

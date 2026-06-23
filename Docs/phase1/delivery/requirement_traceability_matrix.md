@@ -29,7 +29,7 @@ Evidence paths are repo-relative.
 | 17 | Payments | Partial | `api/v1/payments.py` | `pages/PaymentsPage.tsx` | — |
 | 18 | Documents & storage | Backend only | `api/v1/documents.py`, `services/storage.py` | — | No document UI. **Step 4.7** |
 | 19 | Notifications & templates | Partial | `services/notification.py`, `notification_events.py` | — | Only 4/10 events wired; no in-app center. **Step 7** |
-| 20 | Reports & exports | Backend only | `api/v1/reports.py`, `services/reports.py` | — | 6 reports, no UI; add missing. **Step 5** |
+| 20 | Reports & exports | **Done** | `api/v1/reports.py` (+catalogue), `services/reports.py` (10 reports), `test_reports.py` | `pages/ReportsPage.tsx` | ✅ Step 5: 6 new reports, report runner UI, CSV/XLSX/PDF export (PDF degrades to 503 if renderer missing). Live-verified. |
 | 21 | Dashboards | Partial | `reports.dashboard_kpis` | `pages/DashboardPage.tsx` | Role-aware dashboards. **Step 5** |
 
 ## B. TAD cross-cutting requirements
@@ -40,7 +40,7 @@ Evidence paths are repo-relative.
 | C2 | Tenant isolation (app + RLS) | Done | `models/base.py`, `repositories/base.py`, `test_rls_postgres.py`, `test_tenant_isolation.py` | Customer-scope layer pending (**Step 3/8**) |
 | C3 | Audit chain | Done | `services/audit.py`, `test_audit_log.py` | Confirm coverage on all mutations. **Step 8** |
 | C4 | Notification engine | Partial | `services/notification.py` | Event wiring + retries. **Step 7** |
-| C5 | Reporting | Backend only | `services/reports.py` | Expand + UI. **Step 5** |
+| C5 | Reporting | **Done** | `services/reports.py`, `pages/ReportsPage.tsx` | ✅ Step 5: expanded report set + runner UI + exports. |
 | C6 | Offline mobile sync | Needs hardening | `mobile/src/services/syncManager.ts` | LWW → conflict detection; sync status UI. **Step 6** |
 | C7 | Secure mobile storage | Needs hardening | `mobile/src/services/apiClient.ts` (AsyncStorage) | Keychain/Keystore. **Step 6** |
 | C8 | Object storage isolation | Partial | `services/storage.py` | Tenant-prefix verification. **Step 8** |

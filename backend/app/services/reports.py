@@ -122,6 +122,85 @@ async def inventory_consumption(db: AsyncSession, tenant_id: UUID) -> list:
     return [{"item_id": str(i), "consumed": abs(int(q))} for i, q in rows]
 
 
+async def amc_renewal_pipeline(db: AsyncSession, tenant_id: UUID, window_days: int = 90) -> list:
+    """Active AMC contracts expiring within `window_days` — renewal pipeline."""
+    today = date.today()
+    horizon = today + timedelta(days=window_days)
+    rows = (await db.execute(
+        select(AMCContract.contract_number, AMCContract.customer_id,
+               AMCContract.end_date, AMCContract.annual_amount, AMCContract.status)
+        .where(AMCContract.tenant_id == tenant_id,
+               AMCContract.status.in_([AMCStatus.ACTIVE, "expiring"]),
+               AMCContract.end_date <= horizon)
+        .order_by(AMCContract.end_date)
+    )).all()
+    return [{"contract_number": cn, "customer_id": str(cid), "end_date": str(ed),
+             "days_to_expiry": (ed - today).days, "annual_amount": float(amt), "status": st}
+            for cn, cid, ed, amt, st in rows]
+
+
+async def overdue_receivables(db: AsyncSession, tenant_id: UUID) -> list:
+    """Unpaid/partly-paid invoices past their due date."""
+    today = date.today()
+    rows = (await db.execute(
+        select(Invoice.invoice_number, Invoice.customer_id, Invoice.due_date,
+               Invoice.total_amount, Invoice.amount_paid)
+        .where(Invoice.tenant_id == tenant_id,
+               Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
+               Invoice.due_date < today)
+        .order_by(Invoice.due_date)
+    )).all()
+    return [{"invoice_number": inv, "customer_id": str(cid), "due_date": str(dd),
+             "days_overdue": (today - dd).days if dd else None,
+             "balance": float(tot) - float(paid)}
+            for inv, cid, dd, tot, paid in rows]
+
+
+async def payment_collection(db: AsyncSession, tenant_id: UUID) -> list:
+    """Payments collected grouped by mode."""
+    rows = (await db.execute(
+        select(Payment.mode, func.count(), func.coalesce(func.sum(Payment.amount), 0))
+        .where(Payment.tenant_id == tenant_id)
+        .group_by(Payment.mode)
+    )).all()
+    return [{"mode": m, "count": n, "total_collected": float(amt)} for m, n, amt in rows]
+
+
+async def installation_pipeline(db: AsyncSession, tenant_id: UUID) -> list:
+    """Installation work orders grouped by status."""
+    from app.models.installation import Installation
+    rows = (await db.execute(
+        select(Installation.status, func.count())
+        .where(Installation.tenant_id == tenant_id)
+        .group_by(Installation.status)
+    )).all()
+    return [{"status": s, "count": n} for s, n in rows]
+
+
+async def purchase_orders_report(db: AsyncSession, tenant_id: UUID) -> list:
+    """Purchase orders grouped by status with value."""
+    from app.models.vendor import PurchaseOrder
+    rows = (await db.execute(
+        select(PurchaseOrder.status, func.count(),
+               func.coalesce(func.sum(PurchaseOrder.total_amount), 0))
+        .where(PurchaseOrder.tenant_id == tenant_id)
+        .group_by(PurchaseOrder.status)
+    )).all()
+    return [{"status": s, "count": n, "total_value": float(amt)} for s, n, amt in rows]
+
+
+async def inventory_valuation(db: AsyncSession, tenant_id: UUID) -> list:
+    """Current stock valuation per item (current_stock × unit_cost)."""
+    from app.models.inventory import InventoryItem
+    rows = (await db.execute(
+        select(InventoryItem.name, InventoryItem.current_stock, InventoryItem.unit_cost)
+        .where(InventoryItem.tenant_id == tenant_id, InventoryItem.is_active == True)
+    )).all()
+    return [{"item": name, "current_stock": int(stock or 0),
+             "unit_cost": float(cost or 0), "value": float((stock or 0) * float(cost or 0))}
+            for name, stock, cost in rows]
+
+
 # ── Export helpers (CSV / Excel / PDF) ────────────────────────
 def to_csv(rows: list[dict]) -> bytes:
     import csv, io
