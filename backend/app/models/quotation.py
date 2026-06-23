@@ -1,6 +1,7 @@
 import uuid
+from datetime import date
 from enum import Enum
-from sqlalchemy import UUID, String, ForeignKey, Numeric, JSON, Text, Boolean
+from sqlalchemy import UUID, String, ForeignKey, Numeric, JSON, Text, Boolean, Date
 from sqlalchemy.orm import mapped_column, Mapped
 from app.core.database import Base
 from app.models.base import TenantMixin
@@ -28,6 +29,6 @@ class Quotation(Base, TenantMixin):
     igst_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     terms: Mapped[str] = mapped_column(Text, nullable=True)
-    valid_until: Mapped[str] = mapped_column(String(20), nullable=True)
+    valid_until: Mapped[date] = mapped_column(Date, nullable=True)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

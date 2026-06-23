@@ -15,15 +15,15 @@ Evidence paths are repo-relative.
 | 3 | User & RBAC admin | **Done** | `api/v1/users.py` (+roles catalogue), `core/permissions.py`, `test_user_admin.py` | `pages/UsersPage.tsx` | ✅ Step 4.1: users CRUD UI, role assign, activate/deactivate, role→permission catalogue, permission-aware menu via `/auth/me`. TenantRole enum aligned w/ matrix. Live-verified. |
 | 4 | Leads | Partial | `api/v1/leads.py` | `pages/LeadsPage.tsx` | Convert flow in UI; follow-up notif. |
 | 5 | Customers & sites | Partial | `api/v1/customers.py` | `pages/CustomersPage.tsx` | Sites/contacts UI depth. |
-| 6 | Vendors & procurement | Backend only | `api/v1/vendors.py`, `services/vendor.py` | — | No vendor/PO/payable UI. **Step 4.2** |
-| 7 | Inventory & reorder | Backend only | `api/v1/inventory.py`, `services/inventory.py` | — | No inventory UI. **Step 4.3** |
-| 8 | Quotations | Backend only | `api/v1/quotations.py` | — | No quotation UI. **Step 4.4** |
-| 9 | Sales orders | Backend only | `api/v1/sales_orders.py` | — | No sales-order UI. **Step 4.4** |
+| 6 | Vendors & procurement | **Done** | `api/v1/vendors.py` | `pages/VendorsPage.tsx` | ✅ Step 4.2: vendor CRUD, PO create, vendor payment, reorder. Live-smoke 200. |
+| 7 | Inventory & reorder | **Done** | `api/v1/inventory.py` | `pages/InventoryPage.tsx` | ✅ Step 4.3: item CRUD, stock adjust, low-stock view. Live-smoke 200. |
+| 8 | Quotations | **Done** | `api/v1/quotations.py` | `pages/QuotationsPage.tsx` | ✅ Step 4.4: create (GST lines), approve/reject, convert-to-AMC. Fixed valid_until date bug; live-verified. |
+| 9 | Sales orders | **Done** | `api/v1/sales_orders.py` | `pages/QuotationsPage.tsx` | ✅ Step 4.4: sales order list/create. Live-smoke 200. |
 | 10 | AMC contracts | Partial | `api/v1/amc.py`, `services/amc.py` | `pages/AMCPage.tsx` | Activate/PM schedule actions in UI. |
 | 11 | PM schedules | Backend only | `services/pm_schedule.py`, `models/pm_schedule.py` | — | Surface PM schedule in AMC UI. |
-| 12 | Installations & handover | Backend only | `api/v1/installations.py` | — | No installation UI + handover OTP. **Step 4.5** |
+| 12 | Installations & handover | **Done** | `api/v1/installations.py` | `pages/InstallationsPage.tsx` | ✅ Step 4.5: work order, survey, status flow, handover OTP + handover. Live-smoke 200. |
 | 13 | Service tickets | Partial | `api/v1/service_tickets.py` | `pages/ServiceTicketsPage.tsx` | Assign/comments/visit history UI. |
-| 14 | Engineer visits & media | Backend only | `api/v1/engineer_visits.py` | — | No visit UI. **Step 4.6** |
+| 14 | Engineer visits & media | **Done** | `api/v1/engineer_visits.py` | `pages/EngineerVisitsPage.tsx` | ✅ Step 4.6: visit list + detail (check-in/out, parts, photos, signature). Read-focused. |
 | 15 | Assets & warranties | Backend only | `api/v1/assets.py`, `api/v1/documents.py` | — | No asset/document UI. **Step 4.7** |
 | 16 | Invoicing (GST) | Partial | `api/v1/invoices.py`, `services/gst.py`, `services/invoice.py` | `pages/InvoicesPage.tsx` | Verified by `test_invoice_gst.py`. |
 | 17 | Payments | Partial | `api/v1/payments.py` | `pages/PaymentsPage.tsx` | — |
