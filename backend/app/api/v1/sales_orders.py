@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.models.sales_order import SalesOrder, SalesOrderStatus
+from app.services.sequences import next_number
 
 router = APIRouter()
 
@@ -31,14 +32,6 @@ class SalesOrderResponse(BaseModel):
     order_date: date
     total_amount: float
     is_active: bool
-
-
-_SO_SEQ: dict[UUID, int] = {}
-
-
-def _next_order_number(tenant_id: UUID) -> str:
-    _SO_SEQ[tenant_id] = _SO_SEQ.get(tenant_id, 0) + 1
-    return f"SO-{str(tenant_id)[:4].upper()}-{_SO_SEQ[tenant_id]:05d}"
 
 
 @router.get("", response_model=List[SalesOrderResponse])
@@ -65,7 +58,7 @@ async def create_order(
     )
     order = SalesOrder(
         tenant_id=current_user.tenant_id,
-        order_number=_next_order_number(current_user.tenant_id),
+        order_number=await next_number(db, current_user.tenant_id, "sales_order", "SO"),
         customer_id=payload.customer_id,
         quotation_id=payload.quotation_id,
         order_date=payload.order_date,

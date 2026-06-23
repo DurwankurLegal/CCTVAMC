@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.schemas.engineer_visit import (
     EngineerVisitCreate, EngineerVisitResponse,
-    CheckinRequest, CheckoutRequest,
+    EngineerVisitUpdate, CheckinRequest, CheckoutRequest,
 )
 from app.services import engineer_visit as visit_service
 from app.services import document as document_service
@@ -50,6 +50,16 @@ async def create_visit(
     return await visit_service.create_visit(
         db, current_user.tenant_id, current_user.user_id, payload
     )
+
+
+@router.patch("/{visit_id}", response_model=EngineerVisitResponse)
+@router.put("/{visit_id}", response_model=EngineerVisitResponse)
+async def update_visit(
+    visit_id: UUID, payload: EngineerVisitUpdate, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("engineer_visits:write")),
+):
+    """Partial update — admin/manager can correct visit details and override timestamps."""
+    return await visit_service.update_visit(db, current_user.tenant_id, visit_id, payload)
 
 
 @router.get("/{visit_id}", response_model=EngineerVisitResponse)

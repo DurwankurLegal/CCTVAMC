@@ -23,6 +23,8 @@ interface AMCContract {
 
 const STATUSES = ["draft", "active", "expiring", "renewed", "terminated"];
 
+import { useParsedSearchParams } from "../utils/navigation";
+
 export default function AMCPage() {
   const [items, setItems] = useState<AMCContract[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,8 @@ export default function AMCPage() {
   const [editing, setEditing] = useState<AMCContract | null>(null);
   const [form] = Form.useForm();
   const customers = useSelector((s: RootState) => s.customers.items);
+
+  const { status, contract_number } = useParsedSearchParams();
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +47,12 @@ export default function AMCPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const filteredItems = items.filter(item => {
+    if (status && item.status !== status) return false;
+    if (contract_number && item.contract_number !== contract_number) return false;
+    return true;
+  });
 
   const openCreate = () => { setEditing(null); form.resetFields(); setOpen(true); };
   const openEdit = (row: AMCContract) => {
@@ -126,7 +136,7 @@ export default function AMCPage() {
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Contract</Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
+      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
 
       <Modal
         title={editing ? "Edit AMC Contract" : "New AMC Contract"}

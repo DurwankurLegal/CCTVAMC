@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import apiClient from "../api/client";
+import apiClient, { apiErrorMessage } from "../api/client";
 
 interface Customer {
   id: string;
@@ -19,16 +19,27 @@ export const fetchCustomers = createAsyncThunk("customers/list", async () => {
   return data as Customer[];
 });
 
-export const createCustomer = createAsyncThunk("customers/create", async (payload: Omit<Customer, "id">) => {
-  const { data } = await apiClient.post("/customers", payload);
-  return data as Customer;
-});
+export const createCustomer = createAsyncThunk(
+  "customers/create",
+  async (payload: Omit<Customer, "id">, { rejectWithValue }) => {
+    try {
+      const { data } = await apiClient.post("/customers", payload);
+      return data as Customer;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, "Failed to create customer"));
+    }
+  },
+);
 
 export const updateCustomer = createAsyncThunk(
   "customers/update",
-  async ({ id, changes }: { id: string; changes: Partial<Customer> }) => {
-    const { data } = await apiClient.patch(`/customers/${id}`, changes);
-    return data as Customer;
+  async ({ id, changes }: { id: string; changes: Partial<Customer> }, { rejectWithValue }) => {
+    try {
+      const { data } = await apiClient.patch(`/customers/${id}`, changes);
+      return data as Customer;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, "Failed to update customer"));
+    }
   },
 );
 

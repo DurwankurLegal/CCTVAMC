@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -7,7 +8,22 @@ from app.core.database import get_db
 from app.core.security import decode_token
 from app.core.context import set_actor
 
-bearer_scheme = HTTPBearer()
+# auto_error=False so a *missing* Authorization header yields 401 (handled
+# below) rather than HTTPBearer's default 403 — 401 is the correct status for
+# "no credentials supplied" and lets clients trigger re-login.
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _require_credentials(
+    credentials: Optional[HTTPAuthorizationCredentials],
+) -> HTTPAuthorizationCredentials:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials
 
 
 class CurrentUser:
@@ -19,8 +35,9 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> CurrentUser:
+    credentials = _require_credentials(credentials)
     token = credentials.credentials
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
@@ -118,9 +135,10 @@ class PortalUser:
 
 
 async def get_current_portal_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> PortalUser:
     """Validate a portal-scoped token. Rejects staff tokens (no portal scope)."""
+    credentials = _require_credentials(credentials)
     payload = decode_token(credentials.credentials)
     if not payload or payload.get("type") != "access" or payload.get("scope") != "portal":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid portal token")

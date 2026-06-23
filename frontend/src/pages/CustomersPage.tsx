@@ -25,6 +25,8 @@ const statusColor: Record<string, string> = {
 
 interface Row { id: string; name: string; category: string; status?: string; phone?: string; email?: string; }
 
+import { useParsedSearchParams } from "../utils/navigation";
+
 export default function CustomersPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((s: RootState) => s.customers);
@@ -32,8 +34,16 @@ export default function CustomersPage() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  
+  const { status, category } = useParsedSearchParams();
 
   useEffect(() => { dispatch(fetchCustomers()); }, [dispatch]);
+
+  const filteredItems = items.filter(item => {
+    if (status && (item.status || "active") !== status) return false;
+    if (category && item.category !== category) return false;
+    return true;
+  });
 
   const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ status: "active" }); setOpen(true); };
   const openEdit = (row: Row) => { setEditing(row); form.setFieldsValue(row); setOpen(true); };
@@ -52,7 +62,10 @@ export default function CustomersPage() {
       form.resetFields();
       setOpen(false);
     } catch (e: any) {
-      message.error(e?.message || "Save failed");
+      // Form validation errors are objects (errorFields); thrown thunk errors
+      // arrive as a readable string via rejectWithValue.
+      if (e?.errorFields) return; // inline field errors already shown
+      message.error(typeof e === "string" ? e : e?.message || "Save failed");
     } finally {
       setSaving(false);
     }
@@ -84,7 +97,7 @@ export default function CustomersPage() {
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Customer</Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
+      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
 
       <Modal
         title={editing ? "Edit Customer" : "Add Customer"}
@@ -104,7 +117,9 @@ export default function CustomersPage() {
             <Select>{STATUSES.map(s => <Option key={s.value} value={s.value}>{s.label}</Option>)}</Select>
           </Form.Item>
           <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email"><Input type="email" /></Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}>
+            <Input type="email" />
+          </Form.Item>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
           <Form.Item name="contact_person_name" label="Contact Person"><Input /></Form.Item>
         </Form>
