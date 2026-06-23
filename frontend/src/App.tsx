@@ -15,6 +15,8 @@ import {
   ShopOutlined,
   DatabaseOutlined,
   SolutionOutlined,
+  BuildOutlined,
+  CarOutlined,
 } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,6 +32,8 @@ import UsersPage from "./pages/UsersPage";
 import VendorsPage from "./pages/VendorsPage";
 import InventoryPage from "./pages/InventoryPage";
 import QuotationsPage from "./pages/QuotationsPage";
+import InstallationsPage from "./pages/InstallationsPage";
+import EngineerVisitsPage from "./pages/EngineerVisitsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -53,6 +57,8 @@ const tenantMenu = [
   { key: "/quotations",       icon: <SolutionOutlined />,     label: "Quotations",      perm: "quotations:read" },
   { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts",   perm: "amc:read" },
   { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
+  { key: "/visits",           icon: <CarOutlined />,          label: "Engineer Visits", perm: "engineer_visits:read" },
+  { key: "/installations",    icon: <BuildOutlined />,        label: "Installations",   perm: "installations:read" },
   { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
   { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
   { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
@@ -171,6 +177,8 @@ export default function App() {
           <Route path="/vendors" element={<VendorsPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/quotations" element={<QuotationsPage />} />
+          <Route path="/installations" element={<InstallationsPage />} />
+          <Route path="/visits" element={<EngineerVisitsPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />
