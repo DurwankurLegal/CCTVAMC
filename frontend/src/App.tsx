@@ -19,6 +19,7 @@ import {
   CarOutlined,
   BarChartOutlined,
   BellOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
 import { useEffect } from "react";
@@ -39,6 +40,7 @@ import InstallationsPage from "./pages/InstallationsPage";
 import EngineerVisitsPage from "./pages/EngineerVisitsPage";
 import ReportsPage from "./pages/ReportsPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import AssetsPage from "./pages/AssetsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -65,6 +67,7 @@ const tenantMenu = [
   { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
   { key: "/visits",           icon: <CarOutlined />,          label: "Engineer Visits", perm: "engineer_visits:read" },
   { key: "/installations",    icon: <BuildOutlined />,        label: "Installations",   perm: "installations:read" },
+  { key: "/assets",           icon: <VideoCameraOutlined />,  label: "Assets",          perm: "assets:read" },
   { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
   { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
   { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
@@ -180,6 +183,7 @@ export default function App() {
           <Route path="/quotations" element={<QuotationsPage />} />
           <Route path="/installations" element={<InstallationsPage />} />
           <Route path="/visits" element={<EngineerVisitsPage />} />
+          <Route path="/assets" element={<AssetsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route element={<PlatformGuard />}>

@@ -24,10 +24,10 @@ Evidence paths are repo-relative.
 | 12 | Installations & handover | **Done** | `api/v1/installations.py` | `pages/InstallationsPage.tsx` | ✅ Step 4.5: work order, survey, status flow, handover OTP + handover. Live-smoke 200. |
 | 13 | Service tickets | Partial | `api/v1/service_tickets.py` | `pages/ServiceTicketsPage.tsx` | Assign/comments/visit history UI. |
 | 14 | Engineer visits & media | **Done** | `api/v1/engineer_visits.py` | `pages/EngineerVisitsPage.tsx` | ✅ Step 4.6: visit list + detail (check-in/out, parts, photos, signature). Read-focused. |
-| 15 | Assets & warranties | Backend only | `api/v1/assets.py`, `api/v1/documents.py` | — | No asset/document UI. **Step 4.7** |
+| 15 | Assets & warranties | **Done** | `api/v1/assets.py`, `api/v1/customers.py` (+/sites) | `pages/AssetsPage.tsx` | ✅ Step 4.7: asset CRUD, warranty expiry highlighting, per-asset docs. Live-verified. |
 | 16 | Invoicing (GST) | Partial | `api/v1/invoices.py`, `services/gst.py`, `services/invoice.py` | `pages/InvoicesPage.tsx` | Verified by `test_invoice_gst.py`. |
 | 17 | Payments | Partial | `api/v1/payments.py` | `pages/PaymentsPage.tsx` | — |
-| 18 | Documents & storage | Backend only | `api/v1/documents.py`, `services/storage.py` | — | No document UI. **Step 4.7** |
+| 18 | Documents & storage | **Done** | `api/v1/documents.py`, `services/storage.py` | `pages/AssetsPage.tsx` (docs modal) | ✅ Step 4.7: upload/list documents per entity; tenant-prefixed keys verified live. |
 | 19 | Notifications & templates | **Done** | `services/notification.py`, `notification_events.py`, `test_notification_events.py` | `components/NotificationBell.tsx`, `pages/NotificationsPage.tsx` | ✅ Step 7: +4 events wired (quote approve/reject, low stock, PO), in-app bell + center, templates CRUD + logs, per-tenant template seed. Live-verified render. |
 | 20 | Reports & exports | **Done** | `api/v1/reports.py` (+catalogue), `services/reports.py` (10 reports), `test_reports.py` | `pages/ReportsPage.tsx` | ✅ Step 5: 6 new reports, report runner UI, CSV/XLSX/PDF export (PDF degrades to 503 if renderer missing). Live-verified. |
 | 21 | Dashboards | Partial | `reports.dashboard_kpis` | `pages/DashboardPage.tsx` | Role-aware dashboards. **Step 5** |
