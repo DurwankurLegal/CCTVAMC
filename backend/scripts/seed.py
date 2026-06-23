@@ -65,6 +65,35 @@ DEFAULT_PASSWORD = os.getenv("SEED_DEFAULT_PASSWORD", "Passw0rd@123")
 TODAY = date.today()
 
 
+async def seed_templates(session, tenant_id) -> None:
+    """Seed default in-app notification templates per tenant (SRS 4.17)."""
+    from app.models.notification import NotificationTemplate, NotificationChannel
+    # Bodies use the engine's Handlebars-style {{placeholder}} syntax.
+    defaults = {
+        "ticket_assigned": ("Ticket assigned", "Ticket {{ticket_number}} ({{priority}}) assigned to you."),
+        "customer_ticket_created": ("New customer ticket", "Customer raised {{ticket_number}} ({{priority}}): {{complaint}}"),
+        "customer_ticket_comment": ("Customer replied", "New customer comment on ticket {{ticket_id}}."),
+        "sla_breach": ("SLA breached", "Ticket {{ticket_number}} has breached its SLA."),
+        "quote_approved": ("Quotation approved", "Quotation {{quotation_number}} was approved."),
+        "quote_rejected": ("Quotation rejected", "Quotation {{quotation_number}} was rejected."),
+        "low_stock": ("Low stock alert", "{{item}} is low: {{current_stock}} (reorder at {{reorder_level}})."),
+        "purchase_order_created": ("Purchase order created", "PO {{po_number}} for {{vendor}} (₹{{total}})."),
+        "installation_handover": ("Installation handover", "Installation handover completed."),
+        "amc_expiry": ("AMC expiring", "AMC contract is expiring soon."),
+        "payment_due": ("Payment due", "Invoice payment is due."),
+    }
+    existing = (await session.execute(
+        select(NotificationTemplate).where(NotificationTemplate.tenant_id == tenant_id).limit(1)
+    )).scalar_one_or_none()
+    if existing is not None:
+        return
+    for event_type, (subject, body) in defaults.items():
+        session.add(NotificationTemplate(
+            tenant_id=tenant_id, event_type=event_type,
+            channel=NotificationChannel.IN_APP, subject=subject, body=body, is_active=True))
+    print(f"✔ Seeded {len(defaults)} notification templates")
+
+
 async def ensure_user(session, tenant_id, email, full_name, role,
                       password=DEFAULT_PASSWORD, is_platform_admin=False):
     """Idempotently create a user (by email). Returns the user."""
@@ -306,6 +335,7 @@ async def seed() -> None:
                           TenantRole.TECHNICIAN)
         # "accounts" is a custom RBAC role string (billing user) — see permissions matrix.
         await ensure_user(session, tenant.id, "billing@durwankur.ai", "Billing User", "accounts")
+        await seed_templates(session, tenant.id)
 
         await session.commit()
 
@@ -329,6 +359,7 @@ async def seed() -> None:
                           TenantRole.ADMIN)
         await ensure_user(session, tenant2.id, "tech@skyline.in", "Skyline Technician",
                           TenantRole.TECHNICIAN)
+        await seed_templates(session, tenant2.id)
         await session.commit()
 
         # ── Sample data (primary tenant) ──────────────────────

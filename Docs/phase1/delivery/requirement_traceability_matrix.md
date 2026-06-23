@@ -28,7 +28,7 @@ Evidence paths are repo-relative.
 | 16 | Invoicing (GST) | Partial | `api/v1/invoices.py`, `services/gst.py`, `services/invoice.py` | `pages/InvoicesPage.tsx` | Verified by `test_invoice_gst.py`. |
 | 17 | Payments | Partial | `api/v1/payments.py` | `pages/PaymentsPage.tsx` | — |
 | 18 | Documents & storage | Backend only | `api/v1/documents.py`, `services/storage.py` | — | No document UI. **Step 4.7** |
-| 19 | Notifications & templates | Partial | `services/notification.py`, `notification_events.py` | — | Only 4/10 events wired; no in-app center. **Step 7** |
+| 19 | Notifications & templates | **Done** | `services/notification.py`, `notification_events.py`, `test_notification_events.py` | `components/NotificationBell.tsx`, `pages/NotificationsPage.tsx` | ✅ Step 7: +4 events wired (quote approve/reject, low stock, PO), in-app bell + center, templates CRUD + logs, per-tenant template seed. Live-verified render. |
 | 20 | Reports & exports | **Done** | `api/v1/reports.py` (+catalogue), `services/reports.py` (10 reports), `test_reports.py` | `pages/ReportsPage.tsx` | ✅ Step 5: 6 new reports, report runner UI, CSV/XLSX/PDF export (PDF degrades to 503 if renderer missing). Live-verified. |
 | 21 | Dashboards | Partial | `reports.dashboard_kpis` | `pages/DashboardPage.tsx` | Role-aware dashboards. **Step 5** |
 
@@ -39,7 +39,7 @@ Evidence paths are repo-relative.
 | C1 | RBAC enforcement | Partial | `core/deps.py`, `core/permissions.py` | Route-by-route authz audit. **Step 8** |
 | C2 | Tenant isolation (app + RLS) | Done | `models/base.py`, `repositories/base.py`, `test_rls_postgres.py`, `test_tenant_isolation.py` | Customer-scope layer pending (**Step 3/8**) |
 | C3 | Audit chain | Done | `services/audit.py`, `test_audit_log.py` | Confirm coverage on all mutations. **Step 8** |
-| C4 | Notification engine | Partial | `services/notification.py` | Event wiring + retries. **Step 7** |
+| C4 | Notification engine | **Done** | `services/notification.py`, `pages/NotificationsPage.tsx` | ✅ Step 7: events wired, in-app center, templates seeded. |
 | C5 | Reporting | **Done** | `services/reports.py`, `pages/ReportsPage.tsx` | ✅ Step 5: expanded report set + runner UI + exports. |
 | C6 | Offline mobile sync | Needs hardening | `mobile/src/services/syncManager.ts` | LWW → conflict detection; sync status UI. **Step 6** |
 | C7 | Secure mobile storage | Needs hardening | `mobile/src/services/apiClient.ts` (AsyncStorage) | Keychain/Keystore. **Step 6** |

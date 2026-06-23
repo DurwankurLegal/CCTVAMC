@@ -18,7 +18,9 @@ import {
   BuildOutlined,
   CarOutlined,
   BarChartOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
+import NotificationBell from "./components/NotificationBell";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import LoginPage from "./pages/LoginPage";
@@ -36,6 +38,7 @@ import QuotationsPage from "./pages/QuotationsPage";
 import InstallationsPage from "./pages/InstallationsPage";
 import EngineerVisitsPage from "./pages/EngineerVisitsPage";
 import ReportsPage from "./pages/ReportsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -67,6 +70,7 @@ const tenantMenu = [
   { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
   { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
+  { key: "/notifications",    icon: <BellOutlined />,         label: "Notifications",   perm: "notifications:write" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
 ];
 
@@ -126,7 +130,8 @@ function ProtectedLayout() {
       </Sider>
       <Layout>
         <Header style={{ background: token.colorBgContainer, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
-          <span style={{ marginRight: 16, color: token.colorTextSecondary }}>{user?.email}</span>
+          {!onPlatform && <NotificationBell />}
+          <span style={{ margin: "0 16px", color: token.colorTextSecondary }}>{user?.email}</span>
           <Button
             icon={<LogoutOutlined />}
             type="text"
@@ -183,6 +188,7 @@ export default function App() {
           <Route path="/installations" element={<InstallationsPage />} />
           <Route path="/visits" element={<EngineerVisitsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />

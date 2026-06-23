@@ -50,6 +50,17 @@ async def adjust_stock(db: AsyncSession, tenant_id: UUID, payload: StockAdjustme
         notes=payload.notes,
     )
     await MovementRepository(db, tenant_id).create(movement)
+
+    # Alert staff when an outward movement drops stock to/below the reorder level.
+    if payload.quantity < 0 and item.current_stock <= (item.reorder_level or 0):
+        from app.services.notification import NotificationService
+        from app.services.notification_events import LOW_STOCK
+        from app.models.notification import NotificationChannel
+        await NotificationService(db, tenant_id).send(
+            LOW_STOCK, recipient="staff",
+            context={"item": item.name, "current_stock": item.current_stock,
+                     "reorder_level": item.reorder_level},
+            channel=NotificationChannel.IN_APP)
     return item
 
 
