@@ -20,4 +20,9 @@ from app.models import (  # noqa: F401
     sequence,
     auth_session,
     rbac,
+    document,
+    pm_schedule,
+    installation,
+    dashboard_snapshot,
+    ticket_comment,
 )

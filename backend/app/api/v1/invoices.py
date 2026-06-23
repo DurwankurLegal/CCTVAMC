@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
@@ -50,3 +51,15 @@ async def create_credit_note(
 ):
     """Raise a GST credit note against an existing invoice."""
     return await invoice_service.create_credit_note(db, current_user.tenant_id, invoice_id)
+
+
+@router.get("/{invoice_id}/pdf")
+async def invoice_pdf(
+    invoice_id: UUID, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Download the invoice as a GST-compliant PDF (SRS 4.13)."""
+    inv = await invoice_service.get_invoice(db, current_user.tenant_id, invoice_id)
+    pdf = invoice_service.render_pdf(inv)
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{inv.invoice_number}.pdf"'})

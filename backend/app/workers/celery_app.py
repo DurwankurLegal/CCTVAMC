@@ -33,5 +33,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.check_payment_due",
             "schedule": 86400.0,  # daily
         },
+        "generate-recurring-invoices": {
+            "task": "app.workers.tasks.generate_recurring_invoices",
+            "schedule": 86400.0,  # daily; idempotent per billing period
+        },
     },
 )

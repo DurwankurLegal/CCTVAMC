@@ -81,6 +81,90 @@ async def dashboard_kpis(db: AsyncSession, tenant_id: UUID) -> dict:
     }
 
 
+async def lead_conversion_report(db: AsyncSession, tenant_id: UUID) -> dict:
+    total = (await db.execute(
+        select(func.count()).where(Lead.tenant_id == tenant_id)
+    )).scalar() or 0
+    converted = (await db.execute(
+        select(func.count()).where(Lead.tenant_id == tenant_id, Lead.status == LeadStatus.CONVERTED)
+    )).scalar() or 0
+    return {"total_leads": total, "converted": converted,
+            "conversion_pct": round(converted / total * 100, 1) if total else 0.0}
+
+
+async def revenue_by_customer(db: AsyncSession, tenant_id: UUID) -> list:
+    rows = (await db.execute(
+        select(Invoice.customer_id, func.coalesce(func.sum(Invoice.total_amount), 0))
+        .where(Invoice.tenant_id == tenant_id)
+        .group_by(Invoice.customer_id)
+    )).all()
+    return [{"customer_id": str(c), "revenue": float(amt)} for c, amt in rows]
+
+
+async def technician_productivity(db: AsyncSession, tenant_id: UUID) -> list:
+    from app.models.engineer_visit import EngineerVisit
+    rows = (await db.execute(
+        select(EngineerVisit.technician_id, func.count())
+        .where(EngineerVisit.tenant_id == tenant_id, EngineerVisit.checkout_at.isnot(None))
+        .group_by(EngineerVisit.technician_id)
+    )).all()
+    return [{"technician_id": str(t), "completed_visits": n} for t, n in rows]
+
+
+async def inventory_consumption(db: AsyncSession, tenant_id: UUID) -> list:
+    from app.models.inventory import InventoryMovement, MovementType
+    rows = (await db.execute(
+        select(InventoryMovement.item_id, func.coalesce(func.sum(InventoryMovement.quantity), 0))
+        .where(InventoryMovement.tenant_id == tenant_id,
+               InventoryMovement.movement_type == MovementType.CONSUMPTION)
+        .group_by(InventoryMovement.item_id)
+    )).all()
+    return [{"item_id": str(i), "consumed": abs(int(q))} for i, q in rows]
+
+
+# ── Export helpers (CSV / Excel / PDF) ────────────────────────
+def to_csv(rows: list[dict]) -> bytes:
+    import csv, io
+    if not rows:
+        return b""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+    return buf.getvalue().encode()
+
+
+def to_xlsx(rows: list[dict], sheet_name: str = "Report") -> bytes:
+    import io
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet_name[:31]
+    if rows:
+        headers = list(rows[0].keys())
+        ws.append(headers)
+        for r in rows:
+            ws.append([r.get(h) for h in headers])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def to_pdf(title: str, rows: list[dict]) -> bytes:
+    from weasyprint import HTML
+    headers = list(rows[0].keys()) if rows else []
+    head_html = "".join(f"<th>{h}</th>" for h in headers)
+    body_html = "".join(
+        "<tr>" + "".join(f"<td>{r.get(h)}</td>" for h in headers) + "</tr>" for r in rows
+    )
+    html = f"""<html><head><style>
+      body{{font-family:sans-serif;font-size:11px}} h1{{font-size:16px}}
+      table{{border-collapse:collapse;width:100%}} th,td{{border:1px solid #ccc;padding:4px;text-align:left}}
+      th{{background:#0f2a43;color:#fff}}</style></head>
+      <body><h1>{title}</h1><table><tr>{head_html}</tr>{body_html}</table></body></html>"""
+    return HTML(string=html).write_pdf()
+
+
 async def ticket_sla_report(db: AsyncSession, tenant_id: UUID, from_date: date, to_date: date) -> dict:
     r = await db.execute(
         select(func.count()).where(

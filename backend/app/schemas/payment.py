@@ -15,6 +15,14 @@ class PaymentCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class PaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    payment_date: Optional[date] = None
+    mode: Optional[PaymentMode] = None
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class PaymentResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID

@@ -6,7 +6,7 @@ import sentry_sdk
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.core.middleware import RequestContextMiddleware
+from app.core.middleware import RequestContextMiddleware, RateLimitMiddleware
 from app.api.v1 import router as api_v1_router
 
 settings = get_settings()
@@ -30,6 +30,7 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestContextMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

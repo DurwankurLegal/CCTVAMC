@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
-from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse
+from app.schemas.customer import (
+    CustomerCreate, CustomerUpdate, CustomerResponse, ContactCreate, ContactResponse,
+)
 from app.services import customer as customer_service
 
 router = APIRouter()
@@ -46,3 +48,31 @@ async def update_customer(
     current_user: CurrentUser = Depends(require_permission("customers:write")),
 ):
     return await customer_service.update_customer(db, current_user.tenant_id, customer_id, payload)
+
+
+@router.get("/{customer_id}/contacts", response_model=List[ContactResponse])
+async def list_contacts(
+    customer_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    return await customer_service.list_contacts(db, current_user.tenant_id, customer_id)
+
+
+@router.post("/{customer_id}/contacts", response_model=ContactResponse, status_code=201)
+async def add_contact(
+    customer_id: UUID,
+    payload: ContactCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("customers:write")),
+):
+    return await customer_service.add_contact(db, current_user.tenant_id, customer_id, payload)
+
+
+@router.get("/{customer_id}/history")
+async def interaction_history(
+    customer_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    return await customer_service.interaction_history(db, current_user.tenant_id, customer_id)

@@ -23,8 +23,8 @@ async def test_rls_blocks_cross_tenant_rows(db: AsyncSession):
     # Seed one customer per tenant BEFORE enabling RLS.
     for tid in (t1, t2):
         await db.execute(text(
-            "INSERT INTO customers (id, tenant_id, name, category, is_active) "
-            "VALUES (:id, :tid, 'C', 'commercial', true)"
+            "INSERT INTO customers (id, tenant_id, name, category, status, is_active) "
+            "VALUES (:id, :tid, 'C', 'commercial', 'active', true)"
         ), {"id": uuid.uuid4(), "tid": tid})
 
     # Enable the tenant_isolation policy.

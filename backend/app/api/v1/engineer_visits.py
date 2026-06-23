@@ -1,6 +1,6 @@
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
@@ -9,8 +9,28 @@ from app.schemas.engineer_visit import (
     CheckinRequest, CheckoutRequest,
 )
 from app.services import engineer_visit as visit_service
+from app.services import document as document_service
 
 router = APIRouter()
+
+
+@router.post("/media", status_code=201)
+async def upload_visit_media(
+    visit_id: UUID = Form(...),
+    media_type: str = Form("photo"),   # photo | signature
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("engineer_visits:write")),
+):
+    """Endpoint the mobile app calls to sync photos/signatures captured offline."""
+    content = await file.read()
+    doc = await document_service.upload_document(
+        db, current_user.tenant_id, entity_type="visit", entity_id=visit_id,
+        doc_type=media_type, file_name=file.filename or f"{media_type}.bin",
+        content=content, content_type=file.content_type, uploaded_by=current_user.user_id,
+    )
+    await visit_service.attach_media(db, current_user.tenant_id, visit_id, media_type, doc.url)
+    return {"id": str(doc.id), "url": doc.url}
 
 
 @router.get("", response_model=List[EngineerVisitResponse])

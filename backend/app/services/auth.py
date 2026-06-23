@@ -62,7 +62,41 @@ async def login(db: AsyncSession, payload: LoginRequest) -> TokenResponse:
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
+    # Optional second factor (TOTP) — SRS 4.21.
+    if user.totp_enabled:
+        import pyotp
+        code = getattr(payload, "otp_code", None)
+        if not code or not pyotp.TOTP(user.totp_secret).verify(str(code), valid_window=1):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing 2FA code")
+
     return await _issue_tokens(db, user)
+
+
+async def enroll_2fa(db: AsyncSession, user_id: UUID, issuer: str = "CCTV AMC") -> dict:
+    """Generate a TOTP secret + provisioning URI for an authenticator app."""
+    import pyotp
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    secret = pyotp.random_base32()
+    user.totp_secret = secret
+    user.totp_enabled = False  # not active until first verify
+    await db.flush()
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=issuer)
+    return {"secret": secret, "provisioning_uri": uri}
+
+
+async def verify_2fa(db: AsyncSession, user_id: UUID, code: str) -> dict:
+    """Verify the first TOTP code and enable 2FA for the account."""
+    import pyotp
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user or not user.totp_secret:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Enroll 2FA first")
+    if not pyotp.TOTP(user.totp_secret).verify(str(code), valid_window=1):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA code")
+    user.totp_enabled = True
+    await db.flush()
+    return {"enabled": True}
 
 
 async def refresh(db: AsyncSession, payload: RefreshRequest) -> TokenResponse:

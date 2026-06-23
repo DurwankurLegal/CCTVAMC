@@ -1,5 +1,6 @@
 from uuid import UUID
 from datetime import datetime, timezone
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from app.models.engineer_visit import EngineerVisit
@@ -50,9 +51,61 @@ async def checkin(db: AsyncSession, tenant_id: UUID, visit_id: UUID,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
     if visit.checkin_at:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already checked in")
+    await _validate_geofence(db, tenant_id, visit, payload.lat, payload.lng)
     visit.checkin_at = datetime.now(timezone.utc)
     visit.checkin_lat = payload.lat
     visit.checkin_lng = payload.lng
+    return await repo.save(visit)
+
+
+# Max allowed distance (km) between technician check-in and the site.
+GEOFENCE_RADIUS_KM = 1.0
+
+
+async def _validate_geofence(db, tenant_id, visit, lat, lng):
+    """Reject a check-in that is implausibly far from the ticket's site (SRS 4.10).
+    Skips silently when coordinates are unavailable."""
+    if lat is None or lng is None or not visit.ticket_id:
+        return
+    from app.models.service_ticket import ServiceTicket
+    from app.models.customer import CustomerSite
+    ticket = (await db.execute(
+        select(ServiceTicket).where(ServiceTicket.id == visit.ticket_id,
+                                    ServiceTicket.tenant_id == tenant_id)
+    )).scalar_one_or_none()
+    if not ticket or not ticket.site_id:
+        return
+    site = (await db.execute(
+        select(CustomerSite).where(CustomerSite.id == ticket.site_id,
+                                   CustomerSite.tenant_id == tenant_id)
+    )).scalar_one_or_none()
+    if not site or site.latitude is None or site.longitude is None:
+        return
+    if _haversine_km(lat, lng, site.latitude, site.longitude) > GEOFENCE_RADIUS_KM:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Check-in location is too far from the site",
+        )
+
+
+def _haversine_km(lat1, lng1, lat2, lng2) -> float:
+    from math import radians, sin, cos, asin, sqrt
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 2 * 6371 * asin(sqrt(a))
+
+
+async def attach_media(db: AsyncSession, tenant_id: UUID, visit_id: UUID,
+                       media_type: str, url: str) -> EngineerVisit:
+    repo = VisitRepository(db, tenant_id)
+    visit = await repo.get(visit_id)
+    if not visit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
+    if media_type == "signature":
+        visit.signature_url = url
+    else:
+        visit.photo_urls = (visit.photo_urls or []) + [url]
     return await repo.save(visit)
 
 

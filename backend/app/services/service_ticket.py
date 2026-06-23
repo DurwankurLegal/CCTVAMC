@@ -15,6 +15,30 @@ class ServiceTicketRepository(TenantRepository[ServiceTicket]):
     model = ServiceTicket
 
 
+async def add_comment(db: AsyncSession, tenant_id: UUID, ticket_id: UUID, body: str, author_id):
+    from app.models.ticket_comment import TicketComment
+    from sqlalchemy import select
+    if not await ServiceTicketRepository(db, tenant_id).get(ticket_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+
+    class _Repo(TenantRepository[TicketComment]):
+        model = TicketComment
+    comment = TicketComment(ticket_id=ticket_id, body=body, author_id=author_id)
+    return await _Repo(db, tenant_id).create(comment)
+
+
+async def list_comments(db: AsyncSession, tenant_id: UUID, ticket_id: UUID):
+    from app.models.ticket_comment import TicketComment
+    from sqlalchemy import select
+    rows = await db.execute(
+        select(TicketComment).where(
+            TicketComment.tenant_id == tenant_id,
+            TicketComment.ticket_id == ticket_id,
+        ).order_by(TicketComment.created_at)
+    )
+    return list(rows.scalars().all())
+
+
 async def list_tickets(db: AsyncSession, tenant_id: UUID, offset: int, limit: int):
     repo = ServiceTicketRepository(db, tenant_id)
     return await repo.list(offset=offset, limit=limit)
