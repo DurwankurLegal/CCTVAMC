@@ -35,4 +35,5 @@ class ServiceTicketResponse(BaseModel):
     sla_due_at: Optional[datetime]
     sla_breached: bool
     resolved_at: Optional[datetime]
+    closed_at: Optional[datetime]
     created_at: datetime

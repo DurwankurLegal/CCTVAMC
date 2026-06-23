@@ -1,0 +1,153 @@
+/* Modern Design Token Variables & Custom Styling Overrides */
+
+:root {
+  /* HSL curated palettes for dark-slate theme */
+  --dashboard-bg: #0b0f19;
+  --glass-bg: rgba(22, 28, 45, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Gpu transitions */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Body Modifications if needed for premium dark aesthetic */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--dashboard-bg);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphic Components */
+.glass-card {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  border-radius: 12px !important;
+  transition: var(--transition-smooth) !important;
+}
+
+/* Interactive Card states */
+.interactive-card {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.interactive-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: var(--transition-smooth);
+  pointer-events: none;
+}
+
+.interactive-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 12px 40px 0 rgba(59, 130, 246, 0.25) !important;
+}
+
+.interactive-card:hover::after {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Critical alert glow card */
+.interactive-card-danger:hover {
+  box-shadow: 0 12px 40px 0 rgba(239, 68, 68, 0.25) !important;
+}
+.interactive-card-danger:hover::after {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Warning alert glow card */
+.interactive-card-warning:hover {
+  box-shadow: 0 12px 40px 0 rgba(245, 158, 11, 0.25) !important;
+}
+.interactive-card-warning:hover::after {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Success alert glow card */
+.interactive-card-success:hover {
+  box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.25) !important;
+}
+.interactive-card-success:hover::after {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Pulsing warning dot indicator */
+.pulsing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-danger);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: pulse-dot-animation 1.5s infinite;
+}
+
+@keyframes pulse-dot-animation {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Custom Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dashboard-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Radial Gauge Animations */
+.gauge-svg-circle {
+  transition: stroke-dashoffset 0.6s ease-out;
+}
+
+/* Hover effects for tables and table rows */
+.interactive-table-row {
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.interactive-table-row:hover > td {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}

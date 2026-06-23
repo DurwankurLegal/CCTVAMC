@@ -22,7 +22,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -53,7 +53,7 @@ import PortalCoveragePage from "./pages/portal/PortalCoveragePage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import { logout, fetchMe } from "./store/authSlice";
 import type { AppDispatch, RootState } from "./store";
-import { filterTenantMenu } from "./utils/menu";
+import { filterTenantMenu, hasPerm } from "./utils/menu";
 
 const { Header, Sider, Content } = Layout;
 
@@ -144,6 +144,16 @@ function ProtectedLayout() {
   );
 }
 
+// Route-level RBAC guard: blocks direct-URL access to a page the user's role
+// has no permission for (defense-in-depth alongside the backend's 403s).
+function RequirePerm({ perm, children }: { perm: string; children: ReactNode }) {
+  const user = useSelector((s: RootState) => s.auth.user);
+  const isLoggedIn = !!localStorage.getItem("access_token");
+  if (isLoggedIn && user === null) return null; // identity still resolving after reload
+  if (!hasPerm(user, perm)) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
 function PlatformGuard() {
   const user = useSelector((s: RootState) => s.auth.user);
   const isLoggedIn = !!localStorage.getItem("access_token");
@@ -171,21 +181,21 @@ export default function App() {
 
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/amc" element={<AMCPage />} />
-          <Route path="/tickets" element={<ServiceTicketsPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/payments" element={<PaymentsPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/vendors" element={<VendorsPage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/quotations" element={<QuotationsPage />} />
-          <Route path="/installations" element={<InstallationsPage />} />
-          <Route path="/visits" element={<EngineerVisitsPage />} />
-          <Route path="/assets" element={<AssetsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/customers" element={<RequirePerm perm="customers:read"><CustomersPage /></RequirePerm>} />
+          <Route path="/amc" element={<RequirePerm perm="amc:read"><AMCPage /></RequirePerm>} />
+          <Route path="/tickets" element={<RequirePerm perm="service_tickets:read"><ServiceTicketsPage /></RequirePerm>} />
+          <Route path="/leads" element={<RequirePerm perm="leads:read"><LeadsPage /></RequirePerm>} />
+          <Route path="/invoices" element={<RequirePerm perm="invoices:read"><InvoicesPage /></RequirePerm>} />
+          <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
+          <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
+          <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
+          <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />
+          <Route path="/quotations" element={<RequirePerm perm="quotations:read"><QuotationsPage /></RequirePerm>} />
+          <Route path="/installations" element={<RequirePerm perm="installations:read"><InstallationsPage /></RequirePerm>} />
+          <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><EngineerVisitsPage /></RequirePerm>} />
+          <Route path="/assets" element={<RequirePerm perm="assets:read"><AssetsPage /></RequirePerm>} />
+          <Route path="/reports" element={<RequirePerm perm="reports:read"><ReportsPage /></RequirePerm>} />
+          <Route path="/notifications" element={<RequirePerm perm="notifications:write"><NotificationsPage /></RequirePerm>} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />

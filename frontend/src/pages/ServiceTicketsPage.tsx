@@ -23,6 +23,8 @@ interface Ticket {
 const STATUSES = ["open", "assigned", "in_progress", "pending_parts", "resolved", "closed"];
 const PRIORITIES = ["low", "medium", "high", "critical"];
 
+import { useSearchParams } from "react-router-dom";
+
 export default function ServiceTicketsPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((s: RootState) => s.tickets);
@@ -32,7 +34,22 @@ export default function ServiceTicketsPage() {
   const [editing, setEditing] = useState<Ticket | null>(null);
   const [form] = Form.useForm();
 
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const priorityParam = searchParams.get("priority");
+  const slaParam = searchParams.get("sla");
+
   useEffect(() => { dispatch(fetchTickets()); }, [dispatch]);
+
+  const filteredItems = items.filter(item => {
+    if (statusParam && item.status !== statusParam) return false;
+    if (priorityParam && item.priority !== priorityParam) return false;
+    if (slaParam) {
+      const isBreached = slaParam === "breached";
+      if (item.sla_breached !== isBreached) return false;
+    }
+    return true;
+  });
 
   const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ priority: "medium" }); setOpen(true); };
   const openEdit = (row: Ticket) => { setEditing(row); form.setFieldsValue(row); setOpen(true); };
@@ -95,7 +112,7 @@ export default function ServiceTicketsPage() {
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Raise Ticket</Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
+      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
 
       <Modal
         title={editing ? `Edit ${editing.ticket_number}` : "Raise Service Ticket"}

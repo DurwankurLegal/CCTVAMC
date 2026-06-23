@@ -1,9 +1,10 @@
 from datetime import date
+from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser
+from app.core.deps import get_current_user, CurrentUser, require_permission
 from app.services import reports as report_service
 
 router = APIRouter()
@@ -49,6 +50,76 @@ async def sla_report(
 ):
     """SLA compliance report for a date range."""
     return await report_service.ticket_sla_report(db, current_user.tenant_id, from_date, to_date)
+
+
+@router.get("/amc-consolidated")
+async def amc_consolidated_report(
+    amc_id: UUID = Query(..., description="AMC contract UUID"),
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("reports:read")),
+):
+    """
+    Consolidated AMC Performance & Service Report (JSON).
+    Returns contract header, customer, assets, tickets, visits, PM schedules,
+    invoices, payments, and computed KPIs for the given contract and date range.
+    """
+    from fastapi import HTTPException
+    data = await report_service.amc_consolidated_report(
+        db, current_user.tenant_id, amc_id, from_date, to_date
+    )
+    if not data:
+        raise HTTPException(status_code=404, detail="AMC contract not found or not accessible")
+    return data
+
+
+@router.get("/amc-consolidated/export")
+async def export_amc_consolidated_report(
+    amc_id: UUID = Query(..., description="AMC contract UUID"),
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    fmt: str = Query("pdf", pattern="^(pdf|xlsx)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("reports:read")),
+):
+    """
+    Export the Consolidated AMC Performance & Service Report as PDF or Excel.
+    Filename: AMC-{contract_number}-Report-{from_date}-to-{to_date}.{fmt}
+    """
+    from fastapi import HTTPException
+    data = await report_service.amc_consolidated_report(
+        db, current_user.tenant_id, amc_id, from_date, to_date
+    )
+    if not data:
+        raise HTTPException(status_code=404, detail="AMC contract not found or not accessible")
+
+    contract_number = data.get("contract", {}).get("contract_number", str(amc_id))
+    # Sanitise contract number for safe filenames
+    safe_cn = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in contract_number)
+    filename_stem = f"AMC-{safe_cn}-Report-{from_date}-to-{to_date}"
+
+    if fmt == "xlsx":
+        content = report_service.to_xlsx_amc_report(data)
+        return Response(
+            content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename_stem}.xlsx"'},
+        )
+
+    # fmt == "pdf"
+    try:
+        content = report_service.to_pdf_amc_report(data)
+    except (OSError, ImportError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="PDF rendering unavailable in this environment — use Excel export.",
+        ) from exc
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename_stem}.pdf"'},
+    )
 
 
 @router.get("/{report_key}")

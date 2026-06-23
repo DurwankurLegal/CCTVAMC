@@ -13,11 +13,14 @@ export interface MenuEntry {
  *  - before permissions load, fall back to the legacy role check so admins
  *    don't briefly lose their admin-only items
  */
-export function filterTenantMenu<T extends MenuEntry>(menu: T[], user: AuthUser | null): T[] {
+export function hasPerm(user: AuthUser | null, perm?: string): boolean {
+  if (!perm) return true;
   const perms = user?.permissions;
-  return menu.filter((m) => {
-    if (!m.perm) return true;
-    if (perms) return perms.includes(m.perm);
-    return !!user?.is_platform_admin || user?.role === "admin" || user?.role === "manager";
-  });
+  if (perms) return perms.includes(perm);
+  // Before permissions load, fall back to the legacy role check.
+  return !!user?.is_platform_admin || user?.role === "admin" || user?.role === "manager";
+}
+
+export function filterTenantMenu<T extends MenuEntry>(menu: T[], user: AuthUser | null): T[] {
+  return menu.filter((m) => hasPerm(user, m.perm));
 }

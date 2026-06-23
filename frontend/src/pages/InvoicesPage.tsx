@@ -27,6 +27,8 @@ const statusColor: Record<string, string> = {
 };
 const STATUSES = ["draft", "issued", "paid", "partially_paid", "cancelled"];
 
+import { useSearchParams } from "react-router-dom";
+
 export default function InvoicesPage() {
   const [items, setItems] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -35,6 +37,10 @@ export default function InvoicesPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [form] = Form.useForm();
+
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const isDefaulter = searchParams.get("defaulter") === "true";
 
   const load = async () => {
     setLoading(true);
@@ -46,6 +52,21 @@ export default function InvoicesPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const today = new Date();
+  const overdueDays = (i: Invoice) => i.due_date ? Math.floor((today.getTime() - new Date(i.due_date).getTime()) / 86400000) : 0;
+
+  const filteredItems = items.filter(item => {
+    if (statusParam && item.status !== statusParam) return false;
+    
+    if (isDefaulter) {
+      const isOverdue = item.status === "overdue";
+      const hasDefaulterNote = item.notes?.includes("DEFAULTER");
+      const isOverdue45 = overdueDays(item) > 45;
+      if (!isOverdue || !(hasDefaulterNote || isOverdue45)) return false;
+    }
+    return true;
+  });
 
   const custMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
 
@@ -120,7 +141,7 @@ export default function InvoicesPage() {
         <Title level={4} style={{ margin: 0 }}>Invoices</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Invoice</Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} scroll={{ x: true }} />
+      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} scroll={{ x: true }} />
 
       <Modal
         title={editing ? `Edit ${editing.invoice_number}` : "New Invoice"}

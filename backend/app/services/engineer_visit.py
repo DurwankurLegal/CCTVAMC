@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from app.models.engineer_visit import EngineerVisit
 from app.models.inventory import InventoryItem, InventoryMovement, MovementType
 from app.repositories.base import TenantRepository
-from app.schemas.engineer_visit import EngineerVisitCreate, CheckinRequest, CheckoutRequest
+from app.schemas.engineer_visit import EngineerVisitCreate, EngineerVisitUpdate, CheckinRequest, CheckoutRequest
 
 
 class VisitRepository(TenantRepository[EngineerVisit]):
@@ -32,15 +32,32 @@ async def get_visit(db, tenant_id, visit_id):
     return obj
 
 
-async def create_visit(db: AsyncSession, tenant_id: UUID, technician_id: UUID,
+async def create_visit(db: AsyncSession, tenant_id: UUID, current_user_id: UUID,
                        payload: EngineerVisitCreate) -> EngineerVisit:
+    # Allow coordinator/admin to assign visit to a specific technician; fallback to self.
+    assigned_technician = payload.technician_id or current_user_id
     visit = EngineerVisit(
         ticket_id=payload.ticket_id,
         amc_contract_id=payload.amc_contract_id,
-        technician_id=technician_id,
+        technician_id=assigned_technician,
         visit_type=payload.visit_type,
     )
     return await VisitRepository(db, tenant_id).create(visit)
+
+
+async def update_visit(db: AsyncSession, tenant_id: UUID, visit_id: UUID,
+                       payload: EngineerVisitUpdate) -> EngineerVisit:
+    """Partial update — only non-None fields in payload are applied."""
+    repo = VisitRepository(db, tenant_id)
+    visit = await repo.get(visit_id)
+    if not visit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
+
+    update_data = payload.model_dump(exclude_none=True)
+    for field, value in update_data.items():
+        setattr(visit, field, value)
+
+    return await repo.save(visit)
 
 
 async def checkin(db: AsyncSession, tenant_id: UUID, visit_id: UUID,

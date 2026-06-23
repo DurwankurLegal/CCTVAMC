@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import apiClient from "../api/client";
+import apiClient, { apiErrorMessage } from "../api/client";
 
 export interface AuthUser {
   id: string;
@@ -31,14 +31,21 @@ const initialState: AuthState = { user: hydrateUser(), loading: false, error: nu
 
 export const login = createAsyncThunk(
   "auth/login",
-  async (credentials: { email: string; password: string; tenant_slug?: string; otp_code?: string }) => {
-    const { data } = await apiClient.post("/auth/login", credentials);
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
-    // Resolve identity so the UI can drive route guards (platform admin vs tenant).
-    const me = await apiClient.get("/auth/me");
-    localStorage.setItem("user", JSON.stringify(me.data));
-    return me.data as AuthUser;
+  async (
+    credentials: { email: string; password: string; tenant_slug?: string; otp_code?: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { data } = await apiClient.post("/auth/login", credentials);
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      // Resolve identity so the UI can drive route guards (platform admin vs tenant).
+      const me = await apiClient.get("/auth/me");
+      localStorage.setItem("user", JSON.stringify(me.data));
+      return me.data as AuthUser;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, "Login failed"));
+    }
   }
 );
 
@@ -61,7 +68,7 @@ const authSlice = createSlice({
     builder
       .addCase(login.pending, (s) => { s.loading = true; s.error = null; })
       .addCase(login.fulfilled, (s, a) => { s.loading = false; s.user = a.payload; })
-      .addCase(login.rejected, (s, a) => { s.loading = false; s.error = a.error.message ?? "Login failed"; })
+      .addCase(login.rejected, (s, a) => { s.loading = false; s.error = (a.payload as string) ?? a.error.message ?? "Login failed"; })
       .addCase(fetchMe.fulfilled, (s, a) => { s.user = a.payload; });
   },
 });
