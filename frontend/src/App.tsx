@@ -12,6 +12,7 @@ import {
   CloudServerOutlined,
   ApartmentOutlined,
   UsergroupAddOutlined,
+  ShopOutlined,
 } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -24,6 +25,7 @@ import LeadsPage from "./pages/LeadsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import UsersPage from "./pages/UsersPage";
+import VendorsPage from "./pages/VendorsPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -47,6 +49,7 @@ const tenantMenu = [
   { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts",   perm: "amc:read" },
   { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
   { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
+  { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
   { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
@@ -159,6 +162,7 @@ export default function App() {
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />
