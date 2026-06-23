@@ -13,6 +13,7 @@ import {
   ApartmentOutlined,
   UsergroupAddOutlined,
   ShopOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,6 +27,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import UsersPage from "./pages/UsersPage";
 import VendorsPage from "./pages/VendorsPage";
+import InventoryPage from "./pages/InventoryPage";
 import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
 import TenantsPage from "./pages/platform/TenantsPage";
 import TenantDetailPage from "./pages/platform/TenantDetailPage";
@@ -50,6 +52,7 @@ const tenantMenu = [
   { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
   { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
   { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
+  { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
   { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
@@ -163,6 +166,7 @@ export default function App() {
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
           <Route element={<PlatformGuard />}>
             <Route path="/platform" element={<PlatformDashboardPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />
