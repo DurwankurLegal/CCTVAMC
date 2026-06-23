@@ -3,8 +3,8 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { setTokens } from "../services/secureStorage";
 
 const BASE_URL = "https://api.cctvplatform.in/api/v1";
 
@@ -18,8 +18,7 @@ export default function LoginScreen({ navigation }: any) {
     setLoading(true);
     try {
       const { data } = await axios.post(`${BASE_URL}/auth/login`, { email, password });
-      await AsyncStorage.setItem("access_token", data.access_token);
-      await AsyncStorage.setItem("refresh_token", data.refresh_token);
+      await setTokens(data.access_token, data.refresh_token);
       navigation.replace("Main");
     } catch (e: any) {
       Alert.alert("Login Failed", e.response?.data?.detail || "Invalid credentials");

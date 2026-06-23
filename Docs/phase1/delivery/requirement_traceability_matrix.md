@@ -41,8 +41,8 @@ Evidence paths are repo-relative.
 | C3 | Audit chain | Done | `services/audit.py`, `test_audit_log.py` | Confirm coverage on all mutations. **Step 8** |
 | C4 | Notification engine | **Done** | `services/notification.py`, `pages/NotificationsPage.tsx` | ✅ Step 7: events wired, in-app center, templates seeded. |
 | C5 | Reporting | **Done** | `services/reports.py`, `pages/ReportsPage.tsx` | ✅ Step 5: expanded report set + runner UI + exports. |
-| C6 | Offline mobile sync | Needs hardening | `mobile/src/services/syncManager.ts` | LWW → conflict detection; sync status UI. **Step 6** |
-| C7 | Secure mobile storage | Needs hardening | `mobile/src/services/apiClient.ts` (AsyncStorage) | Keychain/Keystore. **Step 6** |
+| C6 | Offline mobile sync | **Done** (UI/queue) | `mobile/src/db/localDb.ts`, `syncManager.ts`, `screens/SyncStatusScreen.tsx` | ✅ Step 6: retry/last_error/status tracking, Sync Status screen, visit-ID remapping, idempotency-key headers + client_updated_at. Backend idempotency endpoint = follow-up. |
+| C7 | Secure mobile storage | **Done** | `mobile/src/services/secureStorage.ts`, `apiClient.ts`, `screens/LoginScreen.tsx` | ✅ Step 6: tokens moved to Keychain/Keystore (react-native-keychain); no token in AsyncStorage; clearTokens on logout/refresh-fail. |
 | C8 | Object storage isolation | Partial | `services/storage.py` | Tenant-prefix verification. **Step 8** |
 | C9 | Monitoring | Partial | Prometheus instrumentator, Sentry in `main.py` | — |
 | C10 | CI/CD | Partial | `.github/workflows` | Add FE/mobile test stages. **Step 9** |
