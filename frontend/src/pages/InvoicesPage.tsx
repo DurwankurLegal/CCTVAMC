@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Typography, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Space, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Table, Tag, Typography, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Space, message, Row, Col } from "antd";
+import { PlusOutlined, EditOutlined, DollarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
+import { useSearchParams } from "react-router-dom";
+import SmartCard from "../components/SmartCard";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -26,8 +28,6 @@ const statusColor: Record<string, string> = {
   partially_paid: "orange", cancelled: "volcano", credit_note: "purple",
 };
 const STATUSES = ["draft", "issued", "paid", "partially_paid", "cancelled"];
-
-import { useSearchParams } from "react-router-dom";
 
 export default function InvoicesPage() {
   const [items, setItems] = useState<Invoice[]>([]);
@@ -70,6 +70,12 @@ export default function InvoicesPage() {
 
   const custMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
 
+  // Calculate totals
+  const totalBilled = filteredItems.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
+  const totalCollected = filteredItems.reduce((acc, curr) => acc + Number(curr.amount_paid), 0);
+  const totalOutstanding = totalBilled - totalCollected;
+  const overdueInvoices = filteredItems.filter(item => item.status === "overdue").length;
+
   const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ invoice_date: dayjs() }); setOpen(true); };
   const openEdit = (row: Invoice) => {
     setEditing(row);
@@ -82,7 +88,6 @@ export default function InvoicesPage() {
     setSaving(true);
     try {
       if (editing) {
-        // InvoiceUpdate accepts status / due_date / notes only.
         await apiClient.patch(`/invoices/${editing.id}`, {
           status: values.status,
           due_date: values.due_date?.format("YYYY-MM-DD") ?? null,
@@ -136,11 +141,44 @@ export default function InvoicesPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Invoices</Title>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <Title level={4} style={{ margin: 0 }}>Invoices Management Ledger</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Invoice</Button>
       </div>
+
+      {/* KPI Cards Row */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={8}>
+          <SmartCard
+            title="Total Invoiced"
+            value={`₹${totalBilled.toLocaleString("en-IN")}`}
+            prefix={<DollarOutlined />}
+            status="info"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <SmartCard
+            title="Total Collected"
+            value={`₹${totalCollected.toLocaleString("en-IN")}`}
+            prefix={<CheckCircleOutlined />}
+            status="success"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <SmartCard
+            title="Outstanding Receivables"
+            value={`₹${totalOutstanding.toLocaleString("en-IN")}`}
+            prefix={<ExclamationCircleOutlined />}
+            status="warning"
+            suffix={overdueInvoices ? <Tag color="red" style={{ margin: 0 }}>{overdueInvoices} Overdue</Tag> : undefined}
+            loading={loading}
+          />
+        </Col>
+      </Row>
+
       <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} scroll={{ x: true }} />
 
       <Modal

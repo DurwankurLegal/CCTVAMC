@@ -9,9 +9,11 @@ import {
   FileExcelOutlined, FilePdfOutlined, FileTextOutlined, PlayCircleOutlined,
   FileSearchOutlined, DownloadOutlined, SafetyCertificateOutlined,
   ToolOutlined, AuditOutlined, DollarOutlined, BarChartOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import apiClient from "../api/client";
+import SmartCard from "../components/SmartCard";
+import MetricProgressGauge from "../components/MetricProgressGauge";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -299,106 +301,81 @@ function AMCConsolidatedPanel() {
           </Divider>
           <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
             {/* SLA Compliance */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center", borderColor: slaColor(preview.kpis.sla_compliance_pct) }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>SLA Compliance</span>}
-                  value={preview.kpis.sla_compliance_pct}
-                  suffix="%"
-                  precision={1}
-                  valueStyle={{ fontSize: 22, color: slaColor(preview.kpis.sla_compliance_pct) }}
-                />
-                <Progress
-                  percent={preview.kpis.sla_compliance_pct}
-                  showInfo={false}
-                  strokeColor={slaColor(preview.kpis.sla_compliance_pct)}
-                  size="small"
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  {preview.kpis.sla_met} met · {preview.kpis.sla_breached} breached
-                </Text>
-              </Card>
+            <Col xs={24} sm={12} md={8}>
+              <MetricProgressGauge
+                title="SLA Compliance"
+                percent={preview.kpis.sla_compliance_pct}
+                status={preview.kpis.sla_compliance_pct >= 90 ? "success" : (preview.kpis.sla_compliance_pct >= 70 ? "warning" : "danger")}
+                subtext={`${preview.kpis.sla_met} met · ${preview.kpis.sla_breached} breached`}
+              />
             </Col>
 
             {/* PM Adherence */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center", borderColor: pmColor(preview.kpis.pm_adherence_pct) }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>PM Adherence</span>}
-                  value={preview.kpis.pm_adherence_pct}
-                  suffix="%"
-                  precision={1}
-                  valueStyle={{ fontSize: 22, color: pmColor(preview.kpis.pm_adherence_pct) }}
-                />
-                <Progress
-                  percent={preview.kpis.pm_adherence_pct}
-                  showInfo={false}
-                  strokeColor={pmColor(preview.kpis.pm_adherence_pct)}
-                  size="small"
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  {preview.kpis.pm_done} done · {preview.kpis.pm_skipped} skipped
-                </Text>
-              </Card>
+            <Col xs={24} sm={12} md={8}>
+              <MetricProgressGauge
+                title="PM Adherence"
+                percent={preview.kpis.pm_adherence_pct}
+                status={preview.kpis.pm_adherence_pct >= 90 ? "success" : (preview.kpis.pm_adherence_pct >= 60 ? "warning" : "danger")}
+                subtext={`${preview.kpis.pm_done} done · ${preview.kpis.pm_skipped} skipped`}
+              />
             </Col>
 
-            {/* Total Visits */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>Engineer Visits</span>}
-                  value={preview.kpis.total_visits}
-                  valueStyle={{ fontSize: 22, color: "#1d4ed8" }}
-                  prefix={<ToolOutlined />}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  {preview.kpis.corrective_visits} corrective · {preview.kpis.preventive_visits} preventive
-                </Text>
-              </Card>
+            {/* Engineer Visits */}
+            <Col xs={24} sm={12} md={8}>
+              <SmartCard
+                title="Engineer Visits"
+                value={preview.kpis.total_visits}
+                prefix={<ToolOutlined />}
+                suffix={
+                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                    {preview.kpis.corrective_visits} corrective · {preview.kpis.preventive_visits} preventive
+                  </span>
+                }
+              />
             </Col>
 
             {/* Tickets Resolved */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>Tickets Resolved</span>}
-                  value={preview.kpis.tickets_resolved}
-                  suffix={`/ ${preview.kpis.total_tickets}`}
-                  valueStyle={{ fontSize: 22, color: "#0f2a43" }}
-                  prefix={<AuditOutlined />}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>service tickets closed</Text>
-              </Card>
+            <Col xs={24} sm={12} md={8}>
+              <SmartCard
+                title="Tickets Resolved"
+                value={preview.kpis.tickets_resolved}
+                prefix={<AuditOutlined />}
+                suffix={
+                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                    of {preview.kpis.total_tickets} service tickets closed
+                  </span>
+                }
+              />
             </Col>
 
             {/* Amount Collected */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center", borderColor: "#16a34a" }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>Collected</span>}
-                  value={preview.kpis.total_collected}
-                  prefix="₹"
-                  precision={0}
-                  valueStyle={{ fontSize: 20, color: "#16a34a" }}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  of {fmtINR(preview.kpis.total_billed)} billed
-                </Text>
-              </Card>
+            <Col xs={24} sm={12} md={8}>
+              <SmartCard
+                title="Amount Collected"
+                value={fmtINR(preview.kpis.total_collected)}
+                prefix={<DollarOutlined />}
+                status="success"
+                suffix={
+                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                    of {fmtINR(preview.kpis.total_billed)} billed
+                  </span>
+                }
+              />
             </Col>
 
-            {/* Outstanding */}
-            <Col xs={12} sm={8} md={4}>
-              <Card size="small" style={{ textAlign: "center", borderColor: preview.kpis.outstanding_balance > 0 ? "#f59e0b" : "#16a34a" }}>
-                <Statistic
-                  title={<span style={{ fontSize: 11 }}>Outstanding</span>}
-                  value={preview.kpis.outstanding_balance}
-                  prefix="₹"
-                  precision={0}
-                  valueStyle={{ fontSize: 20, color: preview.kpis.outstanding_balance > 0 ? "#f59e0b" : "#16a34a" }}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>balance pending</Text>
-              </Card>
+            {/* Outstanding Balance */}
+            <Col xs={24} sm={12} md={8}>
+              <SmartCard
+                title="Outstanding Balance"
+                value={fmtINR(preview.kpis.outstanding_balance)}
+                prefix={<ExclamationCircleOutlined />}
+                status={preview.kpis.outstanding_balance > 0 ? "warning" : "success"}
+                suffix={
+                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                    remaining receivables pending
+                  </span>
+                }
+              />
             </Col>
           </Row>
 

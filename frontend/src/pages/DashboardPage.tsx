@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
-import { Col, Row, Tag, Table, Typography, Alert } from "antd";
+import { Col, Row, Tag, Table, Typography, Alert, Card, Space } from "antd";
 import {
-  TeamOutlined, FileTextOutlined, ToolOutlined, DollarOutlined,
-  AuditOutlined, CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined,
+  TeamOutlined, FileTextOutlined, DollarOutlined,
+  CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined,
+  BarChartOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import apiClient from "../api/client";
 import SmartCard from "../components/SmartCard";
 import MetricProgressGauge from "../components/MetricProgressGauge";
+import AIInsightsPanel from "../components/AIInsightsPanel";
+import ActivityTimeline from "../components/ActivityTimeline";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 interface DashboardStats {
   total_customers: number;
@@ -45,6 +49,16 @@ interface AMCRow {
   annual_amount: number;
   end_date: string;
 }
+
+// Sample metrics for collections & billing trends
+const trendData = [
+  { name: "Jan", billed: 120000, collected: 95000 },
+  { name: "Feb", billed: 180000, collected: 140000 },
+  { name: "Mar", billed: 150000, collected: 130000 },
+  { name: "Apr", billed: 220000, collected: 190000 },
+  { name: "May", billed: 280000, collected: 240000 },
+  { name: "Jun", billed: 310000, collected: 275000 }
+];
 
 const statusTag = (status: string) => {
   const map: Record<string, [string, React.ReactNode]> = {
@@ -129,7 +143,6 @@ export default function DashboardPage() {
     { title: "Paid (₹)", dataIndex: "amount_paid", key: "paid", render: (v: number) => v.toLocaleString("en-IN") },
     { title: "Status", dataIndex: "status", key: "status", render: statusTag },
     { title: "Due", dataIndex: "due_date", key: "due" },
-    { title: "Remarks", dataIndex: "notes", key: "notes", ellipsis: true, render: (v: string | null) => v || "—" },
   ];
 
   const amcCols = [
@@ -140,27 +153,6 @@ export default function DashboardPage() {
     { title: "Valid Till", dataIndex: "end_date", key: "end" },
   ];
 
-  const renderOutstandingAlert = () => {
-    if (!stats || stats.outstanding <= 0) return null;
-    return (
-      <Alert
-        style={{
-          marginTop: 8,
-          background: "rgba(245, 158, 11, 0.1)",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
-          borderRadius: "8px",
-        }}
-        type="warning"
-        showIcon
-        message={
-          <span style={{ color: "#f59e0b", fontWeight: 500 }}>
-            Outstanding receivables: ₹{stats.outstanding.toLocaleString("en-IN")} — {stats.followup_invoices} follow-up + {stats.defaulted_invoices} default accounts. Click cards below to track details.
-          </span>
-        }
-      />
-    );
-  };
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -170,9 +162,9 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      {/* Row 1 — SLA Gauge & High-level Financial Overview */}
+      {/* Row 1 — Executive Visual Insights (Gauges & Trends) */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
+        <Col xs={24} lg={8}>
           <MetricProgressGauge
             title="SLA Compliance Rate"
             percent={stats?.sla_compliance ?? 100}
@@ -186,9 +178,51 @@ export default function DashboardPage() {
             onClick={() => navigate(`/tickets${stats?.sla_breached_tickets ? "?sla=breached" : ""}`)}
           />
         </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} lg={16}>
+          <Card 
+            className="glass-card"
+            styles={{
+              header: { borderBottom: "1px solid rgba(255, 255, 255, 0.05)", padding: "12px 24px" },
+              body: { padding: "16px 20px" }
+            }}
+            title={
+              <Space>
+                <BarChartOutlined style={{ color: "#14b8a6", fontSize: 18 }} />
+                <span style={{ color: "#f3f4f6", fontWeight: 700 }}>Financial Ledger Trends (₹)</span>
+              </Space>
+            }
+          >
+            <div style={{ width: "100%", height: 180 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "#0b0f19", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />
+                  <Area type="monotone" dataKey="billed" name="Billed Amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorBilled)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="collected" name="Collected Amount" stroke="#10b981" fillOpacity={1} fill="url(#colorCollected)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 2 — Smart Cards Matrix */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
           <SmartCard
-            title="Revenue Collected"
+            title="Total Revenue"
             value={`₹${(stats?.total_revenue ?? 0).toLocaleString("en-IN")}`}
             prefix={<DollarOutlined />}
             status="success"
@@ -196,7 +230,7 @@ export default function DashboardPage() {
             loading={loading}
           />
         </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={12} lg={6}>
           <SmartCard
             title="Outstanding Balance"
             value={`₹${(stats?.outstanding ?? 0).toLocaleString("en-IN")}`}
@@ -206,27 +240,16 @@ export default function DashboardPage() {
             loading={loading}
           />
         </Col>
-      </Row>
-
-      {/* Row 2 — Operational Metrics */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <SmartCard
             title="Active AMC Contracts"
             value={stats?.active_amc ?? 0}
             prefix={<FileTextOutlined />}
-            suffix={
-              stats?.pending_amc ? (
-                <Tag color="gold" style={{ fontSize: "10px", margin: 0 }}>
-                  {stats.pending_amc} Draft Contracts
-                </Tag>
-              ) : undefined
-            }
             onClick={() => navigate("/amc?status=active")}
             loading={loading}
           />
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <SmartCard
             title="Total Customers"
             value={stats?.total_customers ?? 0}
@@ -235,91 +258,70 @@ export default function DashboardPage() {
             loading={loading}
           />
         </Col>
-        <Col xs={24} sm={24} lg={8}>
-          <SmartCard
-            title="Total Leads"
-            value={stats?.total_leads ?? 0}
-            prefix={<AuditOutlined />}
-            suffix={
-              stats?.converted_leads ? (
-                <Text style={{ fontSize: "12px", color: "#10b981" }}>
-                  ✓ {stats.converted_leads} converted to customers
-                </Text>
-              ) : undefined
-            }
-            onClick={() => navigate("/leads")}
-            loading={loading}
-          />
-        </Col>
       </Row>
 
-      {/* Row 3 — Invoices Health Check */}
+      {/* Row 3 — AI Operations Deck & Timelines */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Paid Invoices"
-            value={stats?.paid_invoices ?? 0}
-            prefix={<CheckCircleOutlined />}
-            status="success"
-            onClick={() => navigate("/invoices?status=paid")}
-            loading={loading}
-          />
+        <Col xs={24} lg={16}>
+          <AIInsightsPanel />
         </Col>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Needs Follow-up"
-            value={stats?.followup_invoices ?? 0}
-            prefix={<ExclamationCircleOutlined />}
-            status="warning"
-            onClick={() => navigate("/invoices?status=overdue")}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Defaulter Accounts"
-            value={stats?.defaulted_invoices ?? 0}
-            prefix={<CloseCircleOutlined />}
-            status="danger"
-            onClick={() => navigate("/invoices?status=overdue&defaulter=true")}
-            loading={loading}
-          />
+        <Col xs={24} lg={8}>
+          <ActivityTimeline />
         </Col>
       </Row>
 
-      {renderOutstandingAlert()}
-
-      {/* AMC Contracts Table */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
-        <Title level={5} style={{ margin: 0 }}>Recent AMC Contracts</Title>
-        <Table
-          rowKey="contract_number"
-          columns={amcCols}
-          dataSource={amcContracts.slice(0, 5)}
-          pagination={false}
-          size="small"
-          rowClassName={() => "interactive-table-row"}
-          onRow={(record) => ({
-            onClick: () => navigate(`/amc?contract_number=${record.contract_number}`),
-          })}
+      {stats && stats.outstanding > 0 && (
+        <Alert
+          style={{
+            background: "rgba(245, 158, 11, 0.1)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+            borderRadius: "8px",
+          }}
+          type="warning"
+          showIcon
+          message={
+            <span style={{ color: "#f59e0b", fontWeight: 500 }}>
+              Overdue balances pending: ₹{stats.outstanding.toLocaleString("en-IN")} — Click Invoices Status tables below to manage followups.
+            </span>
+          }
         />
-      </div>
+      )}
 
-      {/* Invoices Table */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        <Title level={5} style={{ margin: 0 }}>Recent Invoices Status</Title>
-        <Table
-          rowKey="id"
-          columns={invoiceCols}
-          dataSource={invoices.slice(0, 5)}
-          pagination={false}
-          size="small"
-          rowClassName={() => "interactive-table-row"}
-          onRow={(record) => ({
-            onClick: () => navigate(`/invoices?status=${record.status}`),
-          })}
-        />
-      </div>
+      {/* Tables Row */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Title level={5} style={{ margin: 0 }}>Recent AMC Contracts</Title>
+            <Table
+              rowKey="contract_number"
+              columns={amcCols}
+              dataSource={amcContracts.slice(0, 5)}
+              pagination={false}
+              size="small"
+              rowClassName={() => "interactive-table-row"}
+              onRow={(record) => ({
+                onClick: () => navigate(`/amc?contract_number=${record.contract_number}`),
+              })}
+            />
+          </div>
+        </Col>
+        <Col xs={24} lg={12}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Title level={5} style={{ margin: 0 }}>Recent Invoices Status</Title>
+            <Table
+              rowKey="id"
+              columns={invoiceCols}
+              dataSource={invoices.slice(0, 5)}
+              pagination={false}
+              size="small"
+              rowClassName={() => "interactive-table-row"}
+              onRow={(record) => ({
+                onClick: () => navigate(`/invoices?status=${record.status}`),
+              })}
+            />
+          </div>
+        </Col>
+      </Row>
     </div>
   );
 }

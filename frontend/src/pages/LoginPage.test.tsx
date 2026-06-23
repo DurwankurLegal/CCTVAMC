@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { configureStore } from "@reduxjs/toolkit";
@@ -21,10 +21,10 @@ function renderLogin() {
 
 describe("LoginPage", () => {
   it("renders the sign-in form", () => {
-    renderLogin();
-    expect(screen.getByText("CCTV AMC Platform")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    const { getByText, getByPlaceholderText, getByRole } = renderLogin();
+    expect(getByText("CCTV AMC Platform")).toBeInTheDocument();
+    expect(getByPlaceholderText("Email")).toBeInTheDocument();
+    expect(getByPlaceholderText("Password")).toBeInTheDocument();
+    expect(getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 });

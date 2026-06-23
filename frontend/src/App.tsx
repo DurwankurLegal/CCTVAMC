@@ -22,7 +22,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -90,6 +90,8 @@ function ProtectedLayout() {
   const { token } = theme.useToken();
   const user = useSelector((s: RootState) => s.auth.user);
   const isLoggedIn = !!localStorage.getItem("access_token");
+  
+  const [collapsed, setCollapsed] = useState(false);
 
   // Refresh identity once if we have a token but no resolved user (e.g. after reload).
   useEffect(() => {
@@ -103,10 +105,29 @@ function ProtectedLayout() {
   const items = isPlatformAdmin && onPlatform ? platformMenu : filterTenantMenu(tenantMenu, user);
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Sider width={220} theme="dark">
-        <div style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16, borderBottom: "1px solid #1d2b3a" }}>
-          {onPlatform ? "Platform Admin" : "CCTV AMC"}
+    <Layout style={{ minHeight: "100vh", background: "#0b0f19" }}>
+      <Sider 
+        width={220} 
+        collapsible 
+        collapsed={collapsed} 
+        onCollapse={(v) => setCollapsed(v)}
+        style={{ 
+          background: "rgba(11, 15, 25, 0.9)", 
+          borderRight: "1px solid rgba(255, 255, 255, 0.08)" 
+        }}
+      >
+        <div style={{ 
+          height: 64, 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center", 
+          color: "#fff", 
+          fontWeight: 700, 
+          fontSize: collapsed ? 11 : 16, 
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          transition: "font-size 0.2s"
+        }}>
+          {collapsed ? (onPlatform ? "PLAT" : "CCTV") : (onPlatform ? "Platform Admin" : "CCTV AMC")}
         </div>
         <Menu
           theme="dark"
@@ -114,9 +135,9 @@ function ProtectedLayout() {
           selectedKeys={[location.pathname]}
           items={items}
           onClick={({ key }) => navigate(key)}
-          style={{ marginTop: 8 }}
+          style={{ marginTop: 8, background: "transparent" }}
         />
-        {isPlatformAdmin && (
+        {isPlatformAdmin && !collapsed && (
           <div style={{ padding: 16 }}>
             <Button block ghost onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}>
               {onPlatform ? "Tenant App →" : "Platform Console →"}
@@ -124,19 +145,35 @@ function ProtectedLayout() {
           </div>
         )}
       </Sider>
-      <Layout>
-        <Header style={{ background: token.colorBgContainer, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+      <Layout style={{ background: "#0b0f19" }}>
+        <Header style={{ 
+          background: "rgba(22, 28, 45, 0.5)", 
+          padding: "0 24px", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "flex-end", 
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          backdropFilter: "blur(8px)"
+        }}>
           {!onPlatform && <NotificationBell />}
-          <span style={{ margin: "0 16px", color: token.colorTextSecondary }}>{user?.email}</span>
+          <span style={{ margin: "0 16px", color: "#9ca3af" }}>{user?.email}</span>
           <Button
             icon={<LogoutOutlined />}
             type="text"
             onClick={() => { dispatch(logout()); navigate("/login"); }}
+            style={{ color: "#9ca3af" }}
           >
             Sign Out
           </Button>
         </Header>
-        <Content style={{ margin: 24, padding: 24, background: token.colorBgContainer, borderRadius: token.borderRadius, minHeight: 360 }}>
+        <Content style={{ 
+          margin: 24, 
+          padding: 24, 
+          background: "rgba(22, 28, 45, 0.3)", 
+          borderRadius: 12, 
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          minHeight: 360 
+        }}>
           <Outlet />
         </Content>
       </Layout>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message, Radio, Card } from "antd";
+import { PlusOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTickets } from "../store/ticketSlice";
 import apiClient from "../api/client";
 import type { AppDispatch, RootState } from "../store";
+import { useSearchParams } from "react-router-dom";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -23,8 +24,6 @@ interface Ticket {
 const STATUSES = ["open", "assigned", "in_progress", "pending_parts", "resolved", "closed"];
 const PRIORITIES = ["low", "medium", "high", "critical"];
 
-import { useSearchParams } from "react-router-dom";
-
 export default function ServiceTicketsPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((s: RootState) => s.tickets);
@@ -33,6 +32,8 @@ export default function ServiceTicketsPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Ticket | null>(null);
   const [form] = Form.useForm();
+  
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
@@ -105,14 +106,102 @@ export default function ServiceTicketsPage() {
     },
   ];
 
+  const renderKanbanBoard = () => {
+    const getTicketsByStatus = (status: string) => filteredItems.filter(t => t.status === status);
+    
+    return (
+      <div style={{ display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "16px", minHeight: "450px" }}>
+        {STATUSES.map(status => {
+          const columnTickets = getTicketsByStatus(status);
+          return (
+            <div 
+              key={status} 
+              className="glass-card" 
+              style={{ 
+                flex: "0 0 280px", 
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "12px", 
+                padding: "16px",
+                background: "rgba(22, 28, 45, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.05)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, textTransform: "capitalize", color: "#f3f4f6", fontSize: "13px" }}>
+                  {status.replace("_", " ")}
+                </span>
+                <Tag color="blue" style={{ margin: 0 }}>{columnTickets.length}</Tag>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", flex: 1 }}>
+                {columnTickets.map(ticket => (
+                  <Card
+                    key={ticket.id}
+                    size="small"
+                    className="interactive-table-row"
+                    styles={{
+                      body: { padding: "12px" }
+                    }}
+                    style={{ 
+                      background: "rgba(11, 15, 25, 0.6)", 
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      borderRadius: "8px",
+                      cursor: "pointer"
+                    }}
+                    onClick={() => openEdit(ticket)}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 600, color: "#3b82f6", fontSize: "11px" }}>
+                          {ticket.ticket_number}
+                        </span>
+                        <Tag color={priorityColor[ticket.priority]} style={{ fontSize: "10px", margin: 0 }}>
+                          {ticket.priority}
+                        </Tag>
+                      </div>
+                      <span style={{ color: "#f3f4f6", fontSize: "12px", lineHeight: "1.4" }}>
+                        {ticket.complaint}
+                      </span>
+                      {ticket.sla_breached && (
+                        <Tag color="red" style={{ alignSelf: "flex-start", fontSize: "9px", margin: 0, marginTop: 4 }}>
+                          SLA Breached
+                        </Tag>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+                {columnTickets.length === 0 && (
+                  <div style={{ textAlign: "center", color: "#6b7280", padding: "32px 0", fontSize: "12px" }}>
+                    No tickets
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Service Tickets</Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <Space size={16}>
+          <Title level={4} style={{ margin: 0 }}>Service Tickets</Title>
+          <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)} size="small">
+            <Radio.Button value="table"><UnorderedListOutlined /> Table</Radio.Button>
+            <Radio.Button value="kanban"><AppstoreOutlined /> Kanban</Radio.Button>
+          </Radio.Group>
+        </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Raise Ticket</Button>
       </div>
 
-      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+      {viewMode === "table" ? (
+        <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+      ) : (
+        renderKanbanBoard()
+      )}
 
       <Modal
         title={editing ? `Edit ${editing.ticket_number}` : "Raise Service Ticket"}
