@@ -36,17 +36,17 @@ Evidence paths are repo-relative.
 
 | # | Requirement | Status | Evidence | Gap |
 |---|---|---|---|---|
-| C1 | RBAC enforcement | Partial | `core/deps.py`, `core/permissions.py` | Route-by-route authz audit. **Step 8** |
+| C1 | RBAC enforcement | **Done** | `core/deps.py`, `core/permissions.py`, `test_authorization_matrix.py` | ✅ Step 8: route audit (only login/refresh unauthenticated, by design); authz matrix test (401/403 for unauth + cross-role). |
 | C2 | Tenant isolation (app + RLS) | Done | `models/base.py`, `repositories/base.py`, `test_rls_postgres.py`, `test_tenant_isolation.py` | Customer-scope layer pending (**Step 3/8**) |
 | C3 | Audit chain | Done | `services/audit.py`, `test_audit_log.py` | Confirm coverage on all mutations. **Step 8** |
 | C4 | Notification engine | **Done** | `services/notification.py`, `pages/NotificationsPage.tsx` | ✅ Step 7: events wired, in-app center, templates seeded. |
 | C5 | Reporting | **Done** | `services/reports.py`, `pages/ReportsPage.tsx` | ✅ Step 5: expanded report set + runner UI + exports. |
 | C6 | Offline mobile sync | **Done** (UI/queue) | `mobile/src/db/localDb.ts`, `syncManager.ts`, `screens/SyncStatusScreen.tsx` | ✅ Step 6: retry/last_error/status tracking, Sync Status screen, visit-ID remapping, idempotency-key headers + client_updated_at. Backend idempotency endpoint = follow-up. |
 | C7 | Secure mobile storage | **Done** | `mobile/src/services/secureStorage.ts`, `apiClient.ts`, `screens/LoginScreen.tsx` | ✅ Step 6: tokens moved to Keychain/Keystore (react-native-keychain); no token in AsyncStorage; clearTokens on logout/refresh-fail. |
-| C8 | Object storage isolation | Partial | `services/storage.py` | Tenant-prefix verification. **Step 8** |
+| C8 | Object storage isolation | **Done** | `services/storage.py` (`build_key` = `{tenant_id}/...`) | ✅ Step 8: keys are tenant-prefixed. |
 | C9 | Monitoring | Partial | Prometheus instrumentator, Sentry in `main.py` | — |
 | C10 | CI/CD | Partial | `.github/workflows` | Add FE/mobile test stages. **Step 9** |
-| C11 | Deployment config | Partial | `infra/`, `.env.example` | Env-specific CORS/providers. **Step 8** |
+| C11 | Deployment config | **Partial** | `infra/`, `.env.example`, `config.py` | ✅ CORS env-driven; SMS provider URL moved to config (placeholder removed). Remaining: deploy/monitoring runbook. |
 
 ## C. Test coverage status
 
