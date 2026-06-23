@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from datetime import date
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_platform_admin
@@ -17,20 +17,32 @@ class SubscriptionInvoiceRequest(BaseModel):
     period_end: date
 
 
-@router.get("", response_model=List[TenantResponse])
-async def list_tenants(
+@router.get("/platform/metrics")
+async def platform_metrics(
     db: AsyncSession = Depends(get_db),
     _: CurrentUser = Depends(require_platform_admin),
 ):
-    return await tenant_service.list_tenants(db)
+    """Aggregate tenant metrics for the platform-admin dashboard."""
+    return await tenant_service.platform_metrics(db)
+
+
+@router.get("", response_model=List[TenantResponse])
+async def list_tenants(
+    status: Optional[str] = Query(None, description="Filter by lifecycle status"),
+    plan: Optional[str] = Query(None, description="Filter by subscription plan"),
+    search: Optional[str] = Query(None, description="Search name/slug"),
+    db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    return await tenant_service.list_tenants(db, status_filter=status, plan_filter=plan, search=search)
 
 
 @router.post("", response_model=TenantResponse, status_code=201)
 async def create_tenant(
     payload: TenantCreate, db: AsyncSession = Depends(get_db),
-    _: CurrentUser = Depends(require_platform_admin),
+    user: CurrentUser = Depends(require_platform_admin),
 ):
-    return await tenant_service.create_tenant(db, payload)
+    return await tenant_service.create_tenant(db, payload, actor_user_id=user.user_id)
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
@@ -44,21 +56,58 @@ async def get_tenant(
 @router.patch("/{tenant_id}", response_model=TenantResponse)
 async def update_tenant(
     tenant_id: UUID, payload: TenantUpdate, db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(require_platform_admin),
+):
+    return await tenant_service.update_tenant(db, tenant_id, payload, actor_user_id=user.user_id)
+
+
+async def _status_transition(tenant_id: UUID, action: str, db: AsyncSession, user: CurrentUser):
+    return await tenant_service.set_tenant_status(db, tenant_id, action, actor_user_id=user.user_id)
+
+
+@router.post("/{tenant_id}/suspend", response_model=TenantResponse)
+async def suspend_tenant(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(require_platform_admin),
+):
+    return await _status_transition(tenant_id, "suspend", db, user)
+
+
+@router.post("/{tenant_id}/activate", response_model=TenantResponse)
+async def activate_tenant(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(require_platform_admin),
+):
+    return await _status_transition(tenant_id, "activate", db, user)
+
+
+@router.post("/{tenant_id}/cancel", response_model=TenantResponse)
+async def cancel_tenant(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(require_platform_admin),
+):
+    return await _status_transition(tenant_id, "cancel", db, user)
+
+
+@router.get("/{tenant_id}/usage")
+async def tenant_usage(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
     _: CurrentUser = Depends(require_platform_admin),
 ):
-    return await tenant_service.update_tenant(db, tenant_id, payload)
+    """Resource usage vs. plan limits (users, technicians, sites)."""
+    return await tenant_service.tenant_usage(db, tenant_id)
 
 
 @router.post("/{tenant_id}/subscription-invoices", status_code=201)
 async def create_subscription_invoice(
     tenant_id: UUID, payload: SubscriptionInvoiceRequest, db: AsyncSession = Depends(get_db),
-    _: CurrentUser = Depends(require_platform_admin),
+    user: CurrentUser = Depends(require_platform_admin),
 ):
     """Generate a platform-level subscription invoice for a tenant (SRS 4.1)."""
     inv = await tenant_service.generate_subscription_invoice(
-        db, tenant_id, payload.period_start, payload.period_end)
+        db, tenant_id, payload.period_start, payload.period_end, actor_user_id=user.user_id)
     return {"id": str(inv.id), "invoice_number": inv.invoice_number,
-            "plan": inv.plan, "amount": float(inv.amount)}
+            "plan": inv.plan, "amount": float(inv.amount), "status": inv.status}
 
 
 @router.get("/{tenant_id}/subscription-invoices")

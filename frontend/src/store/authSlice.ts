@@ -1,23 +1,51 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient from "../api/client";
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: string;
+  is_platform_admin: boolean;
+  tenant_id?: string | null;
+  tenant_slug?: string | null;
+}
+
 interface AuthState {
-  user: { id: string; email: string; role: string } | null;
+  user: AuthUser | null;
   loading: boolean;
   error: string | null;
 }
 
-const initialState: AuthState = { user: null, loading: false, error: null };
+function hydrateUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+const initialState: AuthState = { user: hydrateUser(), loading: false, error: null };
 
 export const login = createAsyncThunk(
   "auth/login",
-  async (credentials: { email: string; password: string }) => {
+  async (credentials: { email: string; password: string; tenant_slug?: string; otp_code?: string }) => {
     const { data } = await apiClient.post("/auth/login", credentials);
     localStorage.setItem("access_token", data.access_token);
     localStorage.setItem("refresh_token", data.refresh_token);
-    return data;
+    // Resolve identity so the UI can drive route guards (platform admin vs tenant).
+    const me = await apiClient.get("/auth/me");
+    localStorage.setItem("user", JSON.stringify(me.data));
+    return me.data as AuthUser;
   }
 );
+
+export const fetchMe = createAsyncThunk("auth/me", async () => {
+  const { data } = await apiClient.get("/auth/me");
+  localStorage.setItem("user", JSON.stringify(data));
+  return data as AuthUser;
+});
 
 const authSlice = createSlice({
   name: "auth",
@@ -31,8 +59,9 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(login.pending, (s) => { s.loading = true; s.error = null; })
-      .addCase(login.fulfilled, (s, a) => { s.loading = false; })
-      .addCase(login.rejected, (s, a) => { s.loading = false; s.error = a.error.message ?? "Login failed"; });
+      .addCase(login.fulfilled, (s, a) => { s.loading = false; s.user = a.payload; })
+      .addCase(login.rejected, (s, a) => { s.loading = false; s.error = a.error.message ?? "Login failed"; })
+      .addCase(fetchMe.fulfilled, (s, a) => { s.user = a.payload; });
   },
 });
 

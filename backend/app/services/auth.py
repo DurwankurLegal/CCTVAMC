@@ -72,6 +72,28 @@ async def login(db: AsyncSession, payload: LoginRequest) -> TokenResponse:
     return await _issue_tokens(db, user)
 
 
+async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
+    """Return the authenticated user's identity for the frontend (route guards,
+    profile). Tenant slug is included so the UI can show the active tenant."""
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    tenant_slug = None
+    if user.tenant_id:
+        tenant_slug = (await db.execute(
+            select(Tenant.slug).where(Tenant.id == user.tenant_id))).scalar_one_or_none()
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "is_platform_admin": user.is_platform_admin,
+        "tenant_id": str(user.tenant_id) if user.tenant_id else None,
+        "tenant_slug": tenant_slug,
+        "totp_enabled": user.totp_enabled,
+    }
+
+
 async def enroll_2fa(db: AsyncSession, user_id: UUID, issuer: str = "CCTV AMC") -> dict:
     """Generate a TOTP secret + provisioning URI for an authenticator app."""
     import pyotp

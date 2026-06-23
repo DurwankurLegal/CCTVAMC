@@ -50,7 +50,40 @@ TENANT_NAME = os.getenv("SEED_TENANT_NAME", "Durwankur")
 TENANT_SLUG = os.getenv("SEED_TENANT_SLUG", "durwankur")
 SAMPLE_DATA = os.getenv("SEED_SAMPLE_DATA", "true").lower() != "false"
 
+# Platform admin (Durwankur operator) — manages tenants/subscriptions via the
+# platform-admin console. Distinct from a tenant admin.
+PLATFORM_ADMIN_EMAIL = os.getenv("SEED_PLATFORM_ADMIN_EMAIL", "platform@durwankur.ai")
+PLATFORM_ADMIN_PASSWORD = os.getenv("SEED_PLATFORM_ADMIN_PASSWORD", "Platform@1234")
+
+# Second tenant so isolation / acceptance scenarios have at least two tenants.
+TENANT2_NAME = os.getenv("SEED_TENANT2_NAME", "Skyline Security")
+TENANT2_SLUG = os.getenv("SEED_TENANT2_SLUG", "skyline")
+TENANT2_ADMIN_EMAIL = os.getenv("SEED_TENANT2_ADMIN_EMAIL", "admin@skyline.in")
+
+DEFAULT_PASSWORD = os.getenv("SEED_DEFAULT_PASSWORD", "Passw0rd@123")
+
 TODAY = date.today()
+
+
+async def ensure_user(session, tenant_id, email, full_name, role,
+                      password=DEFAULT_PASSWORD, is_platform_admin=False):
+    """Idempotently create a user (by email). Returns the user."""
+    from app.models.user import User
+    existing = (await session.execute(
+        select(User).where(User.email == email))).scalar_one_or_none()
+    if existing is not None:
+        print(f"• User already exists: {email}")
+        return existing
+    user = User(
+        tenant_id=tenant_id, email=email, full_name=full_name,
+        hashed_password=hash_password(password), role=role, is_active=True,
+        is_platform_admin=is_platform_admin,
+    )
+    session.add(user)
+    await session.flush()
+    flag = " [platform-admin]" if is_platform_admin else ""
+    print(f"✔ Created user: {email} ({role}){flag}")
+    return user
 
 
 def gst_split(subtotal: float) -> dict:
@@ -250,28 +283,42 @@ async def seed() -> None:
             {"tid": str(tenant.id)},
         )
 
-        # ── Admin user ────────────────────────────────────────
-        admin = (
-            await session.execute(select(User).where(User.email == ADMIN_EMAIL))
-        ).scalar_one_or_none()
-
-        if admin is None:
-            admin = User(
-                tenant_id=tenant.id,
-                email=ADMIN_EMAIL,
-                full_name=ADMIN_NAME,
-                hashed_password=hash_password(ADMIN_PASSWORD),
-                role=TenantRole.ADMIN,
-                is_active=True,
-            )
-            session.add(admin)
-            print(f"✔ Created admin user: {ADMIN_EMAIL}")
-        else:
-            print(f"• Admin user already exists: {ADMIN_EMAIL}")
+        # ── Users (platform admin, tenant admin, technician, accounts) ──
+        await ensure_user(session, tenant.id, ADMIN_EMAIL, ADMIN_NAME,
+                          TenantRole.ADMIN, password=ADMIN_PASSWORD)
+        await ensure_user(session, tenant.id, PLATFORM_ADMIN_EMAIL, "Platform Admin",
+                          TenantRole.ADMIN, password=PLATFORM_ADMIN_PASSWORD,
+                          is_platform_admin=True)
+        await ensure_user(session, tenant.id, "tech@durwankur.ai", "Ravi Technician",
+                          TenantRole.TECHNICIAN)
+        # "accounts" is a custom RBAC role string (billing user) — see permissions matrix.
+        await ensure_user(session, tenant.id, "billing@durwankur.ai", "Billing User", "accounts")
 
         await session.commit()
 
-        # ── Sample data ───────────────────────────────────────
+        # ── Second tenant (isolation / acceptance scenarios) ──
+        tenant2 = (
+            await session.execute(select(Tenant).where(Tenant.slug == TENANT2_SLUG))
+        ).scalar_one_or_none()
+        if tenant2 is None:
+            tenant2 = Tenant(name=TENANT2_NAME, slug=TENANT2_SLUG, plan="growth",
+                             status="active", invoice_prefix="SKY")
+            session.add(tenant2)
+            await session.flush()
+            print(f"✔ Created tenant: {TENANT2_NAME} ({tenant2.id})")
+        else:
+            print(f"• Tenant already exists: {TENANT2_NAME} ({tenant2.id})")
+        await session.execute(
+            text("SELECT set_config('app.tenant_id', :tid, false)"),
+            {"tid": str(tenant2.id)},
+        )
+        await ensure_user(session, tenant2.id, TENANT2_ADMIN_EMAIL, "Skyline Admin",
+                          TenantRole.ADMIN)
+        await ensure_user(session, tenant2.id, "tech@skyline.in", "Skyline Technician",
+                          TenantRole.TECHNICIAN)
+        await session.commit()
+
+        # ── Sample data (primary tenant) ──────────────────────
         if SAMPLE_DATA:
             # Re-assert RLS context for the new transaction
             await session.execute(
@@ -281,7 +328,11 @@ async def seed() -> None:
             await seed_sample_data(session, tenant.id)
 
     print("\nSeed complete.")
-    print(f"  Login: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
+    print(f"  Platform admin: {PLATFORM_ADMIN_EMAIL} / {PLATFORM_ADMIN_PASSWORD}")
+    print(f"  Tenant admin:   {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
+    print(f"  Technician:     tech@durwankur.ai / {DEFAULT_PASSWORD}")
+    print(f"  Accounts:       billing@durwankur.ai / {DEFAULT_PASSWORD}")
+    print(f"  Tenant 2 admin: {TENANT2_ADMIN_EMAIL} / {DEFAULT_PASSWORD}")
 
 
 if __name__ == "__main__":

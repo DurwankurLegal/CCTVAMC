@@ -23,6 +23,16 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
     return await auth_service.refresh(db, payload)
 
 
+@router.get("/me")
+async def me(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Identity of the authenticated user — drives UI route guards (role,
+    platform-admin) and profile display."""
+    return await auth_service.current_user_info(db, current_user.user_id)
+
+
 @router.post("/2fa/enroll")
 async def enroll_2fa(
     db: AsyncSession = Depends(get_db),

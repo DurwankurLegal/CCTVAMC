@@ -9,8 +9,11 @@ import {
   AuditOutlined,
   DollarOutlined,
   ShoppingCartOutlined,
+  CloudServerOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons";
-import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import CustomersPage from "./pages/CustomersPage";
@@ -19,12 +22,15 @@ import ServiceTicketsPage from "./pages/ServiceTicketsPage";
 import LeadsPage from "./pages/LeadsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import PaymentsPage from "./pages/PaymentsPage";
-import { logout } from "./store/authSlice";
-import type { AppDispatch } from "./store";
+import PlatformDashboardPage from "./pages/platform/PlatformDashboardPage";
+import TenantsPage from "./pages/platform/TenantsPage";
+import TenantDetailPage from "./pages/platform/TenantDetailPage";
+import { logout, fetchMe } from "./store/authSlice";
+import type { AppDispatch, RootState } from "./store";
 
 const { Header, Sider, Content } = Layout;
 
-const menuItems = [
+const tenantMenu = [
   { key: "/dashboard",        icon: <DashboardOutlined />,    label: "Dashboard" },
   { key: "/customers",        icon: <TeamOutlined />,         label: "Customers" },
   { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts" },
@@ -34,41 +40,55 @@ const menuItems = [
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments" },
 ];
 
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <div style={{ textAlign: "center", padding: "80px 0", color: "#999" }}>
-      <h2>{title}</h2>
-      <p>This section is coming soon.</p>
-    </div>
-  );
-}
+const platformMenu = [
+  { key: "/platform",         icon: <CloudServerOutlined />,  label: "Platform Overview" },
+  { key: "/platform/tenants", icon: <ApartmentOutlined />,    label: "Tenants" },
+];
 
 function ProtectedLayout() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+  const user = useSelector((s: RootState) => s.auth.user);
   const isLoggedIn = !!localStorage.getItem("access_token");
 
+  // Refresh identity once if we have a token but no resolved user (e.g. after reload).
+  useEffect(() => {
+    if (isLoggedIn && !user) dispatch(fetchMe());
+  }, [isLoggedIn, user, dispatch]);
+
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+
+  const isPlatformAdmin = !!user?.is_platform_admin;
+  const onPlatform = location.pathname.startsWith("/platform");
+  const items = isPlatformAdmin && onPlatform ? platformMenu : tenantMenu;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider width={220} theme="dark">
         <div style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16, borderBottom: "1px solid #1d2b3a" }}>
-          CCTV AMC
+          {onPlatform ? "Platform Admin" : "CCTV AMC"}
         </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          items={menuItems}
+          items={items}
           onClick={({ key }) => navigate(key)}
           style={{ marginTop: 8 }}
         />
+        {isPlatformAdmin && (
+          <div style={{ padding: 16 }}>
+            <Button block ghost onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}>
+              {onPlatform ? "Tenant App →" : "Platform Console →"}
+            </Button>
+          </div>
+        )}
       </Sider>
       <Layout>
         <Header style={{ background: token.colorBgContainer, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+          <span style={{ marginRight: 16, color: token.colorTextSecondary }}>{user?.email}</span>
           <Button
             icon={<LogoutOutlined />}
             type="text"
@@ -85,6 +105,15 @@ function ProtectedLayout() {
   );
 }
 
+function PlatformGuard() {
+  const user = useSelector((s: RootState) => s.auth.user);
+  const isLoggedIn = !!localStorage.getItem("access_token");
+  // While identity is still resolving after a reload, don't bounce the user out.
+  if (isLoggedIn && user === null) return null;
+  if (!user?.is_platform_admin) return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -98,6 +127,11 @@ export default function App() {
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
+          <Route element={<PlatformGuard />}>
+            <Route path="/platform" element={<PlatformDashboardPage />} />
+            <Route path="/platform/tenants" element={<TenantsPage />} />
+            <Route path="/platform/tenants/:id" element={<TenantDetailPage />} />
+          </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -105,4 +139,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
