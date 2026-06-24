@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message } from "antd";
-import { PlusOutlined, EditOutlined, FileOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Card, ConfigProvider, theme } from "antd";
+import { PlusOutlined, EditOutlined, FileOutlined, UserOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import DocumentModal from "../components/DocumentModal";
 import { fetchCustomers, createCustomer, updateCustomer } from "../store/customerSlice";
 import type { AppDispatch, RootState } from "../store";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const CATEGORIES = [
@@ -106,47 +106,101 @@ export default function CustomersPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Customers</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Customer</Button>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#10b981",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <UserOutlined style={{ color: "#10b981" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #34d399 0%, #10b981 50%, #059669 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Customers Registry
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Manage corporate housing societies, commercial entities, and retail shop customer records.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", border: "none", color: "#fff" }}>Add Customer</Button>
+        </div>
+
+        <Card
+          id="customers-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)",
+              borderBottom: "1px solid rgba(16, 185, 129, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <UserOutlined style={{ color: "#10b981", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Customer Database
+              </span>
+              <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                CUSTOMER RECORDS
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+        </Card>
+
+        <Modal
+          title={editing ? "Edit Customer" : "Add Customer"}
+          open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
+          okText={editing ? "Save" : "Create"}
+        >
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="category" label="Category" rules={[{ required: true }]}>
+              <Select disabled={!!editing}>
+                {CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" label="Status">
+              <Select>{STATUSES.map(s => <Option key={s.value} value={s.value}>{s.label}</Option>)}</Select>
+            </Form.Item>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}>
+              <Input type="email" />
+            </Form.Item>
+            <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+            <Form.Item name="contact_person_name" label="Contact Person"><Input /></Form.Item>
+          </Form>
+        </Modal>
+
+        <DocumentModal
+          open={docsOpen}
+          entityType="customer"
+          entityId={selectedCustomerForDocs?.id || null}
+          entityName={selectedCustomerForDocs?.name || ""}
+          onClose={() => setDocsOpen(false)}
+        />
       </div>
-
-      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
-
-      <Modal
-        title={editing ? "Edit Customer" : "Add Customer"}
-        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
-        okText={editing ? "Save" : "Create"}
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="category" label="Category" rules={[{ required: true }]}>
-            <Select disabled={!!editing}>
-              {CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}
-            </Select>
-          </Form.Item>
-          <Form.Item name="status" label="Status">
-            <Select>{STATUSES.map(s => <Option key={s.value} value={s.value}>{s.label}</Option>)}</Select>
-          </Form.Item>
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}>
-            <Input type="email" />
-          </Form.Item>
-          <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="contact_person_name" label="Contact Person"><Input /></Form.Item>
-        </Form>
-      </Modal>
-
-      <DocumentModal
-        open={docsOpen}
-        entityType="customer"
-        entityId={selectedCustomerForDocs?.id || null}
-        entityName={selectedCustomerForDocs?.name || ""}
-        onClose={() => setDocsOpen(false)}
-      />
-    </div>
+    </ConfigProvider>
   );
 }

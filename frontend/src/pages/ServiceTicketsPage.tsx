@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message, Radio, Card, List, Tooltip, Row, Col, Tabs, Upload } from "antd";
-import { PlusOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, MessageOutlined, FileOutlined, SendOutlined, UploadOutlined, InboxOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message, Radio, Card, List, Tooltip, Row, Col, Tabs, Upload, ConfigProvider, theme } from "antd";
+import { PlusOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, MessageOutlined, FileOutlined, SendOutlined, UploadOutlined, InboxOutlined, ToolOutlined } from "@ant-design/icons";
 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTickets } from "../store/ticketSlice";
@@ -9,7 +9,7 @@ import apiClient from "../api/client";
 import type { AppDispatch, RootState } from "../store";
 import { useSearchParams } from "react-router-dom";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 interface Ticket {
@@ -402,26 +402,57 @@ export default function ServiceTicketsPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-        <Space size={16}>
-          <Title level={4} style={{ margin: 0 }}>Service Tickets</Title>
-          <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)} size="small">
-            <Radio.Button value="table"><UnorderedListOutlined /> Table</Radio.Button>
-            <Radio.Button value="kanban"><AppstoreOutlined /> Kanban</Radio.Button>
-          </Radio.Group>
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Raise Ticket</Button>
-      </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#3b82f6",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <ToolOutlined style={{ color: "#3b82f6" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Service Tickets Hub
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Log customer complaints, allocate technicians, check SLA performance compliance, and register comments.
+            </Text>
+          </div>
+          <Space>
+            <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)} size="small">
+              <Radio.Button value="table"><UnorderedListOutlined /> Table</Radio.Button>
+              <Radio.Button value="kanban"><AppstoreOutlined /> Kanban</Radio.Button>
+            </Radio.Group>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", border: "none", color: "#fff" }}>Raise Ticket</Button>
+          </Space>
+        </div>
 
-      {/* Search and Filters Bar */}
-      <Card 
-        style={{ 
-          marginBottom: 20, 
-          background: "rgba(22, 28, 45, 0.2)", 
-          border: "1px solid rgba(255, 255, 255, 0.05)" 
-        }}
-      >
+        {/* Search and Filters Bar */}
+        <Card 
+          className="glass-card"
+          style={{ 
+            marginBottom: 0
+          }}
+          styles={{
+            body: { padding: "16px 20px" }
+          }}
+        >
         <Space wrap size={16}>
           <Input 
             placeholder="Search tickets, complaints..." 
@@ -476,7 +507,31 @@ export default function ServiceTicketsPage() {
       </Card>
 
       {viewMode === "table" ? (
-        <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+        <Card
+          id="tickets-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%)",
+              borderBottom: "1px solid rgba(59, 130, 246, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <ToolOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Active Service Tickets Ledger
+              </span>
+              <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+                TICKETS LEDGER
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+        </Card>
       ) : (
         renderKanbanBoard()
       )}
@@ -610,6 +665,7 @@ export default function ServiceTicketsPage() {
           </Form>
         )}
       </Modal>
-    </div>
+      </div>
+    </ConfigProvider>
   );
 }

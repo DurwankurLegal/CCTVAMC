@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message, Input } from "antd";
-import { PlusOutlined, EditOutlined, ClockCircleOutlined, FileOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message, Input, Card, ConfigProvider, theme } from "antd";
+import { PlusOutlined, EditOutlined, ClockCircleOutlined, FileOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import apiClient from "../api/client";
 import { fetchCustomers } from "../store/customerSlice";
@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import DocumentModal from "../components/DocumentModal";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 interface AMCContract {
@@ -226,13 +226,66 @@ export default function AMCPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>AMC Contracts</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Contract</Button>
-      </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#14b8a6",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <SafetyCertificateOutlined style={{ color: "#14b8a6" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                AMC Contracts Hub
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Oversee annual maintenance contracts, generate schedules, track preventive visits, and manage attachments.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)", border: "none", color: "#fff" }}>New Contract</Button>
+        </div>
 
-      <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+        <Card
+          id="amc-contracts-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.02) 100%)",
+              borderBottom: "1px solid rgba(20, 184, 166, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <SafetyCertificateOutlined style={{ color: "#14b8a6", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Active Maintenance Agreements
+              </span>
+              <Tag color="cyan" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(20, 184, 166, 0.12)", border: "1px solid rgba(20, 184, 166, 0.2)" }}>
+                AMC CONTRACTS &amp; SLA
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+        </Card>
 
       <Modal
         title={editing ? "Edit AMC Contract" : "New AMC Contract"}
@@ -392,7 +445,8 @@ export default function AMCPage() {
         entityName={selectedAMCForDocs?.contract_number || ""}
         onClose={() => setDocsOpen(false)}
       />
-    </div>
+      </div>
+    </ConfigProvider>
   );
 }
 

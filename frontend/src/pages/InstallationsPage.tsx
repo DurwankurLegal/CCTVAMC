@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, DatePicker, Dropdown, Alert, Descriptions, Spin,
+  Table, Button, Modal, Form, Input, InputNumber, DatePicker, Dropdown, Alert, Descriptions, Spin, Card, ConfigProvider, theme, Space, Tag, Typography, Select, message
 } from "antd";
-import { PlusOutlined, MoreOutlined, EyeOutlined } from "@ant-design/icons";
+import { PlusOutlined, MoreOutlined, EyeOutlined, BuildOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const STATUS_FLOW = ["survey_pending", "survey_done", "material_allocated", "in_progress", "completed", "handed_over"];
@@ -146,71 +145,126 @@ export default function InstallationsPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Installations</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setCreateOpen(true); }}>New Work Order</Button>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#06b6d4",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <BuildOutlined style={{ color: "#06b6d4" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Installations Control Center
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Oversee survey feasibility reports, material allocations, and customer OTP handovers.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setCreateOpen(true); }} style={{ background: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)", border: "none", color: "#fff" }}>New Work Order</Button>
+        </div>
+
+        <Card
+          id="installations-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.02) 100%)",
+              borderBottom: "1px solid rgba(6, 182, 212, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <BuildOutlined style={{ color: "#06b6d4", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Active Installation Work Orders
+              </span>
+              <Tag color="cyan" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(6, 182, 212, 0.12)", border: "1px solid rgba(6, 182, 212, 0.2)" }}>
+                INSTALLATIONS &amp; SURVEYS
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No installation work orders" }} />
+        </Card>
+
+        <Modal title="New Installation Work Order" open={createOpen} onOk={create} onCancel={() => setCreateOpen(false)} confirmLoading={saving} okText="Create">
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
+              <Select showSearch optionFilterProp="children">{customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}</Select>
+            </Form.Item>
+            <Form.Item name="target_completion_date" label="Target Completion"><DatePicker style={{ width: "100%" }} /></Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal title="Record Survey" open={!!survey} onOk={recordSurvey} onCancel={() => setSurvey(null)} confirmLoading={saving} okText="Save">
+          <Form form={sForm} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="survey_date" label="Survey Date"><DatePicker style={{ width: "100%" }} /></Form.Item>
+            <Form.Item name="recommended_camera_count" label="Recommended Cameras"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+            <Form.Item name="survey_notes" label="Survey Notes"><Input.TextArea rows={2} /></Form.Item>
+            <Form.Item name="feasibility_notes" label="Feasibility Notes"><Input.TextArea rows={2} /></Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal title="Complete Handover" open={!!handover} onOk={doHandover} onCancel={() => setHandover(null)} confirmLoading={saving} okText="Complete">
+          <Alert type="info" showIcon style={{ marginBottom: 16 }}
+            message="Enter the OTP shared with the customer. An AMC contract is created on successful handover." />
+          <Form form={hForm} layout="vertical">
+            <Form.Item name="otp" label="Customer OTP" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="amc_annual_amount" label="AMC Annual Amount (₹)" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+            <Space>
+              <Form.Item name="amc_months" label="AMC Months" rules={[{ required: true }]}><InputNumber min={1} /></Form.Item>
+              <Form.Item name="preventive_visits_per_year" label="PM Visits/Year" rules={[{ required: true }]}><InputNumber min={0} /></Form.Item>
+            </Space>
+          </Form>
+        </Modal>
+
+        <Modal
+          title={`Work Order Detail — ${selectedInst?.work_order_number}`}
+          open={detailOpen}
+          onCancel={() => setDetailOpen(false)}
+          footer={null}
+          width={600}
+        >
+          <Spin spinning={loadingDetail}>
+            {selectedInst && (
+              <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
+                <Descriptions.Item label="Customer">{cName(selectedInst.customer_id)}</Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  <Tag color={statusColor[selectedInst.status] ?? "default"}>
+                    {selectedInst.status.replace(/_/g, " ").toUpperCase()}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Cameras Target Count">{selectedInst.recommended_camera_count ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Target Completion Date">{selectedInst.target_completion_date ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Survey Date">{selectedInst.survey_date ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Survey Notes">{selectedInst.survey_notes ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Feasibility Notes">{selectedInst.feasibility_notes ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Handover OTP">{selectedInst.handover_otp ?? "—"}</Descriptions.Item>
+                <Descriptions.Item label="Handed Over At">{selectedInst.handed_over_at ? new Date(selectedInst.handed_over_at).toLocaleString("en-IN") : "—"}</Descriptions.Item>
+              </Descriptions>
+            )}
+          </Spin>
+        </Modal>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No installation work orders" }} />
-
-      <Modal title="New Installation Work Order" open={createOpen} onOk={create} onCancel={() => setCreateOpen(false)} confirmLoading={saving} okText="Create">
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="children">{customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}</Select>
-          </Form.Item>
-          <Form.Item name="target_completion_date" label="Target Completion"><DatePicker style={{ width: "100%" }} /></Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal title="Record Survey" open={!!survey} onOk={recordSurvey} onCancel={() => setSurvey(null)} confirmLoading={saving} okText="Save">
-        <Form form={sForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="survey_date" label="Survey Date"><DatePicker style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="recommended_camera_count" label="Recommended Cameras"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="survey_notes" label="Survey Notes"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="feasibility_notes" label="Feasibility Notes"><Input.TextArea rows={2} /></Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal title="Complete Handover" open={!!handover} onOk={doHandover} onCancel={() => setHandover(null)} confirmLoading={saving} okText="Complete">
-        <Alert type="info" showIcon style={{ marginBottom: 16 }}
-          message="Enter the OTP shared with the customer. An AMC contract is created on successful handover." />
-        <Form form={hForm} layout="vertical">
-          <Form.Item name="otp" label="Customer OTP" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="amc_annual_amount" label="AMC Annual Amount (₹)" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
-          <Space>
-            <Form.Item name="amc_months" label="AMC Months" rules={[{ required: true }]}><InputNumber min={1} /></Form.Item>
-            <Form.Item name="preventive_visits_per_year" label="PM Visits/Year" rules={[{ required: true }]}><InputNumber min={0} /></Form.Item>
-          </Space>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={`Work Order Detail — ${selectedInst?.work_order_number}`}
-        open={detailOpen}
-        onCancel={() => setDetailOpen(false)}
-        footer={null}
-        width={600}
-      >
-        <Spin spinning={loadingDetail}>
-          {selectedInst && (
-            <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
-              <Descriptions.Item label="Customer">{cName(selectedInst.customer_id)}</Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag color={statusColor[selectedInst.status] ?? "default"}>
-                  {selectedInst.status.replace(/_/g, " ").toUpperCase()}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Cameras Target Count">{selectedInst.recommended_camera_count ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Target Completion Date">{selectedInst.target_completion_date ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Survey Date">{selectedInst.survey_date ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Survey Notes">{selectedInst.survey_notes ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Feasibility Notes">{selectedInst.feasibility_notes ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Handover OTP">{selectedInst.handover_otp ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Handed Over At">{selectedInst.handed_over_at ? new Date(selectedInst.handed_over_at).toLocaleString("en-IN") : "—"}</Descriptions.Item>
-            </Descriptions>
-          )}
-        </Spin>
-      </Modal>
-    </div>
+    </ConfigProvider>
   );
 }

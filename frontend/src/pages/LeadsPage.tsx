@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Typography, DatePicker, Space, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Typography, DatePicker, Space, message, Card, ConfigProvider, theme } from "antd";
+import { PlusOutlined, EditOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 interface Lead {
@@ -112,41 +112,97 @@ export default function LeadsPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Leads</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Lead</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
-      <Modal
-        title={editing ? "Edit Lead" : "Add Lead"}
-        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
-        okText={editing ? "Save" : "Create"}
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}><Input /></Form.Item>
-          <Form.Item name="category" label="Category">
-            <Select allowClear>{CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}</Select>
-          </Form.Item>
-          <Form.Item name="interest_type" label="Interest">
-            <Select allowClear>{INTERESTS.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}</Select>
-          </Form.Item>
-          <Form.Item name="source" label="Source">
-            <Select>{SOURCES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
-          </Form.Item>
-          {editing && (
-            <Form.Item name="status" label="Status">
-              <Select>{STATUSES.map(s => <Option key={s} value={s}>{s}</Option>)}</Select>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#f59e0b",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <UsergroupAddOutlined style={{ color: "#f59e0b" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Leads &amp; Pipeline Hub
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Track prospective customer leads, follow-up timelines, and sales conversion flows.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", border: "none", color: "#fff" }}>Add Lead</Button>
+        </div>
+
+        <Card
+          id="leads-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%)",
+              borderBottom: "1px solid rgba(245, 158, 11, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <UsergroupAddOutlined style={{ color: "#f59e0b", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Lead Directory
+              </span>
+              <Tag color="warning" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+                LEADS &amp; PIPELINE
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
+        </Card>
+
+        <Modal
+          title={editing ? "Edit Lead" : "Add Lead"}
+          open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
+          okText={editing ? "Save" : "Create"}
+        >
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}><Input /></Form.Item>
+            <Form.Item name="category" label="Category">
+              <Select allowClear>{CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}</Select>
             </Form.Item>
-          )}
-          <Form.Item name="follow_up_date" label="Follow-up Date">
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="notes" label="Notes"><Input.TextArea rows={2} /></Form.Item>
-        </Form>
-      </Modal>
-    </div>
+            <Form.Item name="interest_type" label="Interest">
+              <Select allowClear>{INTERESTS.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}</Select>
+            </Form.Item>
+            <Form.Item name="source" label="Source">
+              <Select>{SOURCES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
+            </Form.Item>
+            {editing && (
+              <Form.Item name="status" label="Status">
+                <Select>{STATUSES.map(s => <Option key={s} value={s}>{s}</Option>)}</Select>
+              </Form.Item>
+            )}
+            <Form.Item name="follow_up_date" label="Follow-up Date">
+              <DatePicker style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item name="notes" label="Notes"><Input.TextArea rows={2} /></Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
 }

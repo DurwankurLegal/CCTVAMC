@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Tabs, Table, Button, Modal, Form, Input, Select, Tag, Typography, message,
+  Tabs, Table, Button, Modal, Form, Input, Select, Tag, Typography, message, Card, ConfigProvider, theme, Space
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, BellOutlined, MailOutlined, HistoryOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const EVENTS = [
@@ -54,10 +54,34 @@ function TemplatesTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Template</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No templates" }} />
+      <Card
+        id="templates-panel"
+        className="glass-card"
+        styles={{
+          header: {
+            background: "linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0.02) 100%)",
+            borderBottom: "1px solid rgba(236, 72, 153, 0.15)",
+            borderRadius: "12px 12px 0 0"
+          },
+          body: { padding: 0 }
+        }}
+        title={
+          <Space>
+            <MailOutlined style={{ color: "#ec4899", fontSize: 18 }} />
+            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              Message Templates
+            </span>
+            <Tag color="pink" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(236, 72, 153, 0.12)", border: "1px solid rgba(236, 72, 153, 0.2)" }}>
+              NOTIFICATION TEMPLATES
+            </Tag>
+          </Space>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)", border: "none", color: "#fff" }}>Add Template</Button>
+        }
+      >
+        <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No templates" }} />
+      </Card>
 
       <Modal title="Add Template" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create">
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -96,17 +120,75 @@ function LogsTab() {
     { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={statusColor[v] ?? "default"}>{v}</Tag> },
     { title: "Retries", dataIndex: "retry_count", key: "retry_count" },
   ];
-  return <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No notification logs" }} />;
+  return (
+    <Card
+      id="logs-panel"
+      className="glass-card"
+      styles={{
+        header: {
+          background: "linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0.02) 100%)",
+          borderBottom: "1px solid rgba(236, 72, 153, 0.15)",
+          borderRadius: "12px 12px 0 0"
+        },
+        body: { padding: 0 }
+      }}
+      title={
+        <Space>
+          <HistoryOutlined style={{ color: "#ec4899", fontSize: 18 }} />
+          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            Message Transmission Logs
+          </span>
+          <Tag color="pink" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(236, 72, 153, 0.12)", border: "1px solid rgba(236, 72, 153, 0.2)" }}>
+            TRANSMISSION HISTORIC LOGS
+          </Tag>
+        </Space>
+      }
+    >
+      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No notification logs" }} />
+    </Card>
+  );
 }
 
 export default function NotificationsPage() {
   return (
-    <div>
-      <Title level={4}>Notifications</Title>
-      <Tabs items={[
-        { key: "templates", label: "Templates", children: <TemplatesTab /> },
-        { key: "logs", label: "Delivery Logs", children: <LogsTab /> },
-      ]} />
-    </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#ec4899",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        {/* Header Block */}
+        <div>
+          <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+            <BellOutlined style={{ color: "#ec4899" }} />
+            <span className="gradient-text" style={{ background: "linear-gradient(90deg, #f472b6 0%, #ec4899 50%, #db2777 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Alerts &amp; Notifications Hub
+            </span>
+          </Title>
+          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            Configure automated system alerts, manage email &amp; SMS message templates, and track delivery reports.
+          </Text>
+        </div>
+
+        <Tabs items={[
+          { key: "templates", label: "Templates", children: <TemplatesTab /> },
+          { key: "logs", label: "Delivery Logs", children: <LogsTab /> },
+        ]} />
+      </div>
+    </ConfigProvider>
   );
 }

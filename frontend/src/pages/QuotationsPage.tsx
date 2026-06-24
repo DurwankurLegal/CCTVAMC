@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Tabs, Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, DatePicker, Popconfirm,
+  InputNumber, DatePicker, Popconfirm, Card, ConfigProvider, theme
 } from "antd";
-import { PlusOutlined, CheckOutlined, CloseOutlined, SwapOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, CheckOutlined, CloseOutlined, SwapOutlined, MinusCircleOutlined, FileTextOutlined, ShopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const inr = (v: number) => "₹" + (v ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -99,10 +99,34 @@ function QuotationsTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Quotation</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+      <Card
+        id="quotations-panel"
+        className="glass-card"
+        styles={{
+          header: {
+            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%)",
+            borderBottom: "1px solid rgba(99, 102, 241, 0.15)",
+            borderRadius: "12px 12px 0 0"
+          },
+          body: { padding: 0 }
+        }}
+        title={
+          <Space>
+            <FileTextOutlined style={{ color: "#6366f1", fontSize: 18 }} />
+            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              Quotations Ledger
+            </span>
+            <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
+              PROPOSALS &amp; QUOTATIONS
+            </Tag>
+          </Space>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)", border: "none", color: "#fff" }}>New Quotation</Button>
+        }
+      >
+        <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+      </Card>
 
       <Modal title="New Quotation" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -184,10 +208,34 @@ function SalesOrdersTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Sales Order</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No sales orders" }} />
+      <Card
+        id="sales-orders-panel"
+        className="glass-card"
+        styles={{
+          header: {
+            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%)",
+            borderBottom: "1px solid rgba(99, 102, 241, 0.15)",
+            borderRadius: "12px 12px 0 0"
+          },
+          body: { padding: 0 }
+        }}
+        title={
+          <Space>
+            <ShopOutlined style={{ color: "#6366f1", fontSize: 18 }} />
+            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              Sales Orders Ledger
+            </span>
+            <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
+              SALES ORDERS
+            </Tag>
+          </Space>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)", border: "none", color: "#fff" }}>New Sales Order</Button>
+        }
+      >
+        <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No sales orders" }} />
+      </Card>
 
       <Modal title="New Sales Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -222,12 +270,44 @@ function SalesOrdersTab() {
 
 export default function QuotationsPage() {
   return (
-    <div>
-      <Title level={4}>Quotations & Sales Orders</Title>
-      <Tabs items={[
-        { key: "quotations", label: "Quotations", children: <QuotationsTab /> },
-        { key: "sales-orders", label: "Sales Orders", children: <SalesOrdersTab /> },
-      ]} />
-    </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#6366f1",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        {/* Header Block */}
+        <div>
+          <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+            <FileTextOutlined style={{ color: "#6366f1" }} />
+            <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Quotations &amp; Sales Orders Hub
+            </span>
+          </Title>
+          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            Draft estimation proposals, convert approved quotes to AMC contracts, and manage active sales orders.
+          </Text>
+        </div>
+
+        <Tabs items={[
+          { key: "quotations", label: "Quotations List", children: <QuotationsTab /> },
+          { key: "sales-orders", label: "Sales Orders List", children: <SalesOrdersTab /> },
+        ]} />
+      </div>
+    </ConfigProvider>
   );
 }

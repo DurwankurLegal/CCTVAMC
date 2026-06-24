@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  DatePicker, Upload, List, Tooltip,
+  DatePicker, Upload, List, Tooltip, Card, ConfigProvider, theme
 } from "antd";
-import { PlusOutlined, EditOutlined, FileOutlined, UploadOutlined, InboxOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, FileOutlined, UploadOutlined, InboxOutlined, DesktopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const STATUSES = ["active", "faulty", "under_repair", "replaced", "decommissioned"];
@@ -128,54 +128,109 @@ export default function AssetsPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Assets & Warranties</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Asset</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No assets" }} />
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#a855f7",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <DesktopOutlined style={{ color: "#a855f7" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Assets &amp; Warranties Hub
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Track covered CCTV hardware, installation details, and dynamic warranty timelines.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #a855f7 0%, #9333ea 100%)", border: "none", color: "#fff" }}>Add Asset</Button>
+        </div>
 
-      <Modal title={editing ? "Edit Asset" : "Add Asset"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          {!editing && (
-            <Form.Item name="site_id" label="Site" rules={[{ required: true }]}>
-              <Select showSearch optionFilterProp="children" placeholder="Select site">
-                {sites.map(s => <Option key={s.id} value={s.id}>{s.name}</Option>)}
-              </Select>
-            </Form.Item>
-          )}
-          <Form.Item name="serial_number" label="Serial Number"><Input /></Form.Item>
-          <Space>
-            <Form.Item name="make" label="Make"><Input /></Form.Item>
-            <Form.Item name="model" label="Model"><Input /></Form.Item>
+        <Card
+          id="assets-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(168, 85, 247, 0.02) 100%)",
+              borderBottom: "1px solid rgba(168, 85, 247, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <DesktopOutlined style={{ color: "#a855f7", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Covered Hardware Assets
+              </span>
+              <Tag color="purple" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(168, 85, 247, 0.12)", border: "1px solid rgba(168, 85, 247, 0.2)" }}>
+                ASSETS &amp; DEVICES
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No assets" }} />
+        </Card>
+
+        <Modal title={editing ? "Edit Asset" : "Add Asset"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            {!editing && (
+              <Form.Item name="site_id" label="Site" rules={[{ required: true }]}>
+                <Select showSearch optionFilterProp="children" placeholder="Select site">
+                  {sites.map(s => <Option key={s.id} value={s.id}>{s.name}</Option>)}
+                </Select>
+              </Form.Item>
+            )}
+            <Form.Item name="serial_number" label="Serial Number"><Input /></Form.Item>
+            <Space>
+              <Form.Item name="make" label="Make"><Input /></Form.Item>
+              <Form.Item name="model" label="Model"><Input /></Form.Item>
+            </Space>
+            <Form.Item name="asset_type" label="Type"><Input placeholder="dome / bullet / DVR / NVR" /></Form.Item>
+            {!editing && <Form.Item name="installation_date" label="Installation Date"><DatePicker style={{ width: "100%" }} /></Form.Item>}
+            <Form.Item name="warranty_expiry" label="Warranty Expiry"><DatePicker style={{ width: "100%" }} /></Form.Item>
+            <Form.Item name="status" label="Status"><Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace(/_/g, " ")}</Option>)}</Select></Form.Item>
+            <Form.Item name="location_description" label="Location"><Input /></Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal title={`Documents — ${docAsset?.serial_number || docAsset?.model || "Asset"}`} open={!!docAsset} footer={null} onCancel={() => setDocAsset(null)}>
+          <Space style={{ marginBottom: 12 }}>
+            <Select value={docType} onChange={setDocType} style={{ width: 180 }}>
+              {DOC_TYPES.map(d => <Option key={d} value={d}>{d.replace(/_/g, " ")}</Option>)}
+            </Select>
+            <Upload beforeUpload={(f) => uploadDoc(f as File)} showUploadList={false}>
+              <Button icon={<UploadOutlined />}>Upload</Button>
+            </Upload>
           </Space>
-          <Form.Item name="asset_type" label="Type"><Input placeholder="dome / bullet / DVR / NVR" /></Form.Item>
-          {!editing && <Form.Item name="installation_date" label="Installation Date"><DatePicker style={{ width: "100%" }} /></Form.Item>}
-          <Form.Item name="warranty_expiry" label="Warranty Expiry"><DatePicker style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="status" label="Status"><Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace(/_/g, " ")}</Option>)}</Select></Form.Item>
-          <Form.Item name="location_description" label="Location"><Input /></Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal title={`Documents — ${docAsset?.serial_number || docAsset?.model || "Asset"}`} open={!!docAsset} footer={null} onCancel={() => setDocAsset(null)}>
-        <Space style={{ marginBottom: 12 }}>
-          <Select value={docType} onChange={setDocType} style={{ width: 180 }}>
-            {DOC_TYPES.map(d => <Option key={d} value={d}>{d.replace(/_/g, " ")}</Option>)}
-          </Select>
-          <Upload beforeUpload={(f) => uploadDoc(f as File)} showUploadList={false}>
-            <Button icon={<UploadOutlined />}>Upload</Button>
-          </Upload>
-        </Space>
-        <List
-          dataSource={docs}
-          locale={{ emptyText: <span><InboxOutlined /> No documents yet</span> }}
-          renderItem={(d) => (
-            <List.Item actions={d.url ? [<a key="v" href={d.url} target="_blank" rel="noreferrer">view</a>] : []}>
-              <List.Item.Meta avatar={<FileOutlined />} title={d.file_name} description={<Tag>{d.doc_type}</Tag>} />
-            </List.Item>
-          )}
-        />
-      </Modal>
-    </div>
+          <List
+            dataSource={docs}
+            locale={{ emptyText: <span><InboxOutlined /> No documents yet</span> }}
+            renderItem={(d) => (
+              <List.Item actions={d.url ? [<a key="v" href={d.url} target="_blank" rel="noreferrer">view</a>] : []}>
+                <List.Item.Meta avatar={<FileOutlined />} title={d.file_name} description={<Tag>{d.doc_type}</Tag>} />
+              </List.Item>
+            )}
+          />
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
 }

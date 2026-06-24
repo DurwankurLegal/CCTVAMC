@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Tabs, Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, Tooltip,
+  InputNumber, Tooltip, Card, ConfigProvider, theme
 } from "antd";
-import { PlusOutlined, EditOutlined, DollarOutlined, ReloadOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DollarOutlined, ReloadOutlined, MinusCircleOutlined, ShopOutlined, FileTextOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const VENDOR_STATUS = [
@@ -83,10 +83,34 @@ function VendorsTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Vendor</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+      <Card
+        id="vendors-panel"
+        className="glass-card"
+        styles={{
+          header: {
+            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%)",
+            borderBottom: "1px solid rgba(59, 130, 246, 0.15)",
+            borderRadius: "12px 12px 0 0"
+          },
+          body: { padding: 0 }
+        }}
+        title={
+          <Space>
+            <ShopOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
+            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              Approved Partner Directory
+            </span>
+            <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+              VENDORS &amp; SERVICE PARTNERS
+            </Tag>
+          </Space>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", border: "none", color: "#fff" }}>Add Vendor</Button>
+        }
+      >
+        <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+      </Card>
 
       <Modal title={editing ? "Edit Vendor" : "Add Vendor"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -166,11 +190,37 @@ function PurchaseOrdersTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-        <Button icon={<ReloadOutlined />} onClick={reorder}>Reorder Low Stock</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Create PO</Button>
-      </div>
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No purchase orders" }} />
+      <Card
+        id="purchase-orders-panel"
+        className="glass-card"
+        styles={{
+          header: {
+            background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%)",
+            borderBottom: "1px solid rgba(139, 92, 246, 0.15)",
+            borderRadius: "12px 12px 0 0"
+          },
+          body: { padding: 0 }
+        }}
+        title={
+          <Space>
+            <FileTextOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
+            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              Purchase Order Ledger
+            </span>
+            <Tag color="purple" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(139, 92, 246, 0.12)", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
+              PROCUREMENT
+            </Tag>
+          </Space>
+        }
+        extra={
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={reorder}>Reorder Low Stock</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", border: "none", color: "#fff" }}>Create PO</Button>
+          </Space>
+        }
+      >
+        <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No purchase orders" }} />
+      </Card>
 
       <Modal title="Create Purchase Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={640}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -203,12 +253,44 @@ function PurchaseOrdersTab() {
 
 export default function VendorsPage() {
   return (
-    <div>
-      <Title level={4}>Vendors & Procurement</Title>
-      <Tabs items={[
-        { key: "vendors", label: "Vendors", children: <VendorsTab /> },
-        { key: "pos", label: "Purchase Orders", children: <PurchaseOrdersTab /> },
-      ]} />
-    </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#3b82f6",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        {/* Header Block */}
+        <div>
+          <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+            <ShopOutlined style={{ color: "#3b82f6" }} />
+            <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Vendors &amp; Procurement Hub
+            </span>
+          </Title>
+          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            Manage service suppliers, track purchase orders, and monitor procurement payables.
+          </Text>
+        </div>
+
+        <Tabs items={[
+          { key: "vendors", label: "Vendors List", children: <VendorsTab /> },
+          { key: "pos", label: "Purchase Orders", children: <PurchaseOrdersTab /> },
+        ]} />
+      </div>
+    </ConfigProvider>
   );
 }

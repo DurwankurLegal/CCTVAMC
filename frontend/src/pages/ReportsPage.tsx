@@ -3,7 +3,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import {
   Card, List, Button, Table, Typography, message, Space, Tag, Descriptions,
   Empty, Spin, Select, DatePicker, Row, Col, Statistic, Progress, Divider,
-  Collapse, Badge, Tooltip,
+  Collapse, Badge, Tooltip, ConfigProvider, theme
 } from "antd";
 import {
   FileExcelOutlined, FilePdfOutlined, FileTextOutlined, PlayCircleOutlined,
@@ -77,19 +77,7 @@ function downloadBlob(data: BlobPart, filename: string, mime: string) {
 }
 
 function fmtINR(v: number) {
-  return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function slaColor(pct: number) {
-  if (pct >= 90) return "#52c41a";
-  if (pct >= 70) return "#fa8c16";
-  return "#f5222d";
-}
-
-function pmColor(pct: number) {
-  if (pct >= 90) return "#52c41a";
-  if (pct >= 60) return "#fa8c16";
-  return "#f5222d";
+  return "₹" + (v ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function priorityTag(p: string) {
@@ -104,7 +92,7 @@ function statusTag(s: string) {
     resolved: "green", closed: "green", in_progress: "blue",
     open: "default", assigned: "cyan", pending_parts: "orange",
   };
-  return <Tag color={map[s] || "default"}>{s?.replace(/_/g, " ")}</Tag>;
+  return <Tag color={map[s] || "default"}>{s?.replace(/_/g, " ").toUpperCase()}</Tag>;
 }
 
 // ─── AMC Consolidated Report Panel ───────────────────────────────────────────
@@ -116,7 +104,6 @@ function AMCConsolidatedPanel() {
   const [preview, setPreview] = useState<ConsolidatedReport | null>(null);
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
-  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
 
   // Load AMC contracts list
   useEffect(() => {
@@ -192,27 +179,38 @@ function AMCConsolidatedPanel() {
 
   const selectedContract = contracts.find((c) => c.id === selectedId);
   const canGenerate = !!selectedId && !!dateRange;
-  const canExport = canGenerate && !!preview;
+  // Direct download enabled immediately once parameters are selected
+  const canExport = canGenerate;
 
   return (
     <Card
       id="amc-consolidated-report-panel"
-      style={{ marginBottom: 28, borderColor: "#1d4ed8", borderWidth: 1.5 }}
-      styles={{ header: { background: "linear-gradient(135deg, #0f2a43 0%, #1e4d72 100%)", borderRadius: "8px 8px 0 0" } }}
+      className="glass-card"
+      style={{ marginBottom: 28 }}
+      styles={{
+        header: {
+          background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%)",
+          borderBottom: "1px solid rgba(59, 130, 246, 0.15)",
+          borderRadius: "12px 12px 0 0"
+        },
+        body: { padding: "24px" }
+      }}
       title={
         <Space>
-          <SafetyCertificateOutlined style={{ color: "#93c5fd", fontSize: 18 }} />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>
+          <SafetyCertificateOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
+          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
             Consolidated AMC Performance &amp; Service Report
           </span>
-          <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>PROOF OF WORK · RENEWAL · PAYMENT</Tag>
+          <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+            PROOF OF WORK · RENEWAL · PAYMENT
+          </Tag>
         </Space>
       }
     >
       {/* ── Controls ── */}
-      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 20 }}>
+      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
         <Col xs={24} md={8}>
-          <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             AMC Contract
           </Text>
           <Select
@@ -229,7 +227,7 @@ function AMCConsolidatedPanel() {
                 <Space>
                   <span style={{ fontWeight: 600 }}>{c.contract_number}</span>
                   <Tag color={c.status === "active" ? "green" : "orange"} style={{ fontSize: 10 }}>
-                    {c.status}
+                    {c.status.toUpperCase()}
                   </Tag>
                 </Space>
               </Option>
@@ -237,7 +235,7 @@ function AMCConsolidatedPanel() {
           </Select>
         </Col>
         <Col xs={24} md={10}>
-          <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Report Period
           </Text>
           <RangePicker
@@ -248,7 +246,7 @@ function AMCConsolidatedPanel() {
             format="YYYY-MM-DD"
           />
         </Col>
-        <Col xs={24} md={6} style={{ paddingTop: 20 }}>
+        <Col xs={24} md={6} style={{ paddingTop: 22 }}>
           <Space wrap>
             <Button
               id="amc-generate-preview-btn"
@@ -257,7 +255,11 @@ function AMCConsolidatedPanel() {
               loading={generating}
               disabled={!canGenerate}
               onClick={generatePreview}
-              style={{ background: "#0f2a43", borderColor: "#0f2a43" }}
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                border: "none",
+                color: "#fff"
+              }}
             >
               Generate Preview
             </Button>
@@ -269,6 +271,10 @@ function AMCConsolidatedPanel() {
                 disabled={!canExport}
                 onClick={() => doExport("pdf")}
                 danger
+                style={{
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  background: !canExport ? undefined : "rgba(239, 68, 68, 0.1)"
+                }}
               />
             </Tooltip>
             <Tooltip title="Download Excel">
@@ -278,7 +284,11 @@ function AMCConsolidatedPanel() {
                 loading={exporting === "xlsx"}
                 disabled={!canExport}
                 onClick={() => doExport("xlsx")}
-                style={{ color: "#16a34a", borderColor: "#16a34a" }}
+                style={{
+                  color: "#16a34a",
+                  borderColor: "rgba(22, 163, 74, 0.3)",
+                  background: !canExport ? undefined : "rgba(22, 163, 74, 0.1)"
+                }}
               />
             </Tooltip>
           </Space>
@@ -287,8 +297,8 @@ function AMCConsolidatedPanel() {
 
       {/* ── Loading ── */}
       {generating && (
-        <div style={{ textAlign: "center", padding: "48px 0" }}>
-          <Spin size="large" tip="Aggregating report data…" />
+        <div style={{ textAlign: "center", padding: "64px 0" }}>
+          <Spin size="large" tip="Consolidating AMC metrics ledger..." />
         </div>
       )}
 
@@ -296,10 +306,10 @@ function AMCConsolidatedPanel() {
       {!generating && preview && (
         <>
           {/* KPI Cards */}
-          <Divider orientation="left" style={{ fontWeight: 700, color: "#0f2a43", fontSize: 13 }}>
+          <Divider orientation="left" style={{ fontWeight: 600, color: "#f3f4f6", borderColor: "rgba(255, 255, 255, 0.08)", fontSize: 13, marginBottom: 20 }}>
             Executive Summary — {preview.report_period.from_date} to {preview.report_period.to_date}
           </Divider>
-          <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             {/* SLA Compliance */}
             <Col xs={24} sm={12} md={8}>
               <MetricProgressGauge
@@ -316,7 +326,7 @@ function AMCConsolidatedPanel() {
                 title="PM Adherence"
                 percent={preview.kpis.pm_adherence_pct}
                 status={preview.kpis.pm_adherence_pct >= 90 ? "success" : (preview.kpis.pm_adherence_pct >= 60 ? "warning" : "danger")}
-                subtext={`${preview.kpis.pm_done} done · ${preview.kpis.pm_skipped} skipped`}
+                subtext={`${preview.kpis.pm_done} executed · ${preview.kpis.pm_skipped} skipped`}
               />
             </Col>
 
@@ -380,10 +390,23 @@ function AMCConsolidatedPanel() {
           </Row>
 
           {/* Download CTA */}
-          <div style={{ background: "#f0f9ff", borderRadius: 8, padding: "12px 16px", marginBottom: 20, border: "1px solid #bae6fd", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{
+            background: "rgba(59, 130, 246, 0.06)",
+            borderRadius: 8,
+            padding: "16px 20px",
+            marginBottom: 24,
+            border: "1px solid rgba(59, 130, 246, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12
+          }}>
             <div>
-              <Text strong style={{ color: "#0f2a43" }}>Report ready.</Text>
-              <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>Generated at {preview.generated_at}</Text>
+              <Text strong style={{ color: "#f3f4f6", fontSize: "14px" }}>Consolidated Report Ready</Text>
+              <Text type="secondary" style={{ marginLeft: 12, fontSize: 12, display: "inline-block" }}>
+                Compiled at {preview.generated_at}
+              </Text>
             </div>
             <Space>
               <Button
@@ -393,6 +416,7 @@ function AMCConsolidatedPanel() {
                 icon={<FilePdfOutlined />}
                 loading={exporting === "pdf"}
                 onClick={() => doExport("pdf")}
+                style={{ background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", border: "none" }}
               >
                 Download PDF
               </Button>
@@ -401,7 +425,11 @@ function AMCConsolidatedPanel() {
                 icon={<FileExcelOutlined />}
                 loading={exporting === "xlsx"}
                 onClick={() => doExport("xlsx")}
-                style={{ color: "#16a34a", borderColor: "#16a34a" }}
+                style={{
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  border: "none"
+                }}
               >
                 Download Excel
               </Button>
@@ -410,19 +438,22 @@ function AMCConsolidatedPanel() {
 
           {/* Collapsible detail tables */}
           <Collapse
+            bordered={false}
             defaultActiveKey={["contract"]}
             style={{ background: "transparent" }}
+            expandIconPosition="end"
           >
             {/* Contract + Customer */}
             <Panel
               key="contract"
-              header={<Space><SafetyCertificateOutlined /> Contract &amp; Customer Details</Space>}
+              header={<span style={{ color: "#f3f4f6", fontWeight: 600 }}><SafetyCertificateOutlined style={{ marginRight: 8, color: "#3b82f6" }} /> Contract &amp; Customer Details</span>}
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
-              <Row gutter={24}>
+              <Row gutter={[24, 24]}>
                 <Col xs={24} md={12}>
-                  <Descriptions title="Contract" size="small" column={1} bordered>
+                  <Descriptions title={<span style={{ color: "#e5e7eb", fontSize: "13px" }}>Contract Identity</span>} size="small" column={1} bordered>
                     <Descriptions.Item label="Number">{preview.contract.contract_number}</Descriptions.Item>
-                    <Descriptions.Item label="Status"><Tag color={preview.contract.status === "active" ? "green" : "orange"}>{preview.contract.status}</Tag></Descriptions.Item>
+                    <Descriptions.Item label="Status"><Tag color={preview.contract.status === "active" ? "green" : "orange"}>{preview.contract.status.toUpperCase()}</Tag></Descriptions.Item>
                     <Descriptions.Item label="Period">{preview.contract.start_date} → {preview.contract.end_date}</Descriptions.Item>
                     <Descriptions.Item label="Annual Value">{fmtINR(preview.contract.annual_amount)}</Descriptions.Item>
                     <Descriptions.Item label="Payment Frequency">{preview.contract.payment_frequency || "—"}</Descriptions.Item>
@@ -430,7 +461,7 @@ function AMCConsolidatedPanel() {
                   </Descriptions>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Descriptions title="Customer" size="small" column={1} bordered>
+                  <Descriptions title={<span style={{ color: "#e5e7eb", fontSize: "13px" }}>Customer Identity</span>} size="small" column={1} bordered>
                     <Descriptions.Item label="Name">{preview.customer.name}</Descriptions.Item>
                     <Descriptions.Item label="Category">{preview.customer.category || "—"}</Descriptions.Item>
                     <Descriptions.Item label="GSTIN">{preview.customer.gstin || "—"}</Descriptions.Item>
@@ -446,12 +477,13 @@ function AMCConsolidatedPanel() {
             <Panel
               key="assets"
               header={
-                <Space>
-                  <BarChartOutlined />
+                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                  <BarChartOutlined style={{ marginRight: 8, color: "#a855f7" }} />
                   Covered CCTV Assets
-                  <Badge count={preview.assets.length} style={{ backgroundColor: "#0f2a43" }} />
-                </Space>
+                  <Badge count={preview.assets.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
+                </span>
               }
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
               {preview.assets.length ? (
                 <Table
@@ -463,11 +495,11 @@ function AMCConsolidatedPanel() {
                   pagination={false}
                   columns={[
                     { title: "#", render: (_: any, __: any, i: number) => i + 1, width: 40 },
-                    { title: "Serial", dataIndex: "serial_number", key: "serial_number", render: (v: string) => v || "—" },
+                    { title: "Serial", dataIndex: "serial_number", key: "serial_number", render: (v: string) => <span style={{ color: "#3b82f6", fontWeight: 600 }}>{v || "—"}</span> },
                     { title: "Make / Model", key: "make_model", render: (r: any) => `${r.make || ""} ${r.model || ""}`.trim() || "—" },
                     { title: "Type", dataIndex: "asset_type", key: "asset_type", render: (v: string) => v || "—" },
                     { title: "Location", dataIndex: "location_description", key: "location_description", render: (v: string) => v || "—" },
-                    { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={v === "active" ? "green" : v === "faulty" ? "red" : "orange"}>{v}</Tag> },
+                    { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={v === "active" ? "green" : v === "faulty" ? "red" : "orange"}>{v.toUpperCase()}</Tag> },
                     { title: "Install Date", dataIndex: "installation_date", key: "installation_date", render: (v: string) => v || "—" },
                     { title: "Warranty Expiry", dataIndex: "warranty_expiry", key: "warranty_expiry", render: (v: string) => v || "—" },
                   ]}
@@ -479,18 +511,18 @@ function AMCConsolidatedPanel() {
             <Panel
               key="tickets"
               header={
-                <Space>
-                  <AuditOutlined />
+                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                  <AuditOutlined style={{ marginRight: 8, color: "#10b981" }} />
                   Service Ticket Log
-                  <Badge count={preview.tickets.length} style={{ backgroundColor: "#0f2a43" }} />
-                  {preview.kpis.sla_breached > 0 && (
-                    <Tag color="red"><CloseCircleOutlined /> {preview.kpis.sla_breached} SLA Breached</Tag>
-                  )}
-                  {preview.kpis.sla_breached === 0 && preview.tickets.length > 0 && (
-                    <Tag color="green"><CheckCircleOutlined /> All SLA Met</Tag>
-                  )}
-                </Space>
+                  <Badge count={preview.tickets.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
+                  {preview.kpis.sla_breached > 0 ? (
+                    <Tag color="red" style={{ marginLeft: 8 }}><CloseCircleOutlined /> {preview.kpis.sla_breached} SLA Breached</Tag>
+                  ) : preview.tickets.length > 0 ? (
+                    <Tag color="green" style={{ marginLeft: 8 }}><CheckCircleOutlined /> All SLA Met</Tag>
+                  ) : null}
+                </span>
               }
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
               {preview.tickets.length ? (
                 <Table
@@ -501,8 +533,8 @@ function AMCConsolidatedPanel() {
                   scroll={{ x: true }}
                   pagination={{ pageSize: 10 }}
                   columns={[
-                    { title: "Ticket #", dataIndex: "ticket_number", key: "ticket_number" },
-                    { title: "Date", dataIndex: "created_at", key: "created_at" },
+                    { title: "Ticket #", dataIndex: "ticket_number", key: "ticket_number", render: (v) => <span style={{ color: "#3b82f6", fontWeight: 600 }}>{v}</span> },
+                    { title: "Date", dataIndex: "created_at", key: "created_at", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" },
                     { title: "Priority", dataIndex: "priority", key: "priority", render: (v: string) => priorityTag(v) },
                     { title: "Status", dataIndex: "status", key: "status", render: (v: string) => statusTag(v) },
                     {
@@ -513,7 +545,7 @@ function AMCConsolidatedPanel() {
                     },
                     { title: "Complaint", dataIndex: "complaint", key: "complaint", ellipsis: true },
                     { title: "Resolution", dataIndex: "resolution_notes", key: "resolution_notes", ellipsis: true, render: (v: string) => v || "—" },
-                    { title: "Resolved At", dataIndex: "resolved_at", key: "resolved_at", render: (v: string) => v || "—" },
+                    { title: "Resolved At", dataIndex: "resolved_at", key: "resolved_at", render: (v: string) => v ? new Date(v).toLocaleDateString("en-IN") : "—" },
                   ]}
                 />
               ) : <Empty description="No tickets in this period" />}
@@ -523,12 +555,13 @@ function AMCConsolidatedPanel() {
             <Panel
               key="visits"
               header={
-                <Space>
-                  <ToolOutlined />
+                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                  <ToolOutlined style={{ marginRight: 8, color: "#f59e0b" }} />
                   Engineer Visit Log
-                  <Badge count={preview.visits.length} style={{ backgroundColor: "#0f2a43" }} />
-                </Space>
+                  <Badge count={preview.visits.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
+                </span>
               }
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
               {preview.visits.length ? (
                 <Table
@@ -539,10 +572,10 @@ function AMCConsolidatedPanel() {
                   scroll={{ x: true }}
                   pagination={{ pageSize: 10 }}
                   columns={[
-                    { title: "Type", dataIndex: "visit_type", key: "visit_type", render: (v: string) => <Tag color={v === "preventive" ? "blue" : "orange"}>{v}</Tag> },
+                    { title: "Type", dataIndex: "visit_type", key: "visit_type", render: (v: string) => <Tag color={v === "preventive" ? "blue" : "orange"}>{v.toUpperCase()}</Tag> },
                     { title: "Check-in", dataIndex: "checkin_at", key: "checkin_at", render: (v: string) => v || "—" },
                     { title: "Check-out", dataIndex: "checkout_at", key: "checkout_at", render: (v: string) => v || "—" },
-                    { title: "Duration (hrs)", dataIndex: "duration_hrs", key: "duration_hrs", render: (v: number) => v != null ? v : "—" },
+                    { title: "Duration (hrs)", dataIndex: "duration_hrs", key: "duration_hrs", render: (v: number) => v != null ? `${v.toFixed(1)} hrs` : "—" },
                     { title: "Work Performed", dataIndex: "work_performed", key: "work_performed", ellipsis: true, render: (v: string) => v || "—" },
                     {
                       title: "Parts Used", dataIndex: "parts_used", key: "parts_used",
@@ -558,12 +591,13 @@ function AMCConsolidatedPanel() {
             <Panel
               key="pm"
               header={
-                <Space>
-                  <ClockCircleOutlined />
+                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                  <ClockCircleOutlined style={{ marginRight: 8, color: "#ec4899" }} />
                   Preventive Maintenance Tracker
-                  <Badge count={preview.pm_schedules.length} style={{ backgroundColor: "#0f2a43" }} />
-                </Space>
+                  <Badge count={preview.pm_schedules.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
+                </span>
               }
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
               {preview.pm_schedules.length ? (
                 <Table
@@ -599,18 +633,19 @@ function AMCConsolidatedPanel() {
             <Panel
               key="financial"
               header={
-                <Space>
-                  <DollarOutlined />
+                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                  <DollarOutlined style={{ marginRight: 8, color: "#14b8a6" }} />
                   Financial Ledger
-                  <Tag color={preview.kpis.outstanding_balance > 0 ? "orange" : "green"}>
+                  <Tag color={preview.kpis.outstanding_balance > 0 ? "orange" : "green"} style={{ marginLeft: 8 }}>
                     {preview.kpis.outstanding_balance > 0
-                      ? `₹${preview.kpis.outstanding_balance.toLocaleString("en-IN")} Outstanding`
+                      ? `${fmtINR(preview.kpis.outstanding_balance)} Outstanding`
                       : "Fully Settled"}
                   </Tag>
-                </Space>
+                </span>
               }
+              style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
-              <Text strong style={{ display: "block", marginBottom: 8 }}>Invoices</Text>
+              <Text strong style={{ display: "block", marginBottom: 12, color: "#e5e7eb", fontSize: "13px" }}>Invoices Summary</Text>
               {preview.invoices.length ? (
                 <Table
                   id="amc-invoices-table"
@@ -620,10 +655,12 @@ function AMCConsolidatedPanel() {
                   pagination={false}
                   scroll={{ x: true }}
                   summary={() => (
-                    <Table.Summary.Row style={{ background: "#f0f9ff", fontWeight: 700 }}>
-                      <Table.Summary.Cell index={0} colSpan={5}>Totals</Table.Summary.Cell>
+                    <Table.Summary.Row style={{ background: "rgba(255, 255, 255, 0.02)", fontWeight: 700 }}>
+                      <Table.Summary.Cell index={0} colSpan={5}>Ledger Totals</Table.Summary.Cell>
                       <Table.Summary.Cell index={5} align="right">{fmtINR(preview.kpis.total_billed)}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={6} align="right" className={preview.kpis.outstanding_balance > 0 ? "amount-warning" : ""}>{fmtINR(preview.kpis.total_collected)}</Table.Summary.Cell>
+                      <Table.Summary.Cell index={6} align="right">
+                        <Text type="success">{fmtINR(preview.kpis.total_collected)}</Text>
+                      </Table.Summary.Cell>
                       <Table.Summary.Cell index={7} align="right">
                         <Text type={preview.kpis.outstanding_balance > 0 ? "warning" : "success"} strong>
                           {fmtINR(preview.kpis.outstanding_balance)}
@@ -635,16 +672,16 @@ function AMCConsolidatedPanel() {
                     { title: "Invoice #", dataIndex: "invoice_number", key: "invoice_number" },
                     { title: "Date", dataIndex: "invoice_date", key: "invoice_date" },
                     { title: "Due Date", dataIndex: "due_date", key: "due_date", render: (v: string) => v || "—" },
-                    { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={v === "paid" ? "green" : v === "partially_paid" ? "orange" : "blue"}>{v?.replace(/_/g, " ")}</Tag> },
-                    { title: "Subtotal (₹)", dataIndex: "subtotal", key: "subtotal", align: "right", render: (v: number) => v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) },
-                    { title: "Total (₹)", dataIndex: "total_amount", key: "total_amount", align: "right", render: (v: number) => v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) },
-                    { title: "Paid (₹)", dataIndex: "amount_paid", key: "amount_paid", align: "right", render: (v: number) => <Text type="success">{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</Text> },
-                    { title: "Balance (₹)", dataIndex: "balance", key: "balance", align: "right", render: (v: number) => <Text type={v > 0 ? "warning" : "success"}>{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</Text> },
+                    { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={v === "paid" ? "green" : v === "partially_paid" ? "orange" : "blue"}>{v?.replace(/_/g, " ").toUpperCase()}</Tag> },
+                    { title: "Subtotal", dataIndex: "subtotal", key: "subtotal", align: "right", render: (v: number) => v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) },
+                    { title: "Total", dataIndex: "total_amount", key: "total_amount", align: "right", render: (v: number) => <span style={{ fontWeight: 600 }}>{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span> },
+                    { title: "Paid", dataIndex: "amount_paid", key: "amount_paid", align: "right", render: (v: number) => <span style={{ color: "#10b981", fontWeight: 600 }}>{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span> },
+                    { title: "Balance", dataIndex: "balance", key: "balance", align: "right", render: (v: number) => <span style={{ color: v > 0 ? "#f59e0b" : "#10b981" }}>{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span> },
                   ]}
                 />
               ) : <Empty description="No invoices for this contract" />}
 
-              <Text strong style={{ display: "block", margin: "16px 0 8px" }}>Payments Received</Text>
+              <Text strong style={{ display: "block", margin: "24px 0 12px", color: "#e5e7eb", fontSize: "13px" }}>Payments Received</Text>
               {preview.payments.length ? (
                 <Table
                   id="amc-payments-table"
@@ -656,7 +693,7 @@ function AMCConsolidatedPanel() {
                     { title: "Payment Date", dataIndex: "payment_date", key: "payment_date" },
                     { title: "Mode", dataIndex: "mode", key: "mode", render: (v: string) => <Tag>{v?.toUpperCase()}</Tag> },
                     { title: "Reference #", dataIndex: "reference_number", key: "reference_number", render: (v: string) => v || "—" },
-                    { title: "Amount (₹)", dataIndex: "amount", key: "amount", align: "right", render: (v: number) => <Text type="success" strong>{v.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</Text> },
+                    { title: "Amount", dataIndex: "amount", key: "amount", align: "right", render: (v: number) => <span style={{ color: "#10b981", fontWeight: 600 }}>{fmtINR(v)}</span> },
                     { title: "Notes", dataIndex: "notes", key: "notes", ellipsis: true, render: (v: string) => v || "—" },
                   ]}
                 />
@@ -682,7 +719,7 @@ function AMCConsolidatedPanel() {
   );
 }
 
-// ─── Standard Reports Panel (existing, preserved) ────────────────────────────
+// ─── Standard Reports Panel ──────────────────────────────────────────────────
 
 function StandardReportsPanel() {
   const [reports, setReports] = useState<ReportMeta[]>([]);
@@ -714,7 +751,7 @@ function StandardReportsPanel() {
     setExporting(fmt);
     const mime = fmt === "csv" ? "text/csv"
       : fmt === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      : "application/pdf";
+        : "application/pdf";
     try {
       const resp = await apiClient.get(`/reports/${active.key}/export`, { params: { fmt }, responseType: "blob" });
       downloadBlob(resp.data, `${active.key}.${fmt}`, mime);
@@ -732,62 +769,92 @@ function StandardReportsPanel() {
   const isList = Array.isArray(data);
   const columns = isList && data.length
     ? Object.keys(data[0]).map((k) => ({
-        title: k.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        dataIndex: k, key: k,
-        render: (v: any) => typeof v === "number" ? v.toLocaleString("en-IN") : String(v ?? "—"),
-      }))
+      title: k.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      dataIndex: k, key: k,
+      render: (v: any) => typeof v === "number" ? v.toLocaleString("en-IN") : String(v ?? "—"),
+    }))
     : [];
 
   return (
     <Card
       id="standard-reports-panel"
+      className="glass-card"
+      style={{ marginBottom: 24 }}
+      styles={{
+        header: {
+          background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%)",
+          borderBottom: "1px solid rgba(139, 92, 246, 0.15)",
+          borderRadius: "12px 12px 0 0"
+        },
+        body: { padding: "24px" }
+      }}
       title={
         <Space>
-          <BarChartOutlined />
-          <span>Standard Operational Reports</span>
+          <BarChartOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
+          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 16 }}>
+            Standard Operational Reports
+          </span>
+          <Tag color="purple" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(139, 92, 246, 0.12)", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
+            OPERATIONAL CATALOG
+          </Tag>
         </Space>
       }
     >
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <Card title="Available Reports" style={{ width: 300, flexShrink: 0 }} styles={{ body: { padding: 0 } }}>
+        {/* Left Side: Available Reports */}
+        <Card
+          title={<span style={{ color: "#f3f4f6", fontWeight: 600 }}>Available Templates</span>}
+          style={{ width: 300, flexShrink: 0, background: "rgba(255, 255, 255, 0.01)", borderColor: "rgba(255, 255, 255, 0.06)" }}
+          styles={{ body: { padding: 0 } }}
+        >
           <List
             dataSource={reports}
-            renderItem={(r) => (
-              <List.Item
-                id={`report-item-${r.key}`}
-                style={{ padding: "10px 16px", cursor: "pointer", background: active?.key === r.key ? "#e6f4ff" : undefined }}
-                onClick={() => run(r)}
-                actions={[<PlayCircleOutlined key="run" />]}
-              >
-                <Text>{r.title}</Text>
-              </List.Item>
-            )}
-            locale={{ emptyText: "Loading…" }}
+            renderItem={(r) => {
+              const isActive = active?.key === r.key;
+              return (
+                <List.Item
+                  id={`report-item-${r.key}`}
+                  style={{
+                    padding: "12px 20px",
+                    cursor: "pointer",
+                    background: isActive ? "rgba(139, 92, 246, 0.12)" : "transparent",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                    transition: "var(--transition-smooth)"
+                  }}
+                  onClick={() => run(r)}
+                  actions={[<PlayCircleOutlined key="run" style={{ color: isActive ? "#8b5cf6" : "#9ca3af" }} />]}
+                >
+                  <Text style={{ color: isActive ? "#c084fc" : "#e5e7eb", fontWeight: isActive ? 600 : 400 }}>{r.title}</Text>
+                </List.Item>
+              );
+            }}
+            locale={{ emptyText: "Syncing templates..." }}
           />
         </Card>
 
+        {/* Right Side: Report Workspace Output */}
         <Card
-          style={{ flex: 1, minWidth: 360 }}
-          title={active ? active.title : "Select a report"}
+          style={{ flex: 1, minWidth: 360, background: "rgba(255, 255, 255, 0.01)", borderColor: "rgba(255, 255, 255, 0.06)" }}
+          title={<span style={{ color: "#f3f4f6", fontWeight: 600 }}>{active ? active.title : "Workspace Output"}</span>}
           extra={active && (
             <Space>
               <Button id="export-csv-btn" icon={<FileTextOutlined />} loading={exporting === "csv"} onClick={() => doExport("csv")}>CSV</Button>
-              <Button id="export-xlsx-btn" icon={<FileExcelOutlined />} loading={exporting === "xlsx"} onClick={() => doExport("xlsx")}>Excel</Button>
-              <Button id="export-pdf-btn" icon={<FilePdfOutlined />} loading={exporting === "pdf"} onClick={() => doExport("pdf")}>PDF</Button>
+              <Button id="export-xlsx-btn" icon={<FileExcelOutlined />} loading={exporting === "xlsx"} onClick={() => doExport("xlsx")} style={{ color: "#10b981", borderColor: "#10b981" }}>Excel</Button>
+              <Button id="export-pdf-btn" icon={<FilePdfOutlined />} loading={exporting === "pdf"} onClick={() => doExport("pdf")} danger>PDF</Button>
             </Space>
           )}
         >
-          {!active && <Empty description="Pick a report from the list to run it" />}
+          {!active && <Empty description="Pick an operational report template to execute" />}
           {running && <Spin style={{ display: "block", margin: "40px auto" }} />}
           {!running && active && isList && (
             data.length
               ? <Table id="standard-report-table" rowKey={(_, i) => String(i)} columns={columns} dataSource={data} size="small" scroll={{ x: true }} />
-              : <Empty description="No data for this report" />
+              : <Empty description="No data generated in this period" />
           )}
           {!running && active && !isList && data && (
             <Descriptions bordered column={1} size="small">
               {Object.entries(data).map(([k, v]) => (
-                <Descriptions.Item key={k} label={k.replace(/_/g, " ")}>
+                <Descriptions.Item key={k} label={k.replace(/_/g, " ").toUpperCase()}>
                   {typeof v === "object" ? <Tag>{JSON.stringify(v)}</Tag> : String(v)}
                 </Descriptions.Item>
               ))}
@@ -798,7 +865,6 @@ function StandardReportsPanel() {
     </Card>
   );
 }
-
 
 // ─── SLA Compliance Report Panel ─────────────────────────────────────────────
 
@@ -832,21 +898,31 @@ function SLAReportPanel() {
   return (
     <Card
       id="sla-report-panel"
-      style={{ marginBottom: 28, borderColor: "#10b981", borderWidth: 1.5 }}
-      styles={{ header: { background: "linear-gradient(135deg, #064e3b 0%, #047857 100%)", borderRadius: "8px 8px 0 0" } }}
+      className="glass-card"
+      style={{ marginBottom: 28 }}
+      styles={{
+        header: {
+          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)",
+          borderBottom: "1px solid rgba(16, 185, 129, 0.15)",
+          borderRadius: "12px 12px 0 0"
+        },
+        body: { padding: "24px" }
+      }}
       title={
         <Space>
-          <BarChartOutlined style={{ color: "#a7f3d0", fontSize: 18 }} />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>
+          <BarChartOutlined style={{ color: "#10b981", fontSize: 18 }} />
+          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
             SLA Compliance Report
           </span>
-          <Tag color="green" style={{ marginLeft: 4, fontSize: 10 }}>SERVICE LEVEL AGREEMENT</Tag>
+          <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+            SERVICE LEVEL AGREEMENT
+          </Tag>
         </Space>
       }
     >
-      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 20 }}>
+      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
         <Col xs={24} md={18}>
-          <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Report Period
           </Text>
           <RangePicker
@@ -857,7 +933,7 @@ function SLAReportPanel() {
             format="YYYY-MM-DD"
           />
         </Col>
-        <Col xs={24} md={6} style={{ paddingTop: 20 }}>
+        <Col xs={24} md={6} style={{ paddingTop: 22 }}>
           <Button
             id="sla-generate-btn"
             type="primary"
@@ -865,7 +941,11 @@ function SLAReportPanel() {
             loading={loading}
             disabled={!dateRange}
             onClick={generateReport}
-            style={{ background: "#064e3b", borderColor: "#064e3b", width: "100%" }}
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              border: "none",
+              width: "100%"
+            }}
           >
             Generate Report
           </Button>
@@ -873,7 +953,7 @@ function SLAReportPanel() {
       </Row>
 
       {loading && (
-        <div style={{ textAlign: "center", padding: "48px 0" }}>
+        <div style={{ textAlign: "center", padding: "64px 0" }}>
           <Spin size="large" tip="Calculating SLA compliance..." />
         </div>
       )}
@@ -919,7 +999,7 @@ function SLAReportPanel() {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
             <span>
-              Select a date range, then click <Text strong>Generate Report</Text> to view SLA stats.
+              Select a date range, then click <Text strong style={{ color: "#f3f4f6" }}>Generate Report</Text> to view SLA stats.
             </span>
           }
           style={{ padding: "32px 0" }}
@@ -929,20 +1009,50 @@ function SLAReportPanel() {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Reports Hub Page ───────────────────────────────────────────────────
 
 export default function ReportsPage() {
   return (
-    <div id="reports-page">
-      <Title level={4} style={{ marginBottom: 20 }}>
-        <BarChartOutlined style={{ marginRight: 8, color: "#0f2a43" }} />
-        Reports &amp; Exports
-      </Title>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#3b82f6",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          },
+          Descriptions: {
+            labelBg: "rgba(255, 255, 255, 0.02)",
+          }
+        }
+      }}
+    >
+      <div id="reports-page" style={{ padding: "8px 0 24px 0" }}>
+        {/* Page Header */}
+        <div style={{ marginBottom: 28 }}>
+          <Title level={4} style={{ margin: 0, marginBottom: 6, display: "flex", alignItems: "center", gap: 10 }}>
+            <BarChartOutlined style={{ color: "#3b82f6" }} />
+            <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Analytics &amp; Intelligence Hub
+            </span>
+          </Title>
+          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            Real-time service execution metrics, operational SLA tracking, and financial contract assessments.
+          </Text>
+        </div>
 
-      <SLAReportPanel />
-      <AMCConsolidatedPanel />
-      <StandardReportsPanel />
-    </div>
+        <SLAReportPanel />
+        <AMCConsolidatedPanel />
+        <StandardReportsPanel />
+      </div>
+    </ConfigProvider>
   );
 }
-

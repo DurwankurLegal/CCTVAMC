@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Select, DatePicker, Tag, Space,
-  Typography, message, Descriptions, Image, List, Empty, Input, Tooltip,
+  Typography, message, Descriptions, Image, List, Empty, Input, Tooltip, Card, ConfigProvider, theme
 } from "antd";
-import { PlusOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, EyeOutlined, CalendarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const typeColor: Record<string, string> = { corrective: "volcano", preventive: "green" };
@@ -223,22 +223,75 @@ export default function EngineerVisitsPage() {
   ];
 
   return (
-    <div>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Engineer Visits</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Schedule Visit
-        </Button>
-      </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#10b981",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <CalendarOutlined style={{ color: "#10b981" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Engineer Visits Hub
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Schedule technician visits, view location check-ins, record work reports, and collect signatures.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", border: "none", color: "#fff" }}>
+            Schedule Visit
+          </Button>
+        </div>
 
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={loading}
-        locale={{ emptyText: "No engineer visits yet" }}
-      />
+        <Card
+          id="visits-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)",
+              borderBottom: "1px solid rgba(16, 185, 129, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: "#10b981", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Field Engineer Logs
+              </span>
+              <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                ENGINEER VISITS &amp; LOGS
+              </Tag>
+            </Space>
+          }
+        >
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={rows}
+            loading={loading}
+            locale={{ emptyText: "No engineer visits yet" }}
+          />
+        </Card>
 
       {/* ── Create / Edit modal ──────────────────────────────────────────── */}
       <Modal
@@ -388,6 +441,7 @@ export default function EngineerVisitsPage() {
           </>
         )}
       </Modal>
-    </div>
+      </div>
+    </ConfigProvider>
   );
 }

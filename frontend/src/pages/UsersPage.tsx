@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Switch, Tooltip,
+  Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Switch, Tooltip, Card, ConfigProvider, theme
 } from "antd";
-import { PlusOutlined, EditOutlined, SafetyOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, SafetyOutlined, TeamOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 
 const { Title, Text } = Typography;
@@ -117,44 +117,98 @@ export default function UsersPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Users & Roles</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add User</Button>
-      </div>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+          colorPrimary: "#6366f1",
+        },
+        components: {
+          Table: {
+            headerBg: "rgba(255, 255, 255, 0.04)",
+            headerColor: "#f3f4f6",
+          }
+        }
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+              <TeamOutlined style={{ color: "#6366f1" }} />
+              <span className="gradient-text" style={{ background: "linear-gradient(90deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Access Control Registry
+              </span>
+            </Title>
+            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+              Configure administrative staff profiles, coordinate operations, assign role capabilities, and toggle status.
+            </Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)", border: "none", color: "#fff" }}>Add User</Button>
+        </div>
 
-      <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+        <Card
+          id="users-ledger-panel"
+          className="glass-card"
+          styles={{
+            header: {
+              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%)",
+              borderBottom: "1px solid rgba(99, 102, 241, 0.15)",
+              borderRadius: "12px 12px 0 0"
+            },
+            body: { padding: 0 }
+          }}
+          title={
+            <Space>
+              <TeamOutlined style={{ color: "#6366f1", fontSize: 18 }} />
+              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+                Staff &amp; Key Accounts
+              </span>
+              <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
+                STAFF DIRECTORY
+              </Tag>
+            </Space>
+          }
+        >
+          <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
+        </Card>
 
-      <Modal title={editing ? "Edit User" : "Add User"} open={open} onOk={handleSave}
-        onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="full_name" label="Full Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-            <Input disabled={!!editing} />
-          </Form.Item>
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          {!editing && (
-            <Form.Item name="password" label="Password" rules={[{ required: true, min: 8 }]}>
-              <Input.Password />
+        <Modal title={editing ? "Edit User" : "Add User"} open={open} onOk={handleSave}
+          onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="full_name" label="Full Name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+              <Input disabled={!!editing} />
             </Form.Item>
-          )}
-          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select onChange={() => undefined}>
-              {ROLES.map(r => <Option key={r.value} value={r.value}>{r.label}</Option>)}
-            </Select>
-          </Form.Item>
-          <Form.Item shouldUpdate={(p, c) => p.role !== c.role} style={{ marginBottom: 0 }}>
-            {({ getFieldValue }) => {
-              const perms = roleInfo[getFieldValue("role")];
-              return perms ? (
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Grants: {perms.join(", ")}
-                </Text>
-              ) : null;
-            }}
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            {!editing && (
+              <Form.Item name="password" label="Password" rules={[{ required: true, min: 8 }]}>
+                <Input.Password />
+              </Form.Item>
+            )}
+            <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+              <Select onChange={() => undefined}>
+                {ROLES.map(r => <Option key={r.value} value={r.value}>{r.label}</Option>)}
+              </Select>
+            </Form.Item>
+            <Form.Item shouldUpdate={(p, c) => p.role !== c.role} style={{ marginBottom: 0 }}>
+              {({ getFieldValue }) => {
+                const perms = roleInfo[getFieldValue("role")];
+                return perms ? (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Grants: {perms.join(", ")}
+                  </Text>
+                ) : null;
+              }}
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
 }
