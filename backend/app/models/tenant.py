@@ -49,6 +49,9 @@ class Tenant(Base, TimestampMixin):
     billing_contact_name: Mapped[str] = mapped_column(String(255), nullable=True)
     billing_contact_email: Mapped[str] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    custom_domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=True)
+    custom_email_sender: Mapped[str] = mapped_column(String(255), nullable=True)
+    email_templates: Mapped[dict] = mapped_column(JSON, default=dict, nullable=True)
 
 
 class SubscriptionInvoice(Base, TimestampMixin):

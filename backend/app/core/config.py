@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+    BASE_DOMAIN: str = "cctvamc.local"
 
     # Database
     DATABASE_URL: str

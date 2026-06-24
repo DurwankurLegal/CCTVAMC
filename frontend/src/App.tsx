@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Layout, Menu, Button, theme } from "antd";
+import { Layout, Menu, Button, theme, ConfigProvider } from "antd";
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -21,6 +21,7 @@ import {
   BellOutlined,
   VideoCameraOutlined,
   KeyOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
 import { useEffect, useState, type ReactNode } from "react";
@@ -57,6 +58,8 @@ import { logout, fetchMe } from "./store/authSlice";
 import TwoFAModal from "./components/TwoFAModal";
 import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
+import { fetchTenantConfig } from "./store/tenantSlice";
+import TenantSettingsPage from "./pages/TenantSettingsPage";
 
 const { Header, Sider, Content } = Layout;
 
@@ -79,6 +82,7 @@ const tenantMenu = [
   { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
   { key: "/notifications",    icon: <BellOutlined />,         label: "Notifications",   perm: "notifications:write" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
+  { key: "/settings",         icon: <SettingOutlined />,      label: "Tenant Settings",  perm: "tenants:write" },
 ];
 
 const platformMenu = [
@@ -92,6 +96,7 @@ function ProtectedLayout() {
   const location = useLocation();
   const { token } = theme.useToken();
   const user = useSelector((s: RootState) => s.auth.user);
+  const tenantConfig = useSelector((s: RootState) => s.tenant.config);
   const isLoggedIn = !!localStorage.getItem("access_token");
   
   const [collapsed, setCollapsed] = useState(false);
@@ -136,7 +141,15 @@ function ProtectedLayout() {
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           transition: "font-size 0.2s"
         }}>
-          {collapsed ? (onPlatform ? "PLAT" : "CCTV") : (onPlatform ? "Platform Admin" : "CCTV AMC")}
+          {collapsed ? (
+            onPlatform ? "PLAT" : "CCTV"
+          ) : onPlatform ? (
+            "Platform Admin"
+          ) : tenantConfig?.branding?.logo_url ? (
+            <img src={tenantConfig.branding.logo_url} style={{ maxHeight: 32, maxWidth: 180, objectFit: "contain" }} alt={tenantConfig.name} />
+          ) : (
+            tenantConfig?.name || "CCTV AMC"
+          )}
         </div>
         <Menu
           theme="dark"
@@ -224,48 +237,72 @@ function PlatformGuard() {
 }
 
 export default function App() {
+  const dispatch = useDispatch<AppDispatch>();
+  const tenantConfig = useSelector((s: RootState) => s.tenant.config);
+
+  useEffect(() => {
+    dispatch(fetchTenantConfig(window.location.host));
+  }, [dispatch]);
+
+  const primaryColor = tenantConfig?.branding?.primary_color || "#1677ff";
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/force-password-change" element={<ForceChangePassword />} />
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorPrimary: primaryColor,
+          colorBgContainer: "#161c2d",
+          colorBorder: "rgba(255, 255, 255, 0.08)",
+          colorText: "#f3f4f6",
+          colorTextSecondary: "#9ca3af",
+          colorTextHeading: "#ffffff",
+        }
+      }}
+    >
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/force-password-change" element={<ForceChangePassword />} />
 
-        {/* Customer self-service portal — separate identity/token from staff app */}
-        <Route path="/portal/login" element={<PortalLoginPage />} />
-        <Route path="/portal" element={<PortalLayout />}>
-          <Route index element={<PortalDashboardPage />} />
-          <Route path="tickets" element={<PortalTicketsPage />} />
-          <Route path="tickets/:id" element={<PortalTicketDetailPage />} />
-          <Route path="coverage" element={<PortalCoveragePage />} />
-          <Route path="invoices" element={<PortalInvoicesPage />} />
-        </Route>
-
-        <Route element={<ProtectedLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/customers" element={<RequirePerm perm="customers:read"><CustomersPage /></RequirePerm>} />
-          <Route path="/amc" element={<RequirePerm perm="amc:read"><AMCPage /></RequirePerm>} />
-          <Route path="/tickets" element={<RequirePerm perm="service_tickets:read"><ServiceTicketsPage /></RequirePerm>} />
-          <Route path="/leads" element={<RequirePerm perm="leads:read"><LeadsPage /></RequirePerm>} />
-          <Route path="/invoices" element={<RequirePerm perm="invoices:read"><InvoicesPage /></RequirePerm>} />
-          <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
-          <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
-          <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
-          <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />
-          <Route path="/quotations" element={<RequirePerm perm="quotations:read"><QuotationsPage /></RequirePerm>} />
-          <Route path="/installations" element={<RequirePerm perm="installations:read"><InstallationsPage /></RequirePerm>} />
-          <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><EngineerVisitsPage /></RequirePerm>} />
-          <Route path="/assets" element={<RequirePerm perm="assets:read"><AssetsPage /></RequirePerm>} />
-          <Route path="/reports" element={<RequirePerm perm="reports:read"><ReportsPage /></RequirePerm>} />
-          <Route path="/notifications" element={<RequirePerm perm="notifications:write"><NotificationsPage /></RequirePerm>} />
-          <Route element={<PlatformGuard />}>
-            <Route path="/platform" element={<PlatformDashboardPage />} />
-            <Route path="/platform/tenants" element={<TenantsPage />} />
-            <Route path="/platform/tenants/:id" element={<TenantDetailPage />} />
+          {/* Customer self-service portal — separate identity/token from staff app */}
+          <Route path="/portal/login" element={<PortalLoginPage />} />
+          <Route path="/portal" element={<PortalLayout />}>
+            <Route index element={<PortalDashboardPage />} />
+            <Route path="tickets" element={<PortalTicketsPage />} />
+            <Route path="tickets/:id" element={<PortalTicketDetailPage />} />
+            <Route path="coverage" element={<PortalCoveragePage />} />
+            <Route path="invoices" element={<PortalInvoicesPage />} />
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/customers" element={<RequirePerm perm="customers:read"><CustomersPage /></RequirePerm>} />
+            <Route path="/amc" element={<RequirePerm perm="amc:read"><AMCPage /></RequirePerm>} />
+            <Route path="/tickets" element={<RequirePerm perm="service_tickets:read"><ServiceTicketsPage /></RequirePerm>} />
+            <Route path="/leads" element={<RequirePerm perm="leads:read"><LeadsPage /></RequirePerm>} />
+            <Route path="/invoices" element={<RequirePerm perm="invoices:read"><InvoicesPage /></RequirePerm>} />
+            <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
+            <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
+            <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
+            <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />
+            <Route path="/quotations" element={<RequirePerm perm="quotations:read"><QuotationsPage /></RequirePerm>} />
+            <Route path="/installations" element={<RequirePerm perm="installations:read"><InstallationsPage /></RequirePerm>} />
+            <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><EngineerVisitsPage /></RequirePerm>} />
+            <Route path="/assets" element={<RequirePerm perm="assets:read"><AssetsPage /></RequirePerm>} />
+            <Route path="/reports" element={<RequirePerm perm="reports:read"><ReportsPage /></RequirePerm>} />
+            <Route path="/notifications" element={<RequirePerm perm="notifications:write"><NotificationsPage /></RequirePerm>} />
+            <Route path="/settings" element={<RequirePerm perm="tenants:write"><TenantSettingsPage /></RequirePerm>} />
+            <Route element={<PlatformGuard />}>
+              <Route path="/platform" element={<PlatformDashboardPage />} />
+              <Route path="/platform/tenants" element={<TenantsPage />} />
+              <Route path="/platform/tenants/:id" element={<TenantDetailPage />} />
+            </Route>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }

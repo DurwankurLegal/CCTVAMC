@@ -23,14 +23,21 @@ def deliver_notification(self, log_id: str):
             SessionFactory = _get_session_factory()
             async with SessionFactory() as db:
                 from sqlalchemy import select
-                result = await db.execute(select(NotificationLog).where(NotificationLog.id == log_id))
+                from uuid import UUID as PyUUID
+                target_id = PyUUID(log_id) if isinstance(log_id, str) else log_id
+                result = await db.execute(select(NotificationLog).where(NotificationLog.id == target_id))
                 log = result.scalar_one_or_none()
                 if not log or log.status == NotificationStatus.SENT:
                     return
 
                 try:
                     if log.channel == NotificationChannel.EMAIL:
-                        await _send_email(log.recipient, log.subject, log.body)
+                        from app.models.tenant import Tenant
+                        from sqlalchemy import select
+                        result_tenant = await db.execute(select(Tenant).where(Tenant.id == log.tenant_id))
+                        tenant = result_tenant.scalar_one_or_none()
+                        sender = tenant.custom_email_sender if tenant else None
+                        await _send_email(log.recipient, log.subject, log.body, sender=sender)
                     elif log.channel == NotificationChannel.SMS:
                         await _send_sms(log.recipient, log.body)
                     elif log.channel == NotificationChannel.WHATSAPP:
@@ -53,13 +60,13 @@ def deliver_notification(self, log_id: str):
         raise self.retry(exc=exc)
 
 
-async def _send_email(recipient: str, subject: str, body: str):
+async def _send_email(recipient: str, subject: str, body: str, sender: str = None):
     import smtplib
     from email.message import EmailMessage
     from app.core.config import get_settings
     settings = get_settings()
     msg = EmailMessage()
-    msg["From"] = settings.SMTP_FROM
+    msg["From"] = sender or settings.SMTP_FROM
     msg["To"] = recipient
     msg["Subject"] = subject
     msg.set_content(body)

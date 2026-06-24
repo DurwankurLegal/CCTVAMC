@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_platform_admin
@@ -11,6 +11,8 @@ from app.schemas.tenant import (
     TenantProvisionRequest, TenantProvisionResponse, ProvisionedAdmin,
 )
 from app.services import tenant as tenant_service
+from app.core.config import get_settings
+from app.core.tenant_resolution import resolve_tenant_from_host
 
 router = APIRouter()
 
@@ -27,6 +29,36 @@ async def platform_metrics(
 ):
     """Aggregate tenant metrics for the platform-admin dashboard."""
     return await tenant_service.platform_metrics(db)
+
+
+@router.get("/config")
+async def get_public_tenant_config(
+    request: Request,
+    host: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Public endpoint to resolve tenant identity and branding from Host header or host query param.
+    Returns default branding if no tenant is matched (main portal).
+    """
+    settings = get_settings()
+    query_host = host
+    if not query_host:
+        query_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+        
+    if not query_host:
+        return {"resolved": False, "name": "CCTV AMC", "slug": "default", "branding": {"primary_color": "#1677ff", "logo_url": None}}
+        
+    tenant = await resolve_tenant_from_host(db, query_host, settings.BASE_DOMAIN)
+    if not tenant:
+        return {"resolved": False, "name": "CCTV AMC", "slug": "default", "branding": {"primary_color": "#1677ff", "logo_url": None}}
+        
+    return {
+        "resolved": True,
+        "id": str(tenant.id),
+        "name": tenant.name,
+        "slug": tenant.slug,
+        "branding": tenant.branding or {"primary_color": "#1677ff", "logo_url": None},
+    }
 
 
 @router.get("", response_model=List[TenantResponse])

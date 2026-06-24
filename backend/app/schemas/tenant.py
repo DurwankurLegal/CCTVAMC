@@ -24,6 +24,9 @@ class TenantUpdate(BaseModel):
     branding: Optional[dict] = None
     settings: Optional[dict] = None
     trial_ends_at: Optional[datetime] = None
+    custom_domain: Optional[str] = None
+    custom_email_sender: Optional[str] = None
+    email_templates: Optional[dict] = None
 
 
 class TenantResponse(BaseModel):
@@ -39,6 +42,9 @@ class TenantResponse(BaseModel):
     settings: dict
     is_active: bool
     trial_ends_at: Optional[datetime] = None
+    custom_domain: Optional[str] = None
+    custom_email_sender: Optional[str] = None
+    email_templates: Optional[dict] = None
 
 
 class TenantProvisionRequest(BaseModel):

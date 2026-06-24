@@ -69,7 +69,26 @@ class NotificationService:
                 NotificationTemplate.is_active == True,
             )
         )
-        return result.scalar_one_or_none()
+        db_template = result.scalar_one_or_none()
+        if db_template:
+            return db_template
+
+        # Check tenant email templates override JSON
+        from app.models.tenant import Tenant
+        result_tenant = await self.db.execute(select(Tenant).where(Tenant.id == self.tenant_id))
+        tenant = result_tenant.scalar_one_or_none()
+        if tenant and tenant.email_templates:
+            template_override = tenant.email_templates.get(event_type)
+            if template_override and isinstance(template_override, dict):
+                class DynamicTemplate:
+                    def __init__(self, subject: str, body: str):
+                        self.subject = subject
+                        self.body = body
+                subject = template_override.get("subject", "")
+                body = template_override.get("body", "")
+                if body:
+                    return DynamicTemplate(subject, body)
+        return None
 
     @staticmethod
     def _render(template: str, context: dict) -> str:
