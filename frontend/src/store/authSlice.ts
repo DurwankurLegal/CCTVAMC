@@ -11,6 +11,7 @@ export interface AuthUser {
   tenant_slug?: string | null;
   must_change_password?: boolean;
   permissions?: string[];
+  totp_enabled?: boolean;
 }
 
 interface AuthState {

@@ -28,4 +28,4 @@ async def test_list_customers(client: AsyncClient, admin_token: str):
 @pytest.mark.asyncio
 async def test_unauthenticated_returns_401(client: AsyncClient):
     resp = await client.get("/api/v1/customers")
-    assert resp.status_code == 403  # HTTPBearer returns 403 when no credentials
+    assert resp.status_code == 401  # HTTPBearer returns 401 when no credentials

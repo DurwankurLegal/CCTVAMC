@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Table, Tag, Typography, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Space, message, Row, Col } from "antd";
-import { PlusOutlined, EditOutlined, DollarOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DollarOutlined, CheckCircleOutlined, ExclamationCircleOutlined, FileOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
 import { useSearchParams } from "react-router-dom";
 import SmartCard from "../components/SmartCard";
+import DocumentModal from "../components/DocumentModal";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -26,6 +27,7 @@ interface Customer { id: string; name: string; }
 const statusColor: Record<string, string> = {
   draft: "default", issued: "blue", paid: "green",
   partially_paid: "orange", cancelled: "volcano", credit_note: "purple",
+  overdue: "red",
 };
 const STATUSES = ["draft", "issued", "paid", "partially_paid", "cancelled"];
 
@@ -37,6 +39,10 @@ export default function InvoicesPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [form] = Form.useForm();
+
+  // Document modal state
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [selectedInvoiceForDocs, setSelectedInvoiceForDocs] = useState<Invoice | null>(null);
 
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
@@ -57,10 +63,17 @@ export default function InvoicesPage() {
   const overdueDays = (i: Invoice) => i.due_date ? Math.floor((today.getTime() - new Date(i.due_date).getTime()) / 86400000) : 0;
 
   const filteredItems = items.filter(item => {
-    if (statusParam && item.status !== statusParam) return false;
+    const isOverdue = ["issued", "partially_paid"].includes(item.status) && overdueDays(item) > 0;
+    
+    if (statusParam) {
+      if (statusParam === "overdue") {
+        if (!isOverdue) return false;
+      } else if (item.status !== statusParam) {
+        return false;
+      }
+    }
     
     if (isDefaulter) {
-      const isOverdue = item.status === "overdue";
       const hasDefaulterNote = item.notes?.includes("DEFAULTER");
       const isOverdue45 = overdueDays(item) > 45;
       if (!isOverdue || !(hasDefaulterNote || isOverdue45)) return false;
@@ -73,8 +86,12 @@ export default function InvoicesPage() {
   // Calculate totals
   const totalBilled = filteredItems.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
   const totalCollected = filteredItems.reduce((acc, curr) => acc + Number(curr.amount_paid), 0);
-  const totalOutstanding = totalBilled - totalCollected;
-  const overdueInvoices = filteredItems.filter(item => item.status === "overdue").length;
+  const totalOutstanding = filteredItems
+    .filter(i => ["issued", "partially_paid"].includes(i.status))
+    .reduce((acc, curr) => acc + (Number(curr.total_amount) - Number(curr.amount_paid)), 0);
+  const overdueInvoices = filteredItems.filter(item => 
+    ["issued", "partially_paid"].includes(item.status) && overdueDays(item) > 0
+  ).length;
 
   const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ invoice_date: dayjs() }); setOpen(true); };
   const openEdit = (row: Invoice) => {
@@ -116,7 +133,13 @@ export default function InvoicesPage() {
     { title: "Customer", dataIndex: "customer_id", key: "cust", render: (v: string) => custMap[v] ?? "—" },
     {
       title: "Status", dataIndex: "status", key: "status",
-      render: (v: string) => <Tag color={statusColor[v] ?? "default"}>{v.replace("_", " ")}</Tag>,
+      render: (v: string, record: Invoice) => {
+        let displayStatus = v;
+        const isOverdue = ["issued", "partially_paid"].includes(record.status) && 
+          record.due_date && (new Date(record.due_date).getTime() < new Date().setHours(0,0,0,0));
+        if (isOverdue) displayStatus = "overdue";
+        return <Tag color={statusColor[displayStatus] ?? "default"}>{displayStatus.replace("_", " ")}</Tag>;
+      }
     },
     { title: "Invoice Date", dataIndex: "invoice_date", key: "idate", render: (v: string) => dayjs(v).format("DD MMM YYYY") },
     { title: "Due Date", dataIndex: "due_date", key: "ddate", render: (v: string) => v ? dayjs(v).format("DD MMM YYYY") : "—" },
@@ -135,6 +158,16 @@ export default function InvoicesPage() {
       render: (_: any, row: Invoice) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
+          <Button
+            size="small"
+            icon={<FileOutlined />}
+            onClick={() => {
+              setSelectedInvoiceForDocs(row);
+              setDocsOpen(true);
+            }}
+          >
+            Docs
+          </Button>
         </Space>
       ),
     },
@@ -219,6 +252,14 @@ export default function InvoicesPage() {
           <Form.Item name="notes" label="Notes"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
+
+      <DocumentModal
+        open={docsOpen}
+        entityType="invoice"
+        entityId={selectedInvoiceForDocs?.id || null}
+        entityName={selectedInvoiceForDocs?.invoice_number || ""}
+        onClose={() => setDocsOpen(false)}
+      />
     </div>
   );
 }

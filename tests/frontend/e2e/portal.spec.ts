@@ -11,13 +11,15 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PORTAL_EMAIL    = process.env.E2E_PORTAL_EMAIL    ?? "customer@portal.com";
 const PORTAL_PASSWORD = process.env.E2E_PORTAL_PASSWORD ?? "Portal@1234";
+const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "durwankur";
 
 async function portalLogin(page: Page) {
   await page.goto("/portal/login");
+  await page.fill("#tenant_slug", TENANT_SLUG);
   await page.fill("input[type='email'], input#email", PORTAL_EMAIL);
   await page.fill("input[type='password']", PORTAL_PASSWORD);
   await page.click("button[type='submit'], button:has-text('Sign In'), button:has-text('Login')");
-  await page.waitForURL(/\/portal/, { timeout: 10_000 });
+  await page.waitForURL(/\/portal\/?$/, { timeout: 10_000 });
 }
 
 // ── Portal login page ─────────────────────────────────────────────────────────
@@ -41,11 +43,15 @@ test("portal login page is separate from staff login", async ({ page }) => {
 
 test("invalid portal credentials shows error", async ({ page }) => {
   await page.goto("/portal/login");
+  await page.fill("#tenant_slug", TENANT_SLUG);
   await page.fill("input[type='email'], input#email", "fake@portal.com");
   await page.fill("input[type='password']", "wrongpass");
   await page.click("button[type='submit'], button:has-text('Sign In'), button:has-text('Login')");
   await expect(
-    page.locator(".ant-message-error, [role='alert'], text=Invalid, text=credentials").first()
+    page.locator(".ant-message-error, [role='alert']")
+      .or(page.locator("text=Invalid"))
+      .or(page.locator("text=credentials"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -64,21 +70,29 @@ test("portal dashboard loads after login", async ({ page }) => {
 test("portal has tickets link", async ({ page }) => {
   await portalLogin(page);
   await expect(
-    page.locator("text=Tickets, text=Service Requests, a[href*='/portal/tickets']").first()
+    page.locator("a[href*='/portal/tickets']")
+      .or(page.locator("text=Tickets"))
+      .or(page.locator("text=Service Requests"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
 test("portal has invoices link", async ({ page }) => {
   await portalLogin(page);
   await expect(
-    page.locator("text=Invoices, a[href*='/portal/invoices']").first()
+    page.locator("a[href*='/portal/invoices']")
+      .or(page.locator("text=Invoices"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
 test("portal has coverage/AMC link", async ({ page }) => {
   await portalLogin(page);
   await expect(
-    page.locator("text=Coverage, text=AMC, a[href*='/portal/coverage']").first()
+    page.locator("a[href*='/portal/coverage']")
+      .or(page.locator("text=Coverage"))
+      .or(page.locator("text=AMC"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -88,7 +102,10 @@ test("portal tickets page loads", async ({ page }) => {
   await portalLogin(page);
   await page.goto("/portal/tickets");
   await expect(
-    page.locator(".ant-table, table, text=No data, text=No tickets").first()
+    page.locator(".ant-table, table")
+      .or(page.locator("text=No data"))
+      .or(page.locator("text=No tickets"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -96,7 +113,10 @@ test("portal invoices page loads", async ({ page }) => {
   await portalLogin(page);
   await page.goto("/portal/invoices");
   await expect(
-    page.locator(".ant-table, table, text=No data, text=No invoices").first()
+    page.locator(".ant-table, table")
+      .or(page.locator("text=No data"))
+      .or(page.locator("text=No invoices"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -104,7 +124,10 @@ test("portal coverage page loads", async ({ page }) => {
   await portalLogin(page);
   await page.goto("/portal/coverage");
   await expect(
-    page.locator(".ant-card, .ant-list, text=No data, text=coverage").first()
+    page.locator(".ant-card, .ant-list")
+      .or(page.locator("text=No data"))
+      .or(page.locator("text=coverage"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -114,6 +137,8 @@ test("portal login token does not grant access to staff dashboard", async ({ pag
   await portalLogin(page);
   // Manually navigate to staff route
   await page.goto("/dashboard");
+  // Wait for the asynchronous client-side redirect to the login page to complete
+  await page.waitForURL(/\/login/);
   // Should redirect away or show 403, not the staff dashboard
   // The staff app checks for a different token type; portal token is invalid
   const url = page.url();

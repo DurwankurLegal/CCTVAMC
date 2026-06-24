@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message, Radio, Card } from "antd";
-import { PlusOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Typography, Space, message, Radio, Card, List, Tooltip, Row, Col, Tabs, Upload } from "antd";
+import { PlusOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, MessageOutlined, FileOutlined, SendOutlined, UploadOutlined, InboxOutlined } from "@ant-design/icons";
+
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTickets } from "../store/ticketSlice";
+import { fetchCustomers } from "../store/customerSlice";
 import apiClient from "../api/client";
 import type { AppDispatch, RootState } from "../store";
 import { useSearchParams } from "react-router-dom";
@@ -35,14 +37,121 @@ export default function ServiceTicketsPage() {
   
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
+  // Filters State
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  const [slaFilter, setSlaFilter] = useState<string | null>(null);
+
+  // Drag and drop state
+  const [draggedOverColumn, setDraggedOverColumn] = useState<string | null>(null);
+
+  // Comments state
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  // Docs state
+  const [docs, setDocs] = useState<any[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [docType, setDocType] = useState("other");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<string>("comments");
+
+  const loadComments = async (ticketId: string) => {
+    setLoadingComments(true);
+    try {
+      const { data } = await apiClient.get(`/service-tickets/${ticketId}/comments`);
+      setComments(data);
+    } catch {
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const postComment = async () => {
+    if (!editing || !commentText.trim()) return;
+    setPostingComment(true);
+    try {
+      await apiClient.post(`/service-tickets/${editing.id}/comments`, { body: commentText.trim() });
+      setCommentText("");
+      loadComments(editing.id);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to post comment");
+    } finally {
+      setPostingComment(false);
+    }
+  };
+
+  const loadDocs = async (ticketId: string) => {
+    setLoadingDocs(true);
+    try {
+      const { data } = await apiClient.get("/documents", {
+        params: { entity_type: "ticket", entity_id: ticketId }
+      });
+      setDocs(data);
+    } catch {
+      setDocs([]);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  const handleUploadDoc = async (file: File) => {
+    if (!editing) return false;
+    setUploadingDoc(true);
+    const fd = new FormData();
+    fd.append("entity_type", "ticket");
+    fd.append("entity_id", editing.id);
+    fd.append("doc_type", docType);
+    fd.append("file", file);
+    try {
+      await apiClient.post("/documents", fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      message.success("Document uploaded");
+      loadDocs(editing.id);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Upload failed");
+    } finally {
+      setUploadingDoc(false);
+    }
+    return false;
+  };
+
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
   const priorityParam = searchParams.get("priority");
   const slaParam = searchParams.get("sla");
 
-  useEffect(() => { dispatch(fetchTickets()); }, [dispatch]);
+  useEffect(() => {
+    dispatch(fetchTickets());
+    dispatch(fetchCustomers());
+  }, [dispatch]);
 
   const filteredItems = items.filter(item => {
+    // 1. Search text filter (matches ticket number, complaint, or customer name)
+    if (searchText.trim()) {
+      const query = searchText.toLowerCase();
+      const matchNo = item.ticket_number.toLowerCase().includes(query);
+      const matchComplaint = item.complaint.toLowerCase().includes(query);
+      const customerName = customers.find(c => c.id === item.customer_id)?.name || "";
+      const matchCustomer = customerName.toLowerCase().includes(query);
+      if (!matchNo && !matchComplaint && !matchCustomer) return false;
+    }
+    // 2. Status filter
+    if (statusFilter && item.status !== statusFilter) return false;
+    // 3. Priority filter
+    if (priorityFilter && item.priority !== priorityFilter) return false;
+    // 4. SLA filter
+    if (slaFilter) {
+      if (slaFilter === "breached" && !item.sla_breached) return false;
+      if (slaFilter === "ok" && item.sla_breached) return false;
+    }
+    // 5. URL search params fallback / override (if specified)
     if (statusParam && item.status !== statusParam) return false;
     if (priorityParam && item.priority !== priorityParam) return false;
     if (slaParam) {
@@ -52,8 +161,20 @@ export default function ServiceTicketsPage() {
     return true;
   });
 
-  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ priority: "medium" }); setOpen(true); };
-  const openEdit = (row: Ticket) => { setEditing(row); form.setFieldsValue(row); setOpen(true); };
+  const openCreate = () => { 
+    setEditing(null); 
+    form.resetFields(); 
+    form.setFieldsValue({ priority: "medium" }); 
+    setOpen(true); 
+  };
+  const openEdit = (row: Ticket, tab: string = "comments") => { 
+    setEditing(row); 
+    form.setFieldsValue(row); 
+    setActiveTab(tab); 
+    setOpen(true); 
+    loadComments(row.id);
+    loadDocs(row.id);
+  };
 
   const handleSave = async () => {
     const values = await form.validateFields();
@@ -78,13 +199,59 @@ export default function ServiceTicketsPage() {
     }
   };
 
+  const updateTicketStatus = async (ticketId: string, newStatus: string) => {
+    try {
+      await apiClient.patch(`/service-tickets/${ticketId}`, { status: newStatus });
+      message.success("Ticket status updated");
+      dispatch(fetchTickets());
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to update status");
+    }
+  };
+
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, ticketId: string) => {
+    e.dataTransfer.setData("text/plain", ticketId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: string) => {
+    e.preventDefault();
+    setDraggedOverColumn(status);
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverColumn(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, status: string) => {
+    e.preventDefault();
+    setDraggedOverColumn(null);
+    const ticketId = e.dataTransfer.getData("text/plain");
+    if (ticketId) {
+      await updateTicketStatus(ticketId, status);
+    }
+  };
+
   const priorityColor: Record<string, string> = { low: "blue", medium: "orange", high: "red", critical: "purple" };
   const statusColor: Record<string, string> = {
     open: "blue", assigned: "cyan", in_progress: "orange", pending_parts: "gold", resolved: "green", closed: "default",
   };
 
   const columns = [
-    { title: "Ticket #", dataIndex: "ticket_number", key: "ticket_number" },
+    { 
+      title: "Ticket #", 
+      key: "ticket_number",
+      render: (_: any, row: Ticket) => (
+        <span style={{ fontWeight: 600, color: "#3b82f6" }}>{row.ticket_number}</span>
+      )
+    },
+    {
+      title: "Customer",
+      dataIndex: "customer_id",
+      key: "customer",
+      render: (v: string) => customers.find(c => c.id === v)?.name || "—",
+    },
     {
       title: "Status", dataIndex: "status", key: "status",
       render: (v: string) => <Tag color={statusColor[v] ?? "default"}>{v.replace("_", " ")}</Tag>,
@@ -101,7 +268,23 @@ export default function ServiceTicketsPage() {
     {
       title: "Actions", key: "actions",
       render: (_: unknown, row: Ticket) => (
-        <Space><Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button></Space>
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row, "comments")}>Edit</Button>
+          <Tooltip title="Comments">
+            <Button 
+              size="small" 
+              icon={<MessageOutlined />} 
+              onClick={() => openEdit(row, "comments")}
+            />
+          </Tooltip>
+          <Tooltip title="Docs & Attachments">
+            <Button 
+              size="small" 
+              icon={<FileOutlined />} 
+              onClick={() => openEdit(row, "docs")}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
@@ -117,14 +300,19 @@ export default function ServiceTicketsPage() {
             <div 
               key={status} 
               className="glass-card" 
+              onDragOver={(e) => handleDragOver(e, status)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, status)}
               style={{ 
                 flex: "0 0 280px", 
                 display: "flex", 
                 flexDirection: "column", 
                 gap: "12px", 
                 padding: "16px",
-                background: "rgba(22, 28, 45, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.05)"
+                background: draggedOverColumn === status ? "rgba(59, 130, 246, 0.15)" : "rgba(22, 28, 45, 0.4)",
+                border: draggedOverColumn === status ? "1px dashed #3b82f6" : "1px solid rgba(255, 255, 255, 0.05)",
+                borderRadius: "8px",
+                transition: "all 0.2s"
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -140,6 +328,8 @@ export default function ServiceTicketsPage() {
                     key={ticket.id}
                     size="small"
                     className="interactive-table-row"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, ticket.id)}
                     styles={{
                       body: { padding: "12px" }
                     }}
@@ -147,7 +337,7 @@ export default function ServiceTicketsPage() {
                       background: "rgba(11, 15, 25, 0.6)", 
                       border: "1px solid rgba(255, 255, 255, 0.08)",
                       borderRadius: "8px",
-                      cursor: "pointer"
+                      cursor: "grab"
                     }}
                     onClick={() => openEdit(ticket)}
                   >
@@ -160,14 +350,41 @@ export default function ServiceTicketsPage() {
                           {ticket.priority}
                         </Tag>
                       </div>
+                      <div style={{ fontSize: "11px", color: "#9ca3af", fontWeight: 500 }}>
+                        {customers.find(c => c.id === ticket.customer_id)?.name || "—"}
+                      </div>
                       <span style={{ color: "#f3f4f6", fontSize: "12px", lineHeight: "1.4" }}>
                         {ticket.complaint}
                       </span>
-                      {ticket.sla_breached && (
-                        <Tag color="red" style={{ alignSelf: "flex-start", fontSize: "9px", margin: 0, marginTop: 4 }}>
-                          SLA Breached
-                        </Tag>
-                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                        {ticket.sla_breached ? (
+                          <Tag color="red" style={{ fontSize: "9px", margin: 0 }}>
+                            SLA Breached
+                          </Tag>
+                        ) : (
+                          <span />
+                        )}
+                        <Space onClick={e => e.stopPropagation()}>
+                          <Tooltip title="Comments">
+                            <Button 
+                              size="small" 
+                              type="text" 
+                              icon={<MessageOutlined />} 
+                              onClick={() => openEdit(ticket, "comments")} 
+                              style={{ color: "#9ca3af", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
+                            />
+                          </Tooltip>
+                          <Tooltip title="Attachments">
+                            <Button 
+                              size="small" 
+                              type="text" 
+                              icon={<FileOutlined />} 
+                              onClick={() => openEdit(ticket, "docs")} 
+                              style={{ color: "#9ca3af", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
+                            />
+                          </Tooltip>
+                        </Space>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -197,6 +414,67 @@ export default function ServiceTicketsPage() {
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Raise Ticket</Button>
       </div>
 
+      {/* Search and Filters Bar */}
+      <Card 
+        style={{ 
+          marginBottom: 20, 
+          background: "rgba(22, 28, 45, 0.2)", 
+          border: "1px solid rgba(255, 255, 255, 0.05)" 
+        }}
+      >
+        <Space wrap size={16}>
+          <Input 
+            placeholder="Search tickets, complaints..." 
+            value={searchText} 
+            onChange={e => setSearchText(e.target.value)} 
+            style={{ width: 220 }} 
+            allowClear
+          />
+          <Select 
+            placeholder="Filter by Status" 
+            value={statusFilter} 
+            onChange={setStatusFilter} 
+            style={{ width: 160 }} 
+            allowClear
+          >
+            {STATUSES.map(s => (
+              <Option key={s} value={s}>{s.replace("_", " ").toUpperCase()}</Option>
+            ))}
+          </Select>
+          <Select 
+            placeholder="Filter by Priority" 
+            value={priorityFilter} 
+            onChange={setPriorityFilter} 
+            style={{ width: 140 }} 
+            allowClear
+          >
+            {PRIORITIES.map(p => (
+              <Option key={p} value={p}>{p.toUpperCase()}</Option>
+            ))}
+          </Select>
+          <Select 
+            placeholder="SLA Compliance" 
+            value={slaFilter} 
+            onChange={setSlaFilter} 
+            style={{ width: 160 }} 
+            allowClear
+          >
+            <Option value="ok">SLA OK</Option>
+            <Option value="breached">SLA Breached</Option>
+          </Select>
+          <Button 
+            onClick={() => {
+              setSearchText("");
+              setStatusFilter(null);
+              setPriorityFilter(null);
+              setSlaFilter(null);
+            }}
+          >
+            Reset Filters
+          </Button>
+        </Space>
+      </Card>
+
       {viewMode === "table" ? (
         <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
       ) : (
@@ -205,34 +483,132 @@ export default function ServiceTicketsPage() {
 
       <Modal
         title={editing ? `Edit ${editing.ticket_number}` : "Raise Service Ticket"}
-        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
+        open={open} 
+        onOk={handleSave} 
+        onCancel={() => setOpen(false)} 
+        confirmLoading={saving}
         okText={editing ? "Save" : "Create"}
+        width={editing ? 950 : 520}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          {!editing && (
+        {editing ? (
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+                <Form.Item name="status" label="Status">
+                  <Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
+                </Form.Item>
+                <Form.Item name="priority" label="Priority">
+                  <Select>{PRIORITIES.map(p => <Option key={p} value={p}>{p}</Option>)}</Select>
+                </Form.Item>
+                <Form.Item name="complaint" label="Complaint / Description">
+                  <Input.TextArea rows={3} disabled />
+                </Form.Item>
+                <Form.Item name="resolution_notes" label="Resolution Notes">
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+              </Form>
+            </Col>
+            <Col xs={24} md={12} style={{ marginTop: 16 }}>
+              <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+                {
+                  key: "comments",
+                  label: `Comments (${comments.length})`,
+                  children: (
+                    <div>
+                      <div style={{ 
+                        maxHeight: "260px", 
+                        overflowY: "auto", 
+                        marginBottom: "12px", 
+                        padding: "8px", 
+                        background: "rgba(255, 255, 255, 0.02)", 
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.05)"
+                      }}>
+                        <List
+                          loading={loadingComments}
+                          dataSource={comments}
+                          locale={{ emptyText: "No comments yet" }}
+                          size="small"
+                          renderItem={(c: any) => (
+                            <List.Item style={{ padding: "8px 0" }}>
+                              <List.Item.Meta
+                                title={<span style={{ fontSize: "11px", color: "#9ca3af" }}>{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : ""}</span>}
+                                description={<span style={{ color: "#f3f4f6", fontSize: "13px" }}>{c.body}</span>}
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                      <Space.Compact style={{ width: "100%" }}>
+                        <Input value={commentText} onChange={e => setCommentText(e.target.value)} onPressEnter={postComment} placeholder="Add a comment…" />
+                        <Button type="primary" icon={<SendOutlined />} loading={postingComment} onClick={postComment}>Send</Button>
+                      </Space.Compact>
+                    </div>
+                  )
+                },
+                {
+                  key: "docs",
+                  label: `Docs & Attachments (${docs.length})`,
+                  children: (
+                    <div>
+                      <Space style={{ marginBottom: 12 }} wrap>
+                        <Select value={docType} onChange={setDocType} style={{ width: 140 }} size="small">
+                          {["contract", "invoice", "receipt", "audit", "warranty", "photo", "other"].map(d => (
+                            <Option key={d} value={d}>{d.toUpperCase()}</Option>
+                          ))}
+                        </Select>
+                        <Upload beforeUpload={(f) => handleUploadDoc(f as File)} showUploadList={false}>
+                          <Button size="small" icon={<UploadOutlined />} loading={uploadingDoc}>Upload</Button>
+                        </Upload>
+                      </Space>
+                      <div style={{ 
+                        maxHeight: "260px", 
+                        overflowY: "auto", 
+                        padding: "8px", 
+                        background: "rgba(255, 255, 255, 0.02)", 
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.05)"
+                      }}>
+                        <List
+                          loading={loadingDocs}
+                          dataSource={docs}
+                          locale={{ emptyText: <span><InboxOutlined /> No documents yet</span> }}
+                          size="small"
+                          renderItem={(d: any) => (
+                            <List.Item
+                              style={{ padding: "8px 0" }}
+                              actions={d.url ? [<a key="v" href={d.url} target="_blank" rel="noreferrer" style={{ fontSize: "12px" }}>View</a>] : []}
+                            >
+                              <List.Item.Meta
+                                avatar={<FileOutlined style={{ fontSize: "16px", marginTop: "4px" }} />}
+                                title={<span style={{ fontSize: "13px", color: "#f3f4f6" }}>{d.file_name}</span>}
+                                description={<Tag style={{ fontSize: "10px", lineHeight: "14px" }}>{d.doc_type.toUpperCase()}</Tag>}
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+              ]} />
+            </Col>
+          </Row>
+        ) : (
+          <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
             <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
               <Select showSearch optionFilterProp="children" placeholder="Select customer">
                 {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
               </Select>
             </Form.Item>
-          )}
-          {editing && (
-            <Form.Item name="status" label="Status">
-              <Select>{STATUSES.map(s => <Option key={s} value={s}>{s.replace("_", " ")}</Option>)}</Select>
+            <Form.Item name="priority" label="Priority">
+              <Select>{PRIORITIES.map(p => <Option key={p} value={p}>{p}</Option>)}</Select>
             </Form.Item>
-          )}
-          <Form.Item name="priority" label="Priority">
-            <Select>{PRIORITIES.map(p => <Option key={p} value={p}>{p}</Option>)}</Select>
-          </Form.Item>
-          <Form.Item name="complaint" label="Complaint / Description" rules={[{ required: !editing }]}>
-            <Input.TextArea rows={3} disabled={!!editing} />
-          </Form.Item>
-          {editing && (
-            <Form.Item name="resolution_notes" label="Resolution Notes">
+            <Form.Item name="complaint" label="Complaint / Description" rules={[{ required: true }]}>
               <Input.TextArea rows={3} />
             </Form.Item>
-          )}
-        </Form>
+          </Form>
+        )}
       </Modal>
     </div>
   );

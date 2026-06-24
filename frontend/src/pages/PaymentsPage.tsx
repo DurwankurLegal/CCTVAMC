@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Typography, Button, Modal, Form, Select, DatePicker, InputNumber, Input, Space, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Table, Tag, Typography, Button, Modal, Form, Select, DatePicker, InputNumber, Input, Space, message, Tabs, Card, Row, Col } from "antd";
+import { PlusOutlined, EditOutlined, DownloadOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 import dayjs from "dayjs";
 
@@ -38,6 +38,28 @@ export default function PaymentsPage() {
   const [form] = Form.useForm();
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
 
+  const [activeTab, setActiveTab] = useState("payments");
+  const [ageingData, setAgeingData] = useState<any[]>([]);
+  const [loadingAgeing, setLoadingAgeing] = useState(false);
+
+  const loadAgeing = async () => {
+    setLoadingAgeing(true);
+    try {
+      const { data } = await apiClient.get("/payments/ageing");
+      setAgeingData(data);
+    } catch (e: any) {
+      message.error("Failed to load ageing report");
+    } finally {
+      setLoadingAgeing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "ageing") {
+      loadAgeing();
+    }
+  }, [activeTab]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -48,6 +70,26 @@ export default function PaymentsPage() {
       setCustomers(custRes.data);
       setInvoices(invRes.data);
     } finally { setLoading(false); }
+  };
+
+  const downloadReceipt = async (paymentId: string) => {
+    try {
+      const response = await apiClient.get(`/payments/${paymentId}/receipt`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `receipt-${paymentId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Receipt downloaded successfully");
+    } catch (e: any) {
+      message.error("Failed to download receipt");
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -109,7 +151,38 @@ export default function PaymentsPage() {
     {
       title: "Actions", key: "actions",
       render: (_: any, row: Payment) => (
-        <Space><Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button></Space>
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
+          <Button size="small" icon={<DownloadOutlined />} onClick={() => downloadReceipt(row.id)}>Receipt</Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const tabItems = [
+    {
+      key: "payments",
+      label: "Payments",
+      children: <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />,
+    },
+    {
+      key: "ageing",
+      label: "Ageing",
+      children: (
+        <Card loading={loadingAgeing} data-testid="ageing">
+          <Row gutter={16}>
+            {ageingData.map((d: any) => (
+              <Col span={6} key={d.bucket}>
+                <Card title={d.bucket.replace("_", " ").toUpperCase()} bordered={false} style={{ textAlign: "center", background: "#fafafa" }}>
+                  <Typography.Title level={3} style={{ margin: 0 }}>
+                    ₹{Number(d.amount).toLocaleString("en-IN")}
+                  </Typography.Title>
+                  <Typography.Text type="secondary">{d.count} invoices</Typography.Text>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
       ),
     },
   ];
@@ -120,7 +193,8 @@ export default function PaymentsPage() {
         <Title level={4} style={{ margin: 0 }}>Payments</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Record Payment</Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
+
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
 
       <Modal
         title={editing ? "Edit Payment" : "Record Payment"}

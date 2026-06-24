@@ -29,7 +29,9 @@ test("tickets page shows list or table", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
   await expect(
-    page.locator(".ant-table, table, [data-testid='ticket-list'], text=No data").first()
+    page.locator(".ant-table, table, [data-testid='ticket-list']")
+      .or(page.locator("text=No data"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -38,7 +40,7 @@ test("tickets page shows list or table", async ({ page }) => {
 test("create ticket button opens a form modal", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
-  await page.click("button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
+  await page.click("button:has-text('Raise Ticket'), button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
   await expect(
     page.locator(".ant-modal, [role='dialog'], form").first()
   ).toBeVisible({ timeout: 5_000 });
@@ -47,21 +49,23 @@ test("create ticket button opens a form modal", async ({ page }) => {
 test("new ticket form has priority selector", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
-  await page.click("button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
+  await page.click("button:has-text('Raise Ticket'), button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
   await page.waitForSelector(".ant-modal, [role='dialog'], form");
   await expect(
-    page.locator("[placeholder*='priority' i], .ant-select:has-text('priority'), select").first()
+    page.locator("#priority, .ant-form-item:has-text('Priority') .ant-select").first()
   ).toBeVisible();
 });
 
 test("ticket form validation shows error for empty complaint", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
-  await page.click("button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
+  await page.click("button:has-text('Raise Ticket'), button:has-text('New'), button:has-text('Create'), button:has-text('Add')");
   await page.waitForSelector(".ant-modal, [role='dialog']");
   await page.click(".ant-modal-footer .ant-btn-primary, button[type='submit']");
   await expect(
-    page.locator(".ant-form-item-explain-error, [class*='error'], text=required").first()
+    page.locator(".ant-form-item-explain-error, [class*='error']")
+      .or(page.locator("text=required"))
+      .first()
   ).toBeVisible({ timeout: 5_000 });
 });
 
@@ -70,7 +74,7 @@ test("ticket form validation shows error for empty complaint", async ({ page }) 
 test("tickets page renders without error", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
-  await expect(page.locator("text=Something went wrong, text=500").first()).not.toBeVisible();
+  await expect(page.locator("text=Something went wrong").or(page.locator("text=500")).first()).not.toBeVisible();
 });
 
 // ── Navigation breadcrumb / title ─────────────────────────────────────────────
@@ -79,7 +83,7 @@ test("tickets page has a heading", async ({ page }) => {
   await login(page);
   await page.goto("/tickets");
   await expect(
-    page.locator("h1, h2, .ant-page-header-heading-title, [data-testid='page-title']").first()
+    page.locator("h1, h2, h3, h4, .ant-page-header-heading-title, [data-testid='page-title']").first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -91,7 +95,7 @@ test("tickets page has filter controls", async ({ page }) => {
   // Look for any filter control (search, select, or tabs)
   await expect(
     page.locator(
-      "input[placeholder*='search' i], .ant-select, .ant-tabs, [data-testid='filter']"
+      "input[placeholder*='search' i], .ant-select, .ant-tabs, .ant-radio-group, [data-testid='filter']"
     ).first()
   ).toBeVisible({ timeout: 8_000 });
 });

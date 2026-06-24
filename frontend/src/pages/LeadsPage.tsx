@@ -126,7 +126,7 @@ export default function LeadsPage() {
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email"><Input type="email" /></Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}><Input /></Form.Item>
           <Form.Item name="category" label="Category">
             <Select allowClear>{CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}</Select>
           </Form.Item>

@@ -60,16 +60,26 @@ const trendData = [
   { name: "Jun", billed: 310000, collected: 275000 }
 ];
 
-const statusTag = (status: string) => {
+const statusTag = (status: string, record?: any) => {
+  let displayStatus = status;
+  if (record && record.due_date) {
+    const today = new Date();
+    const isOverdue = ["issued", "partially_paid"].includes(record.status) && 
+      (new Date(record.due_date).getTime() < today.setHours(0,0,0,0));
+    if (isOverdue) {
+      displayStatus = "overdue";
+    }
+  }
   const map: Record<string, [string, React.ReactNode]> = {
     paid:           ["green",  <CheckCircleOutlined />],
     overdue:        ["red",    <CloseCircleOutlined />],
     partially_paid: ["orange", <ExclamationCircleOutlined />],
     active:         ["green",  <CheckCircleOutlined />],
     draft:          ["gold",   <ExclamationCircleOutlined />],
+    issued:         ["blue",   <ExclamationCircleOutlined />],
   };
-  const [color, icon] = map[status] ?? ["default", null];
-  return <Tag color={color} icon={icon}>{status.replace("_", " ")}</Tag>;
+  const [color, icon] = map[displayStatus] ?? ["default", null];
+  return <Tag color={color} icon={icon}>{displayStatus.replace("_", " ")}</Tag>;
 };
 
 export default function DashboardPage() {
@@ -102,9 +112,13 @@ export default function DashboardPage() {
         const today = new Date();
         const paid = inv.filter((i: any) => i.status === "paid");
         const overdueDays = (i: any) => i.due_date ? Math.floor((today.getTime() - new Date(i.due_date).getTime()) / 86400000) : 0;
-        const defaulted = inv.filter((i: any) => i.status === "overdue" && (i.notes?.includes("DEFAULTER") || overdueDays(i) > 45));
+        
+        // Dynamic overdue check
+        const isOverdue = (i: any) => ["issued", "partially_paid"].includes(i.status) && overdueDays(i) > 0;
+
+        const defaulted = inv.filter((i: any) => isOverdue(i) && (i.notes?.includes("DEFAULTER") || overdueDays(i) > 45));
         const defaultedIds = new Set(defaulted.map((i: any) => i.id));
-        const followup = inv.filter((i: any) => ["overdue", "partially_paid"].includes(i.status) && !defaultedIds.has(i.id));
+        const followup = inv.filter((i: any) => (isOverdue(i) || i.status === "partially_paid") && !defaultedIds.has(i.id));
 
         const slaBreached = tickets.filter((t: any) => t.sla_breached).length;
         const slaCompliance = tickets.length ? ((tickets.filter((t: any) => !t.sla_breached).length / tickets.length) * 100) : 100;
@@ -119,7 +133,7 @@ export default function DashboardPage() {
           followup_invoices: followup.length,
           defaulted_invoices: defaulted.length,
           total_revenue: paid.reduce((s: number, i: any) => s + Number(i.amount_paid), 0),
-          outstanding: inv.filter((i: any) => i.status !== "paid").reduce((s: number, i: any) => s + (Number(i.total_amount) - Number(i.amount_paid)), 0),
+          outstanding: inv.filter((i: any) => ["issued", "partially_paid"].includes(i.status)).reduce((s: number, i: any) => s + (Number(i.total_amount) - Number(i.amount_paid)), 0),
           total_tickets: tickets.length,
           sla_breached_tickets: slaBreached,
           sla_compliance: slaCompliance,

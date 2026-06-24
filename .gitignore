@@ -35,3 +35,10 @@ dist/
 *.key
 .DS_Store
 .claude/settings.local.json
+
+# Office temp/lock files
+~$*
+
+# Playwright / E2E artifacts (generated)
+**/test-results/
+**/playwright-report/

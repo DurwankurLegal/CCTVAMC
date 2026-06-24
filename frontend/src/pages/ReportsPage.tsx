@@ -799,6 +799,136 @@ function StandardReportsPanel() {
   );
 }
 
+
+// ─── SLA Compliance Report Panel ─────────────────────────────────────────────
+
+function SLAReportPanel() {
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const generateReport = async () => {
+    if (!dateRange) {
+      message.warning("Please select a date range");
+      return;
+    }
+    setLoading(true);
+    setData(null);
+    try {
+      const { data: resData } = await apiClient.get("/reports/sla", {
+        params: {
+          from_date: dateRange[0].format("YYYY-MM-DD"),
+          to_date: dateRange[1].format("YYYY-MM-DD"),
+        },
+      });
+      setData(resData);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to generate SLA report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card
+      id="sla-report-panel"
+      style={{ marginBottom: 28, borderColor: "#10b981", borderWidth: 1.5 }}
+      styles={{ header: { background: "linear-gradient(135deg, #064e3b 0%, #047857 100%)", borderRadius: "8px 8px 0 0" } }}
+      title={
+        <Space>
+          <BarChartOutlined style={{ color: "#a7f3d0", fontSize: 18 }} />
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>
+            SLA Compliance Report
+          </span>
+          <Tag color="green" style={{ marginLeft: 4, fontSize: 10 }}>SERVICE LEVEL AGREEMENT</Tag>
+        </Space>
+      }
+    >
+      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 20 }}>
+        <Col xs={24} md={18}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+            Report Period
+          </Text>
+          <RangePicker
+            id="sla-report-date-range"
+            style={{ width: "100%" }}
+            value={dateRange}
+            onChange={(v) => setDateRange(v as [Dayjs, Dayjs] | null)}
+            format="YYYY-MM-DD"
+          />
+        </Col>
+        <Col xs={24} md={6} style={{ paddingTop: 20 }}>
+          <Button
+            id="sla-generate-btn"
+            type="primary"
+            icon={<FileSearchOutlined />}
+            loading={loading}
+            disabled={!dateRange}
+            onClick={generateReport}
+            style={{ background: "#064e3b", borderColor: "#064e3b", width: "100%" }}
+          >
+            Generate Report
+          </Button>
+        </Col>
+      </Row>
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: "48px 0" }}>
+          <Spin size="large" tip="Calculating SLA compliance..." />
+        </div>
+      )}
+
+      {!loading && data && (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <SmartCard
+              title="Total Tickets"
+              value={data.total_tickets}
+              prefix={<ToolOutlined />}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <SmartCard
+              title="SLA Met"
+              value={data.sla_met}
+              prefix={<CheckCircleOutlined />}
+              status="success"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <SmartCard
+              title="SLA Breached"
+              value={data.sla_breached}
+              prefix={<CloseCircleOutlined />}
+              status={data.sla_breached > 0 ? "danger" : "success"}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <MetricProgressGauge
+              title="SLA Compliance"
+              percent={data.compliance_pct}
+              status={data.compliance_pct >= 90 ? "success" : (data.compliance_pct >= 70 ? "warning" : "danger")}
+              subtext="Compliance target is 90%+"
+            />
+          </Col>
+        </Row>
+      )}
+
+      {!loading && !data && (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span>
+              Select a date range, then click <Text strong>Generate Report</Text> to view SLA stats.
+            </span>
+          }
+          style={{ padding: "32px 0" }}
+        />
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
@@ -809,8 +939,10 @@ export default function ReportsPage() {
         Reports &amp; Exports
       </Title>
 
+      <SLAReportPanel />
       <AMCConsolidatedPanel />
       <StandardReportsPanel />
     </div>
   );
 }
+

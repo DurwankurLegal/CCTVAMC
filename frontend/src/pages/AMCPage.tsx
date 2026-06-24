@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
-import { useSelector } from "react-redux";
+import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message, Input } from "antd";
+import { PlusOutlined, EditOutlined, ClockCircleOutlined, FileOutlined } from "@ant-design/icons";
+import { useDispatch, useSelector } from "react-redux";
 import apiClient from "../api/client";
-import type { RootState } from "../store";
+import { fetchCustomers } from "../store/customerSlice";
+import type { AppDispatch, RootState } from "../store";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
+import DocumentModal from "../components/DocumentModal";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -26,6 +29,7 @@ const STATUSES = ["draft", "active", "expiring", "renewed", "terminated"];
 import { useParsedSearchParams } from "../utils/navigation";
 
 export default function AMCPage() {
+  const dispatch = useDispatch<AppDispatch>();
   const [items, setItems] = useState<AMCContract[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -35,6 +39,24 @@ export default function AMCPage() {
   const customers = useSelector((s: RootState) => s.customers.items);
 
   const { status, contract_number } = useParsedSearchParams();
+
+  // Document attachments state
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [selectedAMCForDocs, setSelectedAMCForDocs] = useState<AMCContract | null>(null);
+
+  // PM Schedule state
+  const [pmScheduleOpen, setPmScheduleOpen] = useState(false);
+  const [selectedAMCForPm, setSelectedAMCForPm] = useState<AMCContract | null>(null);
+  const [pmSchedule, setPmSchedule] = useState<any[]>([]);
+  const [pmSummary, setPmSummary] = useState<any>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  // Reschedule / Skip Action state
+  const [actionPmVisit, setActionPmVisit] = useState<any | null>(null);
+  const [pmActionType, setPmActionType] = useState<"reschedule" | "skip" | null>(null);
+  const [actionReason, setActionReason] = useState("");
+  const [actionNewDate, setActionNewDate] = useState<Dayjs | null>(null);
+  const [submittingAction, setSubmittingAction] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -46,7 +68,58 @@ export default function AMCPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const loadPmSchedule = async (amcId: string) => {
+    setLoadingSchedule(true);
+    try {
+      const { data } = await apiClient.get(`/amc/${amcId}/pm-schedule`);
+      setPmSchedule(data.visits || []);
+      setPmSummary(data.summary || null);
+    } catch {
+      setPmSchedule([]);
+      setPmSummary(null);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
+  const handlePmActionSubmit = async () => {
+    if (!actionPmVisit || !pmActionType) return;
+    if (pmActionType === "reschedule" && !actionNewDate) {
+      message.warning("Please select a new date");
+      return;
+    }
+    if (!actionReason.trim()) {
+      message.warning("Please provide a reason");
+      return;
+    }
+
+    setSubmittingAction(true);
+    try {
+      if (pmActionType === "reschedule") {
+        await apiClient.post(`/amc/pm-schedule/${actionPmVisit.id}/reschedule`, {
+          new_date: actionNewDate!.format("YYYY-MM-DD"),
+          reason: actionReason.trim(),
+        });
+        message.success("PM visit rescheduled");
+      } else {
+        await apiClient.post(`/amc/pm-schedule/${actionPmVisit.id}/skip`, {
+          reason: actionReason.trim(),
+        });
+        message.success("PM visit skipped");
+      }
+      setPmActionType(null);
+      setActionPmVisit(null);
+      if (selectedAMCForPm) {
+        loadPmSchedule(selectedAMCForPm.id);
+      }
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Action failed");
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  useEffect(() => { load(); dispatch(fetchCustomers()); }, [dispatch]);
 
   const filteredItems = items.filter(item => {
     if (status && item.status !== status) return false;
@@ -124,6 +197,29 @@ export default function AMCPage() {
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
           {row.status === "draft" && <Button size="small" type="link" onClick={() => activate(row)}>Activate</Button>}
+          {row.status !== "draft" && (
+            <Button
+              size="small"
+              icon={<ClockCircleOutlined />}
+              onClick={() => {
+                setSelectedAMCForPm(row);
+                loadPmSchedule(row.id);
+                setPmScheduleOpen(true);
+              }}
+            >
+              PM Schedule
+            </Button>
+          )}
+          <Button
+            size="small"
+            icon={<FileOutlined />}
+            onClick={() => {
+              setSelectedAMCForDocs(row);
+              setDocsOpen(true);
+            }}
+          >
+            Docs
+          </Button>
         </Space>
       ),
     },
@@ -179,6 +275,124 @@ export default function AMCPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal
+        title={`PM Schedule — ${selectedAMCForPm?.contract_number}`}
+        open={pmScheduleOpen}
+        onCancel={() => setPmScheduleOpen(false)}
+        footer={null}
+        width={750}
+      >
+        {pmSummary && (
+          <div style={{ marginBottom: 16, display: "flex", gap: 12 }}>
+            <Tag color="blue">Total: {pmSummary.total}</Tag>
+            <Tag color="green">Completed: {pmSummary.completed}</Tag>
+            <Tag color="red">Skipped: {pmSummary.skipped}</Tag>
+            <Tag color="orange">Pending: {pmSummary.pending}</Tag>
+          </div>
+        )}
+        <Table
+          rowKey="id"
+          loading={loadingSchedule}
+          dataSource={pmSchedule}
+          size="small"
+          pagination={false}
+          columns={[
+            { title: "Seq #", dataIndex: "sequence_no", key: "seq" },
+            { title: "Date", dataIndex: "scheduled_date", key: "date" },
+            {
+              title: "Status",
+              dataIndex: "status",
+              key: "status",
+              render: (v: string) => {
+                const map: Record<string, string> = {
+                  planned: "default",
+                  done: "green",
+                  skipped: "red",
+                  rescheduled: "orange",
+                };
+                return <Tag color={map[v] ?? "default"}>{v.toUpperCase()}</Tag>;
+              },
+            },
+            { title: "Reason / Notes", dataIndex: "reason_code", key: "reason", render: (v: string) => v || "—" },
+            {
+              title: "Actions",
+              key: "actions",
+              render: (_: any, r: any) => {
+                if (r.status === "planned" || r.status === "rescheduled") {
+                  return (
+                    <Space>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setActionPmVisit(r);
+                          setPmActionType("reschedule");
+                          setActionReason("");
+                          setActionNewDate(dayjs(r.scheduled_date));
+                        }}
+                      >
+                        Reschedule
+                      </Button>
+                      <Button
+                        size="small"
+                        danger
+                        onClick={() => {
+                          setActionPmVisit(r);
+                          setPmActionType("skip");
+                          setActionReason("");
+                        }}
+                      >
+                        Skip
+                      </Button>
+                    </Space>
+                  );
+                }
+                return "—";
+              },
+            },
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        title={pmActionType === "reschedule" ? "Reschedule PM Visit" : "Skip PM Visit"}
+        open={!!pmActionType}
+        onOk={handlePmActionSubmit}
+        onCancel={() => { setPmActionType(null); setActionPmVisit(null); }}
+        confirmLoading={submittingAction}
+      >
+        <div style={{ marginTop: 16 }}>
+          {pmActionType === "reschedule" && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ marginBottom: 4 }}>New Scheduled Date:</div>
+              <DatePicker
+                style={{ width: "100%" }}
+                value={actionNewDate}
+                onChange={(d) => setActionNewDate(d)}
+                format="YYYY-MM-DD"
+              />
+            </div>
+          )}
+          <div>
+            <div style={{ marginBottom: 4 }}>Reason:</div>
+            <Input.TextArea
+              rows={3}
+              value={actionReason}
+              onChange={(e) => setActionReason(e.target.value)}
+              placeholder="Provide a reason..."
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <DocumentModal
+        open={docsOpen}
+        entityType="amc"
+        entityId={selectedAMCForDocs?.id || null}
+        entityName={selectedAMCForDocs?.contract_number || ""}
+        onClose={() => setDocsOpen(false)}
+      />
     </div>
   );
 }
+

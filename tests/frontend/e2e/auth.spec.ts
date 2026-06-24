@@ -34,13 +34,14 @@ test("login page has CCTV branding text or logo", async ({ page }) => {
 // ── Redirect unauthenticated ──────────────────────────────────────────────────
 
 test("visiting /dashboard without token redirects to /login", async ({ page }) => {
-  await page.context().clearCookies();
+  await page.goto("/dashboard");
   await page.evaluate(() => localStorage.clear());
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/login/);
 });
 
 test("visiting /customers without token redirects to /login", async ({ page }) => {
+  await page.goto("/customers");
   await page.evaluate(() => localStorage.clear());
   await page.goto("/customers");
   await expect(page).toHaveURL(/login/);
@@ -80,7 +81,9 @@ test("wrong password shows error message", async ({ page }) => {
   await page.click("button[type='submit'], button:has-text('Sign In'), button:has-text('Login')");
   // Expect some error/notification to appear
   await expect(
-    page.locator("text=Invalid, text=credentials, .ant-message-error, [role='alert']").first()
+    page.locator(".ant-alert-message, .ant-message-error")
+      .or(page.locator("text=Invalid"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -90,7 +93,9 @@ test("unknown email shows error message", async ({ page }) => {
   await page.fill("input[type='password']", "anything");
   await page.click("button[type='submit'], button:has-text('Sign In'), button:has-text('Login')");
   await expect(
-    page.locator(".ant-message-error, [role='alert'], text=Invalid").first()
+    page.locator(".ant-alert-message, .ant-message-error")
+      .or(page.locator("text=Invalid"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -105,7 +110,7 @@ test("logout clears session and redirects to /login", async ({ page }) => {
   await page.waitForURL(/dashboard/);
 
   // Click Sign Out
-  await page.click("button:has-text('Sign Out'), text=Sign Out");
+  await page.locator("button:has-text('Sign Out')").or(page.locator("text=Sign Out")).first().click();
   await expect(page).toHaveURL(/login/, { timeout: 8_000 });
 
   // localStorage must be cleared

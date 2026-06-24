@@ -19,6 +19,9 @@ portalClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401) {
+      if (error.config.url?.endsWith("/login") || error.config.url?.endsWith("/refresh")) {
+        return Promise.reject(error);
+      }
       const refresh = localStorage.getItem("portal_refresh");
       if (refresh) {
         try {

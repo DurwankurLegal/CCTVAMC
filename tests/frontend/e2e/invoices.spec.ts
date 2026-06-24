@@ -29,7 +29,9 @@ test("invoices page shows a table", async ({ page }) => {
   await login(page);
   await page.goto("/invoices");
   await expect(
-    page.locator(".ant-table, table, text=No data").first()
+    page.locator(".ant-table, table")
+      .or(page.locator("text=No data"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -53,7 +55,7 @@ test("create invoice button opens a modal", async ({ page }) => {
 test("invoices page renders without error", async ({ page }) => {
   await login(page);
   await page.goto("/invoices");
-  await expect(page.locator("text=Something went wrong, text=500").first()).not.toBeVisible();
+  await expect(page.locator("text=Something went wrong").or(page.locator("text=/^500$/")).first()).not.toBeVisible();
 });
 
 // ── Payments page ─────────────────────────────────────────────────────────────
@@ -68,7 +70,9 @@ test("payments page shows a table or list", async ({ page }) => {
   await login(page);
   await page.goto("/payments");
   await expect(
-    page.locator(".ant-table, table, text=No data").first()
+    page.locator(".ant-table, table")
+      .or(page.locator("text=No data"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -98,6 +102,9 @@ test("payments page includes ageing section or link", async ({ page }) => {
   await page.goto("/payments");
   // Either an "Ageing" tab or a section heading
   await expect(
-    page.locator("text=Ageing, text=Aging, .ant-tabs-tab, [data-testid='ageing']").first()
+    page.locator(".ant-tabs-tab, [data-testid='ageing']")
+      .or(page.locator("text=Ageing"))
+      .or(page.locator("text=Aging"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });

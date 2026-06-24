@@ -25,7 +25,7 @@ test("customers page is accessible from sidebar", async ({ page }) => {
   await login(page);
   await page.click("text=Customers");
   await expect(page).toHaveURL(/customers/);
-  await expect(page.locator("h1, h2, .ant-page-header-heading-title").first()).toBeVisible();
+  await expect(page.locator("h1, h2, h3, h4, .ant-page-header-heading-title").first()).toBeVisible();
 });
 
 test("customers page shows a table or list", async ({ page }) => {
@@ -61,12 +61,20 @@ test("create customer with valid data submits successfully", async ({ page }) =>
     `E2E Customer ${Date.now()}`
   );
 
+  // Select category
+  await page.click(".ant-modal .ant-select-selector");
+  await page.click(".ant-select-item-option:has-text('Commercial')");
+
   // Submit
   await page.click(".ant-modal-footer button.ant-btn-primary, button[type='submit']");
 
   // Success notification or modal closes
   await expect(
-    page.locator(".ant-message-success, text=created, text=success, text=saved").first()
+    page.locator(".ant-message-success")
+      .or(page.locator("text=created"))
+      .or(page.locator("text=success"))
+      .or(page.locator("text=saved"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });
 
@@ -79,7 +87,9 @@ test("create customer with empty name shows validation error", async ({ page }) 
   await page.click(".ant-modal-footer button.ant-btn-primary, button[type='submit']");
   // Validation error must appear
   await expect(
-    page.locator(".ant-form-item-explain-error, text=required, [class*='error']").first()
+    page.locator(".ant-form-item-explain-error, [class*='error']")
+      .or(page.locator("text=required"))
+      .first()
   ).toBeVisible({ timeout: 5_000 });
 });
 
@@ -96,8 +106,10 @@ test("customer list loads without error on first visit", async ({ page }) => {
   await login(page);
   await page.goto("/customers");
   // No error boundary or 500 error
-  await expect(page.locator("text=Something went wrong, text=Error").first()).not.toBeVisible();
+  await expect(page.locator("text=Something went wrong").or(page.locator("text=Error")).first()).not.toBeVisible();
   await expect(
-    page.locator(".ant-table, table, [data-testid='customer-list'], text=No data").first()
+    page.locator(".ant-table, table, [data-testid='customer-list']")
+      .or(page.locator("text=No data"))
+      .first()
   ).toBeVisible({ timeout: 8_000 });
 });

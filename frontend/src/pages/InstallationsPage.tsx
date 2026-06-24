@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, DatePicker, Dropdown, Alert,
+  InputNumber, DatePicker, Dropdown, Alert, Descriptions, Spin,
 } from "antd";
-import { PlusOutlined, MoreOutlined } from "@ant-design/icons";
+import { PlusOutlined, MoreOutlined, EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
 
@@ -35,6 +35,11 @@ export default function InstallationsPage() {
   const [sForm] = Form.useForm();
   const [hForm] = Form.useForm();
 
+  // Detail Modal state
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedInst, setSelectedInst] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -49,6 +54,21 @@ export default function InstallationsPage() {
   useEffect(() => { load(); }, [load]);
 
   const cName = (id: string) => customers.find(c => c.id === id)?.name || id.slice(0, 8);
+
+  const showDetail = async (r: Installation) => {
+    setLoadingDetail(true);
+    setSelectedInst(null);
+    setDetailOpen(true);
+    try {
+      const { data } = await apiClient.get(`/installations/${r.id}`);
+      setSelectedInst(data);
+    } catch (e: any) {
+      message.error("Failed to load details");
+      setDetailOpen(false);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const create = async () => {
     const v = await form.validateFields();
@@ -110,6 +130,8 @@ export default function InstallationsPage() {
       title: "Actions", key: "actions",
       render: (_: unknown, r: Installation) => {
         const items = [
+          { key: "detail", label: "View detail", icon: <EyeOutlined />, onClick: () => showDetail(r) },
+          { type: "divider" as const },
           { key: "survey", label: "Record survey", onClick: () => { sForm.resetFields(); sForm.setFieldsValue({ survey_date: dayjs() }); setSurvey(r); } },
           ...STATUS_FLOW.filter(s => s !== r.status && s !== "handed_over").map(s => ({
             key: s, label: `Mark ${s.replace(/_/g, " ")}`, onClick: () => setStatus(r, s),
@@ -160,6 +182,34 @@ export default function InstallationsPage() {
             <Form.Item name="preventive_visits_per_year" label="PM Visits/Year" rules={[{ required: true }]}><InputNumber min={0} /></Form.Item>
           </Space>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`Work Order Detail — ${selectedInst?.work_order_number}`}
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        footer={null}
+        width={600}
+      >
+        <Spin spinning={loadingDetail}>
+          {selectedInst && (
+            <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
+              <Descriptions.Item label="Customer">{cName(selectedInst.customer_id)}</Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={statusColor[selectedInst.status] ?? "default"}>
+                  {selectedInst.status.replace(/_/g, " ").toUpperCase()}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Cameras Target Count">{selectedInst.recommended_camera_count ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Target Completion Date">{selectedInst.target_completion_date ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Survey Date">{selectedInst.survey_date ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Survey Notes">{selectedInst.survey_notes ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Feasibility Notes">{selectedInst.feasibility_notes ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Handover OTP">{selectedInst.handover_otp ?? "—"}</Descriptions.Item>
+              <Descriptions.Item label="Handed Over At">{selectedInst.handed_over_at ? new Date(selectedInst.handed_over_at).toLocaleString("en-IN") : "—"}</Descriptions.Item>
+            </Descriptions>
+          )}
+        </Spin>
       </Modal>
     </div>
   );

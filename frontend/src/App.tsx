@@ -20,6 +20,7 @@ import {
   BarChartOutlined,
   BellOutlined,
   VideoCameraOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
 import { useEffect, useState, type ReactNode } from "react";
@@ -53,6 +54,7 @@ import PortalCoveragePage from "./pages/portal/PortalCoveragePage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
 import ForceChangePassword from "./pages/ForceChangePassword";
 import { logout, fetchMe } from "./store/authSlice";
+import TwoFAModal from "./components/TwoFAModal";
 import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
 
@@ -93,6 +95,7 @@ function ProtectedLayout() {
   const isLoggedIn = !!localStorage.getItem("access_token");
   
   const [collapsed, setCollapsed] = useState(false);
+  const [twoFAOpen, setTwoFAOpen] = useState(false);
 
   // Refresh identity once if we have a token but no resolved user (e.g. after reload).
   useEffect(() => {
@@ -164,6 +167,14 @@ function ProtectedLayout() {
           {!onPlatform && <NotificationBell />}
           <span style={{ margin: "0 16px", color: "#9ca3af" }}>{user?.email}</span>
           <Button
+            icon={<KeyOutlined />}
+            type="text"
+            onClick={() => setTwoFAOpen(true)}
+            style={{ color: "#9ca3af", marginRight: 8 }}
+          >
+            2FA Security
+          </Button>
+          <Button
             icon={<LogoutOutlined />}
             type="text"
             onClick={() => { dispatch(logout()); navigate("/login"); }}
@@ -182,6 +193,12 @@ function ProtectedLayout() {
         }}>
           <Outlet />
         </Content>
+        <TwoFAModal
+          open={twoFAOpen}
+          totpEnabled={!!user?.totp_enabled}
+          onClose={() => setTwoFAOpen(false)}
+          onSuccess={() => dispatch(fetchMe())}
+        />
       </Layout>
     </Layout>
   );

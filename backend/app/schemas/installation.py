@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel
 from app.models.installation import InstallationStatus
 
@@ -45,3 +45,10 @@ class InstallationResponse(BaseModel):
     recommended_camera_count: Optional[int]
     target_completion_date: Optional[date]
     amc_contract_id: Optional[UUID]
+    
+    survey_date: Optional[date] = None
+    survey_notes: Optional[str] = None
+    feasibility_notes: Optional[str] = None
+    assigned_technician_id: Optional[UUID] = None
+    handed_over_at: Optional[datetime] = None
+

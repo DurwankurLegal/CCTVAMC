@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, FileOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
+import DocumentModal from "../components/DocumentModal";
 import { fetchCustomers, createCustomer, updateCustomer } from "../store/customerSlice";
 import type { AppDispatch, RootState } from "../store";
 
@@ -34,6 +35,10 @@ export default function CustomersPage() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+
+  // Document modal state
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [selectedCustomerForDocs, setSelectedCustomerForDocs] = useState<Row | null>(null);
   
   const { status, category } = useParsedSearchParams();
 
@@ -85,6 +90,16 @@ export default function CustomersPage() {
       render: (_: unknown, row: Row) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
+          <Button
+            size="small"
+            icon={<FileOutlined />}
+            onClick={() => {
+              setSelectedCustomerForDocs(row);
+              setDocsOpen(true);
+            }}
+          >
+            Docs
+          </Button>
         </Space>
       ),
     },
@@ -124,6 +139,14 @@ export default function CustomersPage() {
           <Form.Item name="contact_person_name" label="Contact Person"><Input /></Form.Item>
         </Form>
       </Modal>
+
+      <DocumentModal
+        open={docsOpen}
+        entityType="customer"
+        entityId={selectedCustomerForDocs?.id || null}
+        entityName={selectedCustomerForDocs?.name || ""}
+        onClose={() => setDocsOpen(false)}
+      />
     </div>
   );
 }

@@ -74,18 +74,32 @@ export default function EngineerVisitsPage() {
 
   // Load dropdown reference data once
   const loadDropdowns = useCallback(async () => {
-    try {
-      const [techRes, ticketRes, amcRes] = await Promise.all([
-        apiClient.get("/users", { params: { limit: 200 } }),
-        apiClient.get("/service-tickets", { params: { limit: 200 } }),
-        apiClient.get("/amc", { params: { limit: 200 } }),
-      ]);
-      setTechnicians(techRes.data.filter((u: Technician) => u.role === "technician"));
-      setTickets(ticketRes.data);
-      setAmcContracts(amcRes.data);
-    } catch {
-      // non-critical — dropdowns degrade gracefully
-    }
+    // 1. Fetch Technicians
+    apiClient.get("/users", { params: { limit: 200 } })
+      .then(res => {
+        setTechnicians(res.data.filter((u: Technician) => u.role === "technician"));
+      })
+      .catch(() => {
+        // non-critical degrade
+      });
+
+    // 2. Fetch Tickets
+    apiClient.get("/service-tickets", { params: { limit: 200 } })
+      .then(res => {
+        setTickets(res.data);
+      })
+      .catch(() => {
+        // non-critical degrade
+      });
+
+    // 3. Fetch AMC Contracts
+    apiClient.get("/amc", { params: { limit: 200 } })
+      .then(res => {
+        setAmcContracts(res.data);
+      })
+      .catch(() => {
+        // non-critical degrade
+      });
   }, []);
 
   useEffect(() => { load(); loadDropdowns(); }, [load, loadDropdowns]);
