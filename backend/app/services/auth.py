@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
 from app.models.user import User
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantStatus
 from app.models.auth_session import AuthSession
 from app.core.security import (
     verify_password, create_access_token, create_refresh_token, decode_token,
@@ -31,6 +31,48 @@ async def _issue_tokens(db: AsyncSession, user: User) -> TokenResponse:
     ))
     await db.flush()
     return TokenResponse(access_token=access, refresh_token=refresh)
+
+
+# Block reasons → 403 messages. Kept as a pure mapping so the decision logic in
+# ``tenant_block_reason`` can be unit-tested without DB/HTTP plumbing.
+_BLOCK_MESSAGES = {
+    "inactive": "This workspace is not active. Contact your administrator.",
+    "trial_expired": "Trial period has ended. Contact your administrator.",
+}
+
+
+def tenant_block_reason(status_value: str, is_active: bool,
+                        trial_ends_at: Optional[datetime],
+                        now: Optional[datetime] = None) -> Optional[str]:
+    """Pure decision: why a tenant should be blocked from login/refresh.
+
+    Returns ``"inactive"`` (suspended/cancelled/deactivated), ``"trial_expired"``
+    (TRIAL past its window), or ``None`` when the tenant may proceed."""
+    if status_value in (TenantStatus.SUSPENDED.value, TenantStatus.CANCELLED.value) or not is_active:
+        return "inactive"
+    if status_value == TenantStatus.TRIAL.value and trial_ends_at is not None:
+        ends = trial_ends_at
+        # SQLite (tests) returns naive datetimes; treat them as UTC so the
+        # comparison never mixes naive/aware (which raises TypeError).
+        if ends.tzinfo is None:
+            ends = ends.replace(tzinfo=timezone.utc)
+        if ends < (now or datetime.now(timezone.utc)):
+            return "trial_expired"
+    return None
+
+
+async def _assert_tenant_usable(db: AsyncSession, user: User) -> None:
+    """Block login/refresh for tenants that are suspended, cancelled, or past
+    their trial window (Phase 1 lifecycle). Platform-admin users manage tenants
+    across the platform and are exempt."""
+    if user.is_platform_admin or user.tenant_id is None:
+        return
+    tenant = (await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))).scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    reason = tenant_block_reason(tenant.status, tenant.is_active, tenant.trial_ends_at)
+    if reason:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_BLOCK_MESSAGES[reason])
 
 
 async def _resolve_tenant_id(db: AsyncSession, tenant_slug: Optional[str]) -> Optional[UUID]:
@@ -69,6 +111,9 @@ async def login(db: AsyncSession, payload: LoginRequest) -> TokenResponse:
         if not code or not pyotp.TOTP(user.totp_secret).verify(str(code), valid_window=1):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing 2FA code")
 
+    # Block login for suspended/cancelled/expired-trial tenants (Phase 1 lifecycle).
+    await _assert_tenant_usable(db, user)
+
     return await _issue_tokens(db, user)
 
 
@@ -104,8 +149,28 @@ async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
         "tenant_id": str(user.tenant_id) if user.tenant_id else None,
         "tenant_slug": tenant_slug,
         "totp_enabled": user.totp_enabled,
+        "must_change_password": user.must_change_password,
         "permissions": permissions,
     }
+
+
+async def change_password(db: AsyncSession, user_id: UUID,
+                          current_password: str, new_password: str) -> dict:
+    """Set a new password after verifying the current one, clearing the
+    forced-reset flag. Used by a provisioned admin to retire its temp password."""
+    from app.core.security import hash_password
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not verify_password(current_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect")
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="New password must be at least 8 characters")
+    user.hashed_password = hash_password(new_password)
+    user.must_change_password = False
+    await db.flush()
+    return {"changed": True}
 
 
 async def enroll_2fa(db: AsyncSession, user_id: UUID, issuer: str = "CCTV AMC") -> dict:
@@ -151,6 +216,10 @@ async def refresh(db: AsyncSession, payload: RefreshRequest) -> TokenResponse:
     )).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    # Stop a suspended/cancelled/expired tenant from minting fresh tokens once the
+    # current access token expires (Phase 1 lifecycle).
+    await _assert_tenant_usable(db, user)
 
     # Rotate: revoke the presented token before issuing a new one.
     session.revoked = True

@@ -1,7 +1,7 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
-from sqlalchemy import UUID, String, Boolean, JSON, Numeric, Date, ForeignKey
+from sqlalchemy import UUID, String, Boolean, JSON, Numeric, Date, DateTime, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped
 from app.core.database import Base
 from app.models.base import TimestampMixin
@@ -20,6 +20,10 @@ class TenantStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+# Default trial window (days) applied to new tenants created in TRIAL status.
+TRIAL_PERIOD_DAYS = 14
+
+
 # Plan limits applied by enforce_limit() (SRS 4.1 / NFR 5.3).
 PLAN_LIMITS = {
     "starter":    {"max_users": 5,  "max_sites": 25,   "max_technicians": 3},
@@ -36,6 +40,7 @@ class Tenant(Base, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     plan: Mapped[str] = mapped_column(String(50), default=SubscriptionPlan.STARTER, nullable=False)
     status: Mapped[str] = mapped_column(String(50), default=TenantStatus.TRIAL, nullable=False)
+    trial_ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     branding: Mapped[dict] = mapped_column(JSON, default=dict)
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     gstin: Mapped[str] = mapped_column(String(20), nullable=True)

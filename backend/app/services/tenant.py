@@ -1,10 +1,10 @@
 from typing import Optional
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text
 from fastapi import HTTPException, status
-from app.models.tenant import Tenant, SubscriptionInvoice, PLAN_LIMITS, TenantStatus
+from app.models.tenant import Tenant, SubscriptionInvoice, PLAN_LIMITS, TenantStatus, TRIAL_PERIOD_DAYS
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.services import audit as audit_service
 
@@ -60,6 +60,12 @@ async def create_tenant(db: AsyncSession, payload: TenantCreate,
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Slug already taken")
     tenant = Tenant(**payload.model_dump())
+    # TenantCreate has no status field, so new tenants always start in TRIAL (the
+    # model default). Give them a trial expiry window that login/refresh and the
+    # daily expiry job enforce (Phase 1 lifecycle). Status default is applied at
+    # flush, so we don't gate on it here.
+    if tenant.trial_ends_at is None:
+        tenant.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=TRIAL_PERIOD_DAYS)
     db.add(tenant)
     await db.flush()
     await db.refresh(tenant)
@@ -193,6 +199,25 @@ async def enforce_limit(db: AsyncSession, tenant_id: UUID, resource: str) -> Non
     if count >= cap:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail=f"Plan limit reached for {resource} ({cap}); upgrade your plan")
+
+
+async def run_trial_expiry(db: AsyncSession) -> int:
+    """Suspend tenants whose trial window has elapsed (Phase 1 lifecycle).
+
+    Routed through ``set_tenant_status`` so each transition lands on the tenant's
+    tamper-evident audit chain, consistent with manual platform-admin suspends.
+    Returns the number of tenants suspended. Caller commits."""
+    now = datetime.now(timezone.utc)
+    rows = (await db.execute(
+        select(Tenant.id).where(
+            Tenant.status == TenantStatus.TRIAL.value,
+            Tenant.trial_ends_at.is_not(None),
+            Tenant.trial_ends_at < now,
+        )
+    )).scalars().all()
+    for tid in rows:
+        await set_tenant_status(db, tid, "suspend")
+    return len(rows)
 
 
 async def generate_subscription_invoice(db: AsyncSession, tenant_id: UUID,

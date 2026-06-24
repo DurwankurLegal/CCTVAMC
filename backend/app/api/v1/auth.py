@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, ChangePasswordRequest
 from app.services import auth as auth_service
 
 router = APIRouter()
@@ -31,6 +31,18 @@ async def me(
     """Identity of the authenticated user — drives UI route guards (role,
     platform-admin) and profile display."""
     return await auth_service.current_user_info(db, current_user.user_id)
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Set a new password after verifying the current one; clears the forced-reset
+    flag (e.g. a provisioned admin retiring its temp password)."""
+    return await auth_service.change_password(
+        db, current_user.user_id, payload.current_password, payload.new_password)
 
 
 @router.post("/2fa/enroll")

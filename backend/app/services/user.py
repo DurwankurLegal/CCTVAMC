@@ -2,7 +2,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
-from app.models.user import User
+from app.models.user import User, TenantRole
 from app.core.security import hash_password
 from app.repositories.base import TenantRepository
 from app.schemas.user import UserCreate, UserUpdate
@@ -31,9 +31,12 @@ async def create_user(db: AsyncSession, tenant_id: UUID, payload: UserCreate) ->
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
-    # Enforce subscription plan limits (SRS 4.1).
+    # Enforce subscription plan limits (SRS 4.1). Technicians count against both
+    # the overall user cap and the separate technician cap.
     from app.services.tenant import enforce_limit
     await enforce_limit(db, tenant_id, "users")
+    if payload.role == TenantRole.TECHNICIAN:
+        await enforce_limit(db, tenant_id, "technicians")
 
     user = User(
         email=payload.email,

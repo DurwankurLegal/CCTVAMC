@@ -37,5 +37,9 @@ celery_app.conf.update(
             "task": "app.workers.tasks.generate_recurring_invoices",
             "schedule": 86400.0,  # daily; idempotent per billing period
         },
+        "expire-trials": {
+            "task": "app.workers.tasks.expire_trials",
+            "schedule": 86400.0,  # daily
+        },
     },
 )

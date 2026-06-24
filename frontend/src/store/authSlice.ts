@@ -9,6 +9,7 @@ export interface AuthUser {
   is_platform_admin: boolean;
   tenant_id?: string | null;
   tenant_slug?: string | null;
+  must_change_password?: boolean;
   permissions?: string[];
 }
 

@@ -247,6 +247,22 @@ def generate_recurring_invoices():
 
 
 @celery_app.task
+def expire_trials():
+    """Suspend tenants whose trial window has elapsed (Phase 1 lifecycle)."""
+    import asyncio
+
+    async def _run():
+        from app.services.tenant import run_trial_expiry
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            n = await run_trial_expiry(db)
+            await db.commit()
+            logger.info("Trial expiry sweep complete", suspended=n)
+
+    asyncio.run(_run())
+
+
+@celery_app.task
 def aggregate_dashboard_kpis():
     """Pre-aggregate KPI metrics into dashboard_snapshots for fast dashboard loads."""
     import asyncio

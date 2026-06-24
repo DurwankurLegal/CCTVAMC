@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Dropdown } from "antd";
-import { PlusOutlined, MoreOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Dropdown, Alert } from "antd";
+import { PlusOutlined, MoreOutlined, ReloadOutlined, CopyOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
 
-const { Title } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 const PLANS = [
@@ -37,6 +37,8 @@ export default function TenantsPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [planFilter, setPlanFilter] = useState<string | undefined>();
   const [search, setSearch] = useState("");
+  // One-time credentials shown after a successful provision.
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,18 +61,36 @@ export default function TenantsPage() {
   const openCreate = () => { form.resetFields(); form.setFieldsValue({ plan: "starter" }); setOpen(true); };
 
   const handleCreate = async () => {
-    const values = await form.validateFields();
+    const v = await form.validateFields();
     setSaving(true);
     try {
-      await apiClient.post("/tenants", values);
-      message.success("Tenant created");
+      const { data } = await apiClient.post("/tenants/provision", {
+        tenant: {
+          name: v.name, slug: v.slug, plan: v.plan,
+          gstin: v.gstin, invoice_prefix: v.invoice_prefix,
+        },
+        admin_email: v.admin_email,
+        admin_full_name: v.admin_full_name,
+      });
+      message.success("Company onboarded");
       setOpen(false);
+      if (data.temp_password) {
+        setCredentials({ email: data.first_admin.email, password: data.temp_password });
+      }
       load();
     } catch (e: any) {
-      message.error(e?.response?.data?.detail || "Create failed");
+      message.error(e?.response?.data?.detail || "Onboarding failed");
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyCredentials = () => {
+    if (!credentials) return;
+    navigator.clipboard
+      ?.writeText(`Email: ${credentials.email}\nTemporary password: ${credentials.password}`)
+      .then(() => message.success("Copied"))
+      .catch(() => message.error("Copy failed"));
   };
 
   const changeStatus = async (id: string, action: "suspend" | "activate" | "cancel") => {
@@ -150,7 +170,42 @@ export default function TenantsPage() {
           </Form.Item>
           <Form.Item name="gstin" label="GSTIN"><Input /></Form.Item>
           <Form.Item name="invoice_prefix" label="Invoice Prefix"><Input placeholder="INV" /></Form.Item>
+
+          <Title level={5} style={{ marginTop: 8 }}>First Admin</Title>
+          <Form.Item name="admin_full_name" label="Admin Name" rules={[{ required: true }]}>
+            <Input placeholder="Jane Doe" />
+          </Form.Item>
+          <Form.Item name="admin_email" label="Admin Email" rules={[
+            { required: true }, { type: "email", message: "Enter a valid email" },
+          ]}>
+            <Input placeholder="admin@acme-security.com" />
+          </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Company onboarded"
+        open={!!credentials}
+        onOk={() => setCredentials(null)}
+        onCancel={() => setCredentials(null)}
+        okText="Done"
+        cancelButtonProps={{ style: { display: "none" } }}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          message="Share these credentials securely — the temporary password is shown only once."
+          style={{ marginBottom: 16 }}
+        />
+        <Paragraph style={{ marginBottom: 4 }}>
+          <Text type="secondary">Admin email</Text><br />
+          <Text strong>{credentials?.email}</Text>
+        </Paragraph>
+        <Paragraph>
+          <Text type="secondary">Temporary password</Text><br />
+          <Text code copyable>{credentials?.password}</Text>
+        </Paragraph>
+        <Button icon={<CopyOutlined />} onClick={copyCredentials}>Copy both</Button>
       </Modal>
     </div>
   );

@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_platform_admin
-from app.schemas.tenant import TenantCreate, TenantUpdate, TenantResponse
+from app.schemas.tenant import (
+    TenantCreate, TenantUpdate, TenantResponse,
+    TenantProvisionRequest, TenantProvisionResponse, ProvisionedAdmin,
+)
 from app.services import tenant as tenant_service
 
 router = APIRouter()
@@ -43,6 +46,28 @@ async def create_tenant(
     user: CurrentUser = Depends(require_platform_admin),
 ):
     return await tenant_service.create_tenant(db, payload, actor_user_id=user.user_id)
+
+
+@router.post("/provision", response_model=TenantProvisionResponse, status_code=201)
+async def provision_tenant(
+    payload: TenantProvisionRequest, db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(require_platform_admin),
+):
+    """Onboard a company in one action: tenant + first admin + workspace defaults.
+    Returns the first admin's one-time temp password (shown once; not retrievable)."""
+    from app.services.provisioning import provision_tenant as _provision
+    result = await _provision(db, payload, actor_user_id=user.user_id)
+    return TenantProvisionResponse(
+        tenant=result.tenant,
+        first_admin=(
+            ProvisionedAdmin(
+                id=result.first_admin.id,
+                email=result.first_admin.email,
+                must_change_password=result.first_admin.must_change_password,
+            ) if result.first_admin else None
+        ),
+        temp_password=result.temp_password,
+    )
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)

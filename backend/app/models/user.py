@@ -25,6 +25,8 @@ class User(Base, TenantMixin):
     role: Mapped[str] = mapped_column(String(50), default=TenantRole.VIEWER, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_platform_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Forces a password reset at first login (e.g. provisioned first admin) — SRS 4.1.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Optional 2FA (TOTP) — SRS 4.21
     totp_secret: Mapped[str] = mapped_column(String(64), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

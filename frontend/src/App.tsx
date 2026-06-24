@@ -51,6 +51,7 @@ import PortalTicketsPage from "./pages/portal/PortalTicketsPage";
 import PortalTicketDetailPage from "./pages/portal/PortalTicketDetailPage";
 import PortalCoveragePage from "./pages/portal/PortalCoveragePage";
 import PortalInvoicesPage from "./pages/portal/PortalInvoicesPage";
+import ForceChangePassword from "./pages/ForceChangePassword";
 import { logout, fetchMe } from "./store/authSlice";
 import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
@@ -99,6 +100,11 @@ function ProtectedLayout() {
   }, [isLoggedIn, user, dispatch]);
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+
+  // A provisioned admin on a temp password must reset it before using the app.
+  if (user?.must_change_password && location.pathname !== "/force-password-change") {
+    return <Navigate to="/force-password-change" replace />;
+  }
 
   const isPlatformAdmin = !!user?.is_platform_admin;
   const onPlatform = location.pathname.startsWith("/platform");
@@ -205,6 +211,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/force-password-change" element={<ForceChangePassword />} />
 
         {/* Customer self-service portal — separate identity/token from staff app */}
         <Route path="/portal/login" element={<PortalLoginPage />} />
