@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../store/authSlice";
+import tenantReducer from "../store/tenantSlice";
 import LoginPage from "./LoginPage";
 
 // apiClient hits import.meta.env at import time and would make network calls;
@@ -11,7 +12,13 @@ import LoginPage from "./LoginPage";
 vi.mock("../api/client", () => ({ default: { post: vi.fn(), get: vi.fn() } }));
 
 function renderLogin() {
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({
+    reducer: {
+      auth: authReducer,
+      tenant: tenantReducer,
+    },
+  });
+
   return render(
     <Provider store={store}>
       <MemoryRouter><LoginPage /></MemoryRouter>
