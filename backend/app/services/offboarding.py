@@ -103,6 +103,7 @@ async def hard_delete_tenant_data(db: AsyncSession, tenant_id: UUID) -> None:
         "user_roles",
         "ticket_comments",
         "ticket_attachments",
+        "service_tickets",
         "pm_schedules",
         "installations",
         "payments",
