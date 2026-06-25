@@ -1,15 +1,34 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Tabs, Card, Form, Input, Button, Table, Tag, Space, Typography, message,
-  ConfigProvider, theme, ColorPicker, Progress, Descriptions, Spin, List, Collapse
+  ConfigProvider, theme, ColorPicker, Progress, Descriptions, Spin, List, Collapse,
+  Switch, Tooltip, Modal, Alert, Select
 } from "antd";
 import {
   SettingOutlined, UserOutlined, FileTextOutlined, AppstoreOutlined,
-  MailOutlined, SafetyCertificateOutlined, TeamOutlined, GlobalOutlined
+  MailOutlined, SafetyCertificateOutlined, TeamOutlined, GlobalOutlined,
+  EditOutlined, PlusOutlined, SafetyOutlined
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import apiClient from "../api/client";
 
 const { Title, Text } = Typography;
+const { Option } = Select;
+
+const ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Manager" },
+  { value: "coordinator", label: "Service Coordinator" },
+  { value: "accounts", label: "Accounts" },
+  { value: "technician", label: "Technician" },
+  { value: "viewer", label: "Viewer" },
+];
+const roleColor: Record<string, string> = {
+  admin: "red", manager: "volcano", coordinator: "blue", accounts: "green",
+  technician: "geekblue", viewer: "default",
+};
 
 const PLAN_CAPACITIES = {
   starter: { max_users: 5, max_sites: 25, max_technicians: 3 },
@@ -26,6 +45,9 @@ interface Invoice {
 }
 
 export default function TenantSettingsPage() {
+  const navigate = useNavigate();
+  const currentUser = useSelector((s: RootState) => s.auth.user);
+
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,6 +56,12 @@ export default function TenantSettingsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+
+  const [roleInfo, setRoleInfo] = useState<Record<string, string[]>>({});
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userForm] = Form.useForm();
+  const [savingUser, setSavingUser] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -87,6 +115,56 @@ export default function TenantSettingsPage() {
     loadData();
     loadUsers();
   }, [loadData, loadUsers]);
+
+  useEffect(() => {
+    apiClient.get("/users/roles")
+      .then(({ data }) => setRoleInfo(Object.fromEntries(data.roles.map((r: any) => [r.key, r.permissions]))))
+      .catch(() => { /* catalog is advisory */ });
+  }, []);
+
+  const openAddUser = () => {
+    setEditingUser(null);
+    userForm.resetFields();
+    userForm.setFieldsValue({ role: "viewer" });
+    setUserModalOpen(true);
+  };
+
+  const openEditUser = (user: User) => {
+    setEditingUser(user);
+    userForm.setFieldsValue(user);
+    setUserModalOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    const values = await userForm.validateFields();
+    setSavingUser(true);
+    try {
+      if (editingUser) {
+        const { password, email, ...changes } = values;
+        await apiClient.patch(`/users/${editingUser.id}`, changes);
+        message.success("Staff profile updated");
+      } else {
+        await apiClient.post("/users", values);
+        message.success("New staff onboarded");
+      }
+      setUserModalOpen(false);
+      loadUsers();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to save user");
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const toggleUserActive = async (user: User, active: boolean) => {
+    try {
+      await apiClient.patch(`/users/${user.id}`, { is_active: active });
+      message.success(active ? "User activated" : "User deactivated");
+      loadUsers();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Update failed");
+    }
+  };
 
   const handleSave = async (values: any) => {
     setSaving(true);
@@ -143,8 +221,29 @@ export default function TenantSettingsPage() {
   const userColumns = [
     { title: "Name", dataIndex: "full_name", key: "full_name" },
     { title: "Email", dataIndex: "email", key: "email" },
-    { title: "Role", dataIndex: "role", key: "role", render: (v: string) => <Tag color="geekblue">{v.toUpperCase()}</Tag> },
-    { title: "Status", dataIndex: "is_active", key: "is_active", render: (v: boolean) => <Tag color={v ? "green" : "red"}>{v ? "Active" : "Inactive"}</Tag> }
+    { title: "Phone", dataIndex: "phone", key: "phone", render: (v?: string) => v || "—" },
+    {
+      title: "Role", dataIndex: "role", key: "role",
+      render: (v: string) => (
+        <Tooltip title={roleInfo[v] ? `Can access: ${roleInfo[v].join(", ")}` : undefined}>
+          <Tag color={roleColor[v] ?? "default"} icon={<SafetyOutlined />}>{v.toUpperCase()}</Tag>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Active", dataIndex: "is_active", key: "is_active",
+      render: (v: boolean, row: User) => (
+        <Switch checked={v} size="small" onChange={(checked) => toggleUserActive(row, checked)} />
+      ),
+    },
+    {
+      title: "Actions", key: "actions",
+      render: (_: unknown, row: User) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEditUser(row)}>Edit</Button>
+        </Space>
+      ),
+    },
   ];
 
   if (loading || !tenant) {
@@ -190,6 +289,22 @@ export default function TenantSettingsPage() {
             Configure white-labeled branding parameters, update legal business profile, manage subscription tiers, and audit workspace quotas.
           </Text>
         </div>
+
+        {currentUser?.is_platform_admin && (
+          <Alert
+            message="Platform Administration Mode"
+            description={
+              <span>
+                Looking to register or onboard a new company? You can manage all companies and tenants in the{" "}
+                <a onClick={() => navigate("/platform/tenants")} style={{ fontWeight: 600, textDecoration: "underline" }}>
+                  Platform Tenants Console
+                </a>.
+              </span>
+            }
+            type="info"
+            showIcon
+          />
+        )}
 
         <Form form={form} layout="vertical" onFinish={handleSave} preserve={true}>
           <Tabs
@@ -256,7 +371,15 @@ export default function TenantSettingsPage() {
                 key: "users",
                 label: "Staff Directory",
                 children: (
-                  <Card className="glass-card" title="Workspace Users List">
+                  <Card
+                    className="glass-card"
+                    title="Workspace Users List"
+                    extra={
+                      <Button type="primary" icon={<PlusOutlined />} onClick={openAddUser}>
+                        Add Staff
+                      </Button>
+                    }
+                  >
                     <Table rowKey="id" columns={userColumns} dataSource={users} loading={usersLoading} />
                   </Card>
                 )
@@ -395,6 +518,43 @@ export default function TenantSettingsPage() {
           />
         </Form>
       </div>
+
+      <Modal 
+        title={editingUser ? "Edit Staff User" : "Add Staff User"} 
+        open={userModalOpen} 
+        onOk={handleSaveUser}
+        onCancel={() => setUserModalOpen(false)} 
+        confirmLoading={savingUser} 
+        okText={editingUser ? "Save" : "Create"}
+      >
+        <Form form={userForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="full_name" label="Full Name" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+            <Input disabled={!!editingUser} />
+          </Form.Item>
+          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+          {!editingUser && (
+            <Form.Item name="password" label="Password" rules={[{ required: true, min: 8 }]}>
+              <Input.Password />
+            </Form.Item>
+          )}
+          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+            <Select onChange={() => undefined}>
+              {ROLES.map(r => <Option key={r.value} value={r.value}>{r.label}</Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item shouldUpdate={(p, c) => p.role !== c.role} style={{ marginBottom: 0 }}>
+            {({ getFieldValue }) => {
+              const perms = roleInfo[getFieldValue("role")];
+              return perms ? (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Grants: {perms.join(", ")}
+                </Text>
+              ) : null;
+            }}
+          </Form.Item>
+        </Form>
+      </Modal>
     </ConfigProvider>
   );
 }
