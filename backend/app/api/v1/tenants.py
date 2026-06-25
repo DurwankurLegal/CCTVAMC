@@ -175,3 +175,33 @@ async def list_subscription_invoices(
     rows = await tenant_service.list_subscription_invoices(db, tenant_id)
     return [{"id": str(r.id), "invoice_number": r.invoice_number, "plan": r.plan,
              "amount": float(r.amount), "status": r.status} for r in rows]
+
+
+@router.get("/{tenant_id}/export")
+async def export_tenant(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Platform-admin data export tool for GDPR/DPDP data portability portability."""
+    from app.services.offboarding import export_tenant_data
+    from fastapi import HTTPException
+    data = await export_tenant_data(db, tenant_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return data
+
+
+@router.post("/{tenant_id}/purge")
+async def purge_tenant(
+    tenant_id: UUID, db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Platform-admin hard delete/purge tool for cancellations (GDPR/DPDP compliance)."""
+    from app.services.offboarding import hard_delete_tenant_data
+    from fastapi import Response, status
+    # Check if tenant exists
+    await tenant_service.get_tenant(db, tenant_id)
+    await hard_delete_tenant_data(db, tenant_id)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

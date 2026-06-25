@@ -102,41 +102,55 @@ async def generate_recurring_amc_invoices(db: AsyncSession) -> int:
     from sqlalchemy import select, and_
     from datetime import date
     from app.models.amc import AMCContract, AMCStatus
+    from app.models.tenant import Tenant
+    from app.workers.tasks import set_celery_tenant_context
 
     count = 0
-    contracts = (await db.execute(
-        select(AMCContract).where(AMCContract.status == AMCStatus.ACTIVE)
+    # Fetch all active/trial tenants
+    tenants = (await db.execute(
+        select(Tenant.id).where(Tenant.status.in_(["active", "trial"]))
     )).scalars().all()
+    
     today = date.today()
-    for c in contracts:
-        period_tag = today.strftime("%Y%m")
-        exists = (await db.execute(
-            select(Invoice).where(and_(
-                Invoice.tenant_id == c.tenant_id,
-                Invoice.amc_contract_id == c.id,
-                Invoice.notes == f"AMC billing {period_tag}",
-            ))
-        )).scalar_one_or_none()
-        if exists:
-            continue
-        freq = (c.payment_frequency or "annual")
-        divisor = {"monthly": 12, "quarterly": 4, "annual": 1}.get(freq, 1)
-        amount = round(float(c.annual_amount or 0) / divisor, 2)
-        inv = Invoice(
-            tenant_id=c.tenant_id,
-            customer_id=c.customer_id,
-            invoice_number=await next_number(db, c.tenant_id, "invoice", str(c.tenant_id)[:4].upper()),
-            amc_contract_id=c.id,
-            invoice_date=today,
-            line_items=[{"description": f"AMC {freq} billing", "amount": amount}],
-            subtotal=amount, total_amount=amount,
-            notes=f"AMC billing {period_tag}",
-        )
-        db.add(inv)
-        await db.flush()
-        count += 1
+    for tid in tenants:
+        # Dynamically set Postgres session parameter and structlog context variables
+        await set_celery_tenant_context(db, tid)
+        
+        contracts = (await db.execute(
+            select(AMCContract).where(AMCContract.status == AMCStatus.ACTIVE)
+        )).scalars().all()
+        
+        for c in contracts:
+            period_tag = today.strftime("%Y%m")
+            exists = (await db.execute(
+                select(Invoice).where(and_(
+                    Invoice.tenant_id == c.tenant_id,
+                    Invoice.amc_contract_id == c.id,
+                    Invoice.notes == f"AMC billing {period_tag}",
+                ))
+            )).scalar_one_or_none()
+            if exists:
+                continue
+            freq = (c.payment_frequency or "annual")
+            divisor = {"monthly": 12, "quarterly": 4, "annual": 1}.get(freq, 1)
+            amount = round(float(c.annual_amount or 0) / divisor, 2)
+            inv = Invoice(
+                tenant_id=c.tenant_id,
+                customer_id=c.customer_id,
+                invoice_number=await next_number(db, c.tenant_id, "invoice", str(c.tenant_id)[:4].upper()),
+                amc_contract_id=c.id,
+                invoice_date=today,
+                line_items=[{"description": f"AMC {freq} billing", "amount": amount}],
+                subtotal=amount, total_amount=amount,
+                notes=f"AMC billing {period_tag}",
+            )
+            db.add(inv)
+            await db.flush()
+            count += 1
+            
     await db.commit()
     return count
+
 
 
 async def create_credit_note(db: AsyncSession, tenant_id: UUID, original_invoice_id: UUID) -> Invoice:

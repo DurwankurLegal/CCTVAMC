@@ -48,3 +48,17 @@ def upload_bytes(key: str, data: bytes, content_type: str | None = None) -> str:
                                        key=key, error=str(exc))
         return f"local://{settings.S3_BUCKET}/{key}"
     return f"{base}/{settings.S3_BUCKET}/{key}" if base else f"s3://{settings.S3_BUCKET}/{key}"
+
+
+def delete_file(key: str) -> None:
+    """Delete an object from S3. Graceful no-op when storage is unconfigured or fails."""
+    settings = get_settings()
+    client = _client()
+    if client is None:
+        return
+    try:
+        client.delete_object(Bucket=settings.S3_BUCKET, Key=key)
+    except Exception as exc:
+        import structlog
+        structlog.get_logger().warning("S3 delete failed", key=key, error=str(exc))
+

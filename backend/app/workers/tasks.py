@@ -1,15 +1,34 @@
 from datetime import datetime, timezone
 from app.workers.celery_app import celery_app
 import structlog
+from uuid import UUID
+from sqlalchemy import text, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
 
+async def set_celery_tenant_context(db: AsyncSession, tenant_id: UUID):
+    """Sets tenant contextvars, bindings for structured logs, and the database session
+    RLS context variable for Row-Level Security during a Celery background execution."""
+    from app.core.context import set_actor
+    set_actor(None, tenant_id)
+    structlog.contextvars.bind_contextvars(tenant_id=str(tenant_id))
+    conn = await db.connection()
+    if conn.dialect.name == "postgresql":
+        await db.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"),
+            {"tid": str(tenant_id)},
+        )
+
+
 def _get_session_factory():
     """Return a session factory, initialising the engine lazily."""
-    from app.core.database import _init_engine, _AsyncSessionLocal
-    _init_engine()
-    return _AsyncSessionLocal
+    from app.core import database
+    database._init_engine()
+    return database._AsyncSessionLocal
+
+
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
@@ -30,6 +49,7 @@ def deliver_notification(self, log_id: str):
                 if not log or log.status == NotificationStatus.SENT:
                     return
 
+                await set_celery_tenant_context(db, log.tenant_id)
                 try:
                     if log.channel == NotificationChannel.EMAIL:
                         from app.models.tenant import Tenant
@@ -116,26 +136,33 @@ def check_amc_renewals():
         from sqlalchemy import select
         from datetime import timedelta, date
         from app.models.amc import AMCContract, AMCStatus
+        from app.models.tenant import Tenant
 
         SessionFactory = _get_session_factory()
         async with SessionFactory() as db:
+            tenants = (await db.execute(
+                select(Tenant.id).where(Tenant.status.in_(["active", "trial"]))
+            )).scalars().all()
             today = date.today()
-            for days_ahead in (30, 7):
-                target = today + timedelta(days=days_ahead)
-                result = await db.execute(
-                    select(AMCContract).where(
-                        AMCContract.status == AMCStatus.ACTIVE,
-                        AMCContract.end_date == target,
+            for tid in tenants:
+                await set_celery_tenant_context(db, tid)
+                for days_ahead in (30, 7):
+                    target = today + timedelta(days=days_ahead)
+                    result = await db.execute(
+                        select(AMCContract).where(
+                            AMCContract.status == AMCStatus.ACTIVE,
+                            AMCContract.end_date == target,
+                        )
                     )
-                )
-                contracts = result.scalars().all()
-                for c in contracts:
-                    await _notify_amc_expiry(db, c, days_ahead)
+                    contracts = result.scalars().all()
+                    for c in contracts:
+                        await _notify_amc_expiry(db, c, days_ahead)
 
     asyncio.run(_check())
 
 
 async def _notify_amc_expiry(db, contract, days_ahead):
+    await set_celery_tenant_context(db, contract.tenant_id)
     from sqlalchemy import select
     from app.models.customer import Customer
     from app.services.notification import NotificationService
@@ -164,28 +191,35 @@ def check_sla_breaches():
     async def _check():
         from sqlalchemy import select
         from app.models.service_ticket import ServiceTicket, TicketStatus
+        from app.models.tenant import Tenant
 
         SessionFactory = _get_session_factory()
         async with SessionFactory() as db:
+            tenants = (await db.execute(
+                select(Tenant.id).where(Tenant.status.in_(["active", "trial"]))
+            )).scalars().all()
             now = datetime.now(timezone.utc)
-            result = await db.execute(
-                select(ServiceTicket).where(
-                    ServiceTicket.sla_due_at <= now,
-                    ServiceTicket.sla_breached == False,
-                    ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED]),
+            for tid in tenants:
+                await set_celery_tenant_context(db, tid)
+                result = await db.execute(
+                    select(ServiceTicket).where(
+                        ServiceTicket.sla_due_at <= now,
+                        ServiceTicket.sla_breached == False,
+                        ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED]),
+                    )
                 )
-            )
-            tickets = result.scalars().all()
-            for t in tickets:
-                t.sla_breached = True
-                logger.warning("SLA breached", ticket_id=str(t.id))
-                await _notify_sla_breach(db, t)
+                tickets = result.scalars().all()
+                for t in tickets:
+                    t.sla_breached = True
+                    logger.warning("SLA breached", ticket_id=str(t.id))
+                    await _notify_sla_breach(db, t)
             await db.commit()
 
     asyncio.run(_check())
 
 
 async def _notify_sla_breach(db, ticket):
+    await set_celery_tenant_context(db, ticket.tenant_id)
     from app.services.notification import NotificationService
     from app.services.notification_events import SLA_BREACH
     from app.models.notification import NotificationChannel
@@ -211,28 +245,34 @@ def check_payment_due():
         from app.services.notification import NotificationService
         from app.services.notification_events import PAYMENT_DUE
         from app.models.notification import NotificationChannel
+        from app.models.tenant import Tenant
 
         SessionFactory = _get_session_factory()
         async with SessionFactory() as db:
+            tenants = (await db.execute(
+                select(Tenant.id).where(Tenant.status.in_(["active", "trial"]))
+            )).scalars().all()
             soon = date.today() + timedelta(days=3)
-            result = await db.execute(
-                select(Invoice).where(
-                    Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
-                    Invoice.due_date <= soon,
+            for tid in tenants:
+                await set_celery_tenant_context(db, tid)
+                result = await db.execute(
+                    select(Invoice).where(
+                        Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
+                        Invoice.due_date <= soon,
+                    )
                 )
-            )
-            for inv in result.scalars().all():
-                customer = (await db.execute(
-                    select(Customer).where(Customer.id == inv.customer_id)
-                )).scalar_one_or_none()
-                await NotificationService(db, inv.tenant_id).send(
-                    PAYMENT_DUE,
-                    recipient=(customer.email if customer else None) or "",
-                    context={"invoice_number": inv.invoice_number,
-                             "amount_due": float(inv.total_amount - (inv.amount_paid or 0)),
-                             "due_date": str(inv.due_date)},
-                    channel=NotificationChannel.EMAIL,
-                )
+                for inv in result.scalars().all():
+                    customer = (await db.execute(
+                        select(Customer).where(Customer.id == inv.customer_id)
+                    )).scalar_one_or_none()
+                    await NotificationService(db, inv.tenant_id).send(
+                        PAYMENT_DUE,
+                        recipient=(customer.email if customer else None) or "",
+                        context={"invoice_number": inv.invoice_number,
+                                 "amount_due": float(inv.total_amount - (inv.amount_paid or 0)),
+                                 "due_date": str(inv.due_date)},
+                        channel=NotificationChannel.EMAIL,
+                    )
             await db.commit()
 
     asyncio.run(_check())
@@ -284,6 +324,7 @@ def aggregate_dashboard_kpis():
         async with SessionFactory() as db:
             tenants = (await db.execute(select(Tenant.id))).scalars().all()
             for tid in tenants:
+                await set_celery_tenant_context(db, tid)
                 metrics = await dashboard_kpis(db, tid)
                 existing = (await db.execute(
                     select(DashboardSnapshot).where(DashboardSnapshot.tenant_id == tid)
@@ -296,3 +337,65 @@ def aggregate_dashboard_kpis():
         logger.info("Dashboard KPI aggregation complete", tenants=len(tenants))
 
     asyncio.run(_aggregate())
+
+
+@celery_app.task
+def purge_cancelled_tenants():
+    """Daily cron sweep to find cancelled tenants whose retention window has passed,
+    and hard-delete all their records from the database and storage."""
+    import asyncio
+    
+    async def _purge():
+        from sqlalchemy import select
+        from app.models.tenant import Tenant, TenantStatus
+        from app.services.offboarding import hard_delete_tenant_data
+        
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            now = datetime.now(timezone.utc)
+            stmt = select(Tenant.id).where(
+                Tenant.status == TenantStatus.CANCELLED.value,
+                Tenant.scheduled_hard_delete_at.is_not(None),
+                Tenant.scheduled_hard_delete_at <= now,
+            )
+            result = await db.execute(stmt)
+            tids = result.scalars().all()
+            for tid in tids:
+                logger.info("Purging cancelled tenant", tenant_id=str(tid))
+                await hard_delete_tenant_data(db, tid)
+            await db.commit()
+            
+    asyncio.run(_purge())
+
+
+@celery_app.task
+def meter_tenant_usage():
+    """Daily cron sweep to pre-aggregate resource counts (users, sites, technicians)
+    per tenant and output structured log events for usage metering/billing."""
+    import asyncio
+    
+    async def _meter():
+        from sqlalchemy import select
+        from app.models.tenant import Tenant, TenantStatus
+        from app.services.tenant import tenant_usage
+        
+        SessionFactory = _get_session_factory()
+        async with SessionFactory() as db:
+            stmt = select(Tenant.id).where(
+                Tenant.status.in_([TenantStatus.ACTIVE.value, TenantStatus.TRIAL.value])
+            )
+            result = await db.execute(stmt)
+            tids = result.scalars().all()
+            for tid in tids:
+                usage = await tenant_usage(db, tid)
+                logger.info(
+                    "tenant_usage_meter",
+                    tenant_id=str(tid),
+                    plan=usage.get("plan"),
+                    users=usage["users"]["used"],
+                    technicians=usage["technicians"]["used"],
+                    sites=usage["sites"]["used"],
+                )
+                
+    asyncio.run(_meter())
+

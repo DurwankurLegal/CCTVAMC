@@ -52,6 +52,8 @@ class Tenant(Base, TimestampMixin):
     custom_domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=True)
     custom_email_sender: Mapped[str] = mapped_column(String(255), nullable=True)
     email_templates: Mapped[dict] = mapped_column(JSON, default=dict, nullable=True)
+    scheduled_hard_delete_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 
 class SubscriptionInvoice(Base, TimestampMixin):

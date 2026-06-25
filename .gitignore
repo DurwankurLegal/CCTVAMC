@@ -1,6 +1,9 @@
 # Environment
 .env
 *.env
+*.db
+*.sqlite
+
 
 # Python
 __pycache__/

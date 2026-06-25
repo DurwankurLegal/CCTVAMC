@@ -43,3 +43,18 @@ async def get_subscription_invoices(
     invoices = await tenant_service.list_subscription_invoices(db, current_user.tenant_id)
     return [{"id": str(r.id), "invoice_number": r.invoice_number, "plan": r.plan,
              "amount": float(r.amount), "status": r.status} for r in invoices]
+
+
+@router.get("/settings/export")
+async def export_own_tenant(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("tenants:read")),
+):
+    """Self-service tenant data export for tenant administrators."""
+    from app.services.offboarding import export_tenant_data
+    from fastapi import HTTPException
+    data = await export_tenant_data(db, current_user.tenant_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Tenant data not found")
+    return data
+

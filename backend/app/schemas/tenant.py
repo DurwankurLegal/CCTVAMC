@@ -45,6 +45,8 @@ class TenantResponse(BaseModel):
     custom_domain: Optional[str] = None
     custom_email_sender: Optional[str] = None
     email_templates: Optional[dict] = None
+    scheduled_hard_delete_at: Optional[datetime] = None
+
 
 
 class TenantProvisionRequest(BaseModel):
