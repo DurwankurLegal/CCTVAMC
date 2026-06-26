@@ -285,6 +285,7 @@ async def amc_consolidated_report(
 
     contract_data = {
         "id": str(contract.id),
+        "company_id": str(contract.company_id),
         "contract_number": contract.contract_number,
         "status": contract.status,
         "start_date": str(contract.start_date),
@@ -543,16 +544,44 @@ async def amc_consolidated_report(
     }
 
 
-def to_pdf_amc_report(data: dict) -> bytes:
+async def to_pdf_amc_report(db: AsyncSession, tenant_id: UUID, company_id: UUID, data: dict) -> bytes:
     """Render the consolidated AMC report dict as a styled PDF via Jinja2 + WeasyPrint."""
+    from app.services.company_template import get_template_by_type
+    from app.models.company import Company
+    from app.repositories.base import TenantRepository
     import os
     from jinja2 import Environment, FileSystemLoader
     from weasyprint import HTML
 
-    templates_dir = os.path.join(os.path.dirname(__file__), "templates")
-    env = Environment(loader=FileSystemLoader(templates_dir), autoescape=True)
-    template = env.get_template("amc_report.html.j2")
-    html_str = template.render(**data)
+    # Fetch company info
+    company_repo = TenantRepository[Company](db, tenant_id)
+    company_repo.model = Company
+    company = await company_repo.get(company_id)
+    company_info = {}
+    if company:
+        company_info = {
+            "name": company.name,
+            "gstin": company.gstin,
+            "address": company.address,
+            "logo_url": company.logo_url,
+            "contact_details": company.contact_details,
+            "bank_details": company.bank_details,
+            "authorized_signatory": company.authorized_signatory
+        }
+    
+    # Inject company into rendering data context
+    data["company"] = company_info
+
+    template_record = await get_template_by_type(db, tenant_id, company_id, "AMC_REPORT")
+    if template_record and template_record.template_html:
+        from jinja2 import Template
+        tpl = Template(template_record.template_html)
+        html_str = tpl.render(**data)
+    else:
+        templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+        env = Environment(loader=FileSystemLoader(templates_dir), autoescape=True)
+        template = env.get_template("amc_report.html.j2")
+        html_str = template.render(**data)
     return HTML(string=html_str).write_pdf()
 
 

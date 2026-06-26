@@ -6,6 +6,7 @@ from app.models.invoice import InvoiceStatus, InvoiceType
 
 
 class InvoiceCreate(BaseModel):
+    company_id: Optional[UUID] = None
     customer_id: UUID
     invoice_date: date
     due_date: Optional[date] = None
@@ -26,6 +27,7 @@ class InvoiceResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID
     tenant_id: UUID
+    company_id: UUID
     invoice_number: str
     invoice_type: str
     customer_id: UUID

@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.api.v1 import auth, tenants, users, customers, leads, vendors, assets
 from app.api.v1 import quotations, amc, service_tickets, engineer_visits
 from app.api.v1 import inventory, sales_orders, invoices, payments, notifications, reports
-from app.api.v1 import documents, installations, portal, tenant_admin
+from app.api.v1 import documents, installations, portal, tenant_admin, companies, company_templates, cash_collections
 
 router = APIRouter()
 
@@ -27,3 +27,6 @@ router.include_router(documents.router, prefix="/documents", tags=["documents"])
 router.include_router(installations.router, prefix="/installations", tags=["installations"])
 router.include_router(portal.router, prefix="/portal", tags=["customer-portal"])
 router.include_router(tenant_admin.router, prefix="/tenant-admin", tags=["tenant-admin"])
+router.include_router(companies.router, prefix="/companies", tags=["companies"])
+router.include_router(company_templates.router, prefix="/company-templates", tags=["company-templates"])
+router.include_router(cash_collections.router, prefix="/cash-collections", tags=["cash-collections"])

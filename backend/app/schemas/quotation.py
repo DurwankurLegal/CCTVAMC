@@ -16,6 +16,7 @@ class LineItem(BaseModel):
 
 
 class QuotationCreate(BaseModel):
+    company_id: Optional[UUID] = None
     customer_id: UUID
     lead_id: Optional[UUID] = None
     line_items: List[LineItem] = []
@@ -36,6 +37,7 @@ class QuotationResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID
     tenant_id: UUID
+    company_id: UUID
     quotation_number: str
     customer_id: UUID
     lead_id: Optional[UUID]

@@ -6,6 +6,7 @@ from app.models.amc import AMCStatus
 
 
 class AMCContractCreate(BaseModel):
+    company_id: Optional[UUID] = None
     customer_id: UUID
     start_date: date
     end_date: date
@@ -29,6 +30,7 @@ class AMCContractResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID
     tenant_id: UUID
+    company_id: UUID
     customer_id: UUID
     contract_number: str
     status: str

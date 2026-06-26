@@ -6,6 +6,7 @@ from app.models.lead import LeadStatus, LeadSource, LeadCategory, InterestType
 
 
 class LeadCreate(BaseModel):
+    company_id: Optional[UUID] = None
     name: str
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -36,6 +37,7 @@ class LeadResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID
     tenant_id: UUID
+    company_id: UUID
     name: str
     phone: Optional[str]
     email: Optional[str]

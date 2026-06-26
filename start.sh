@@ -25,6 +25,7 @@ INFRA_DIR="$SCRIPT_DIR/infra"
 
 # ── Fix PATH for non-interactive shells (Homebrew / nvm / fnm) ─
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+export DYLD_FALLBACK_LIBRARY_PATH="/opt/homebrew/lib"
 if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
   # shellcheck source=/dev/null
   source "$HOME/.nvm/nvm.sh"

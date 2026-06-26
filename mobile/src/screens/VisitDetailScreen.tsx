@@ -147,6 +147,13 @@ export default function VisitDetailScreen({ route, navigation }: Props) {
             <Text style={styles.btnText}>📸 Capture Photo ({photoPaths.length})</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.btnSecondary, { backgroundColor: "#047857" }]}
+            onPress={() => navigation.navigate("RecordCash", { ticket })}
+          >
+            <Text style={styles.btnText}>💵 Record Cash Payment</Text>
+          </TouchableOpacity>
+
           <Text style={styles.sectionLabel}>Customer Signature</Text>
           <View style={styles.signatureBox}>
             <SignatureCanvas

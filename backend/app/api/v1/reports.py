@@ -109,7 +109,10 @@ async def export_amc_consolidated_report(
 
     # fmt == "pdf"
     try:
-        content = report_service.to_pdf_amc_report(data)
+        from uuid import UUID
+        company_id_str = data.get("contract", {}).get("company_id")
+        company_id = UUID(company_id_str) if company_id_str else None
+        content = await report_service.to_pdf_amc_report(db, current_user.tenant_id, company_id, data)
     except (OSError, ImportError) as exc:
         raise HTTPException(
             status_code=503,

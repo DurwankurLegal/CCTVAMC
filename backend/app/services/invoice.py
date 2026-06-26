@@ -25,6 +25,8 @@ async def get_invoice(db, tenant_id, invoice_id):
 
 
 async def create_invoice(db: AsyncSession, tenant_id: UUID, payload: InvoiceCreate) -> Invoice:
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, tenant_id, payload.company_id)
     # Fetch tenant invoice prefix
     from sqlalchemy import select
     from app.models.tenant import Tenant
@@ -40,6 +42,7 @@ async def create_invoice(db: AsyncSession, tenant_id: UUID, payload: InvoiceCrea
     )
 
     inv = Invoice(
+        company_id=comp_id,
         customer_id=payload.customer_id,
         invoice_number=await next_number(db, tenant_id, "invoice", prefix),
         invoice_type=payload.invoice_type,
@@ -136,6 +139,7 @@ async def generate_recurring_amc_invoices(db: AsyncSession) -> int:
             amount = round(float(c.annual_amount or 0) / divisor, 2)
             inv = Invoice(
                 tenant_id=c.tenant_id,
+                company_id=c.company_id,
                 customer_id=c.customer_id,
                 invoice_number=await next_number(db, c.tenant_id, "invoice", str(c.tenant_id)[:4].upper()),
                 amc_contract_id=c.id,
@@ -162,6 +166,7 @@ async def create_credit_note(db: AsyncSession, tenant_id: UUID, original_invoice
 
     from app.models.invoice import InvoiceStatus as IS, InvoiceType
     credit = Invoice(
+        company_id=original.company_id,
         customer_id=original.customer_id,
         invoice_number=await next_number(db, tenant_id, "credit_note", "CN"),
         invoice_type=InvoiceType.TAX_INVOICE,
@@ -178,3 +183,16 @@ async def create_credit_note(db: AsyncSession, tenant_id: UUID, original_invoice
         notes=f"Credit note against {original.invoice_number}",
     )
     return await repo.create(credit)
+
+
+async def render_company_invoice_pdf(db: AsyncSession, invoice: Invoice) -> bytes:
+    from app.services.company_template import render_company_document
+    from app.services.customer import get_customer
+    customer = await get_customer(db, invoice.tenant_id, invoice.customer_id)
+    doc_type = "TAX_INVOICE" if invoice.invoice_type == "tax_invoice" else "NON_GST_INVOICE"
+    context = {
+        "doc": invoice,
+        "items": invoice.line_items or [],
+        "customer": customer
+    }
+    return await render_company_document(db, invoice.tenant_id, invoice.company_id, doc_type, context)

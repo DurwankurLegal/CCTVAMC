@@ -18,6 +18,7 @@ class AMCStatus(str, Enum):
 class AMCContract(Base, TenantMixin):
     __tablename__ = "amc_contracts"
 
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     contract_number: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default=AMCStatus.DRAFT)

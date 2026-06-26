@@ -52,6 +52,6 @@ async def payment_receipt(
 ):
     """Download a payment receipt PDF (SRS 4.14)."""
     payment = await payment_service.get_payment(db, current_user.tenant_id, payment_id)
-    pdf = payment_service.render_receipt(payment)
+    pdf = await payment_service.render_company_receipt_pdf(db, payment)
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="receipt-{payment_id}.pdf"'})

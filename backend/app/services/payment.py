@@ -123,3 +123,18 @@ async def get_payment_ageing(db: AsyncSession, tenant_id: UUID) -> list:
             buckets["90d_plus"].append(inv)
     return [{"bucket": k, "count": len(v), "amount": sum(float(i.total_amount - i.amount_paid) for i in v)}
             for k, v in buckets.items()]
+
+
+async def render_company_receipt_pdf(db: AsyncSession, payment: Payment) -> bytes:
+    from app.services.company_template import render_company_document
+    from app.services.invoice import get_invoice
+    from app.services.customer import get_customer
+    invoice = await get_invoice(db, payment.tenant_id, payment.invoice_id)
+    customer = await get_customer(db, payment.tenant_id, payment.customer_id)
+    context = {
+        "doc": payment,
+        "invoice": invoice,
+        "customer": customer,
+        "method": getattr(payment, 'mode', 'CASH')
+    }
+    return await render_company_document(db, payment.tenant_id, invoice.company_id, "PAYMENT_RECEIPT", context)

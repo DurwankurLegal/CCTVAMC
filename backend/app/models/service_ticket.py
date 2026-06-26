@@ -26,6 +26,7 @@ class TicketPriority(str, Enum):
 class ServiceTicket(Base, TenantMixin):
     __tablename__ = "service_tickets"
 
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     ticket_number: Mapped[str] = mapped_column(String(100), nullable=False)
     customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     site_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customer_sites.id"), nullable=True)

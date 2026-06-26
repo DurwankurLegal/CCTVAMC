@@ -12,7 +12,7 @@
  *    then propagated to all dependent queued actions (checkout, media, parts).
  */
 import NetInfo from "@react-native-netinfo";
-import { getPendingQueue, markSynced, markFailed, remapVisitId } from "../db/localDb";
+import { getPendingQueue, markSynced, markFailed, remapVisitId, queueForSync } from "../db/localDb";
 import apiClient from "./apiClient";
 
 let syncInProgress = false;
@@ -70,6 +70,19 @@ async function syncItem(itemId: string, entityType: string, payload: any) {
     case "media_upload":
       await uploadMedia(itemId, payload);
       break;
+    case "cash_collection_create": {
+      const { data } = await apiClient.post("/cash-collections", payload, idempotent(itemId));
+      if (payload.local_photo_path && data?.id) {
+        await queueForSync("cash_collection_photo_upload", {
+          cash_collection_id: data.id,
+          file_uri: payload.local_photo_path
+        });
+      }
+      break;
+    }
+    case "cash_collection_photo_upload":
+      await uploadCashReceipt(itemId, payload.cash_collection_id, payload.file_uri);
+      break;
     default:
       console.warn("Unknown entity type in sync queue:", entityType);
   }
@@ -86,6 +99,19 @@ async function uploadMedia(itemId: string, payload: { visit_id: string; file_uri
   formData.append("media_type", payload.type);
 
   await apiClient.post("/engineer-visits/media", formData, {
+    headers: { "Content-Type": "multipart/form-data", "Idempotency-Key": itemId },
+  });
+}
+
+async function uploadCashReceipt(itemId: string, cashCollectionId: string, fileUri: string) {
+  const formData = new FormData();
+  formData.append("file", {
+    uri: fileUri,
+    type: "image/jpeg",
+    name: `receipt_${Date.now()}.jpg`,
+  } as any);
+
+  await apiClient.post(`/cash-collections/${cashCollectionId}/media`, formData, {
     headers: { "Content-Type": "multipart/form-data", "Idempotency-Key": itemId },
   });
 }

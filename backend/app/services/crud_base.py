@@ -27,6 +27,9 @@ def make_crud(repo_cls: Type[TenantRepository], model_cls: Type[ModelT]):
         data = payload.model_dump(exclude_none=False)
         if extra:
             data.update(extra)
+        if hasattr(model_cls, "company_id") and not data.get("company_id"):
+            from app.services.company import resolve_company_id
+            data["company_id"] = await resolve_company_id(db, tenant_id, None)
         obj = model_cls(**data)
         return await repo_cls(db, tenant_id).create(obj)
 

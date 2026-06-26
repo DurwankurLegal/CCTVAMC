@@ -59,7 +59,8 @@ async def invoice_pdf(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Download the invoice as a GST-compliant PDF (SRS 4.13)."""
+    from fastapi import Response
     inv = await invoice_service.get_invoice(db, current_user.tenant_id, invoice_id)
-    pdf = invoice_service.render_pdf(inv)
+    pdf = await invoice_service.render_company_invoice_pdf(db, inv)
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{inv.invoice_number}.pdf"'})

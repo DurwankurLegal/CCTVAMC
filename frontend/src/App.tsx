@@ -60,6 +60,7 @@ import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
 import { fetchTenantConfig } from "./store/tenantSlice";
 import TenantSettingsPage from "./pages/TenantSettingsPage";
+import { CashReconciliationPage } from "./pages/CashReconciliationPage";
 
 const { Header, Sider, Content } = Layout;
 
@@ -79,6 +80,7 @@ const tenantMenu = [
   { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
   { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
   { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
+  { key: "/reconciliation",   icon: <AuditOutlined />,        label: "Cash Reconciliation", perm: "payments:read" },
   { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
   { key: "/notifications",    icon: <BellOutlined />,         label: "Notifications",   perm: "notifications:write" },
   { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
@@ -283,6 +285,7 @@ export default function App() {
             <Route path="/leads" element={<RequirePerm perm="leads:read"><LeadsPage /></RequirePerm>} />
             <Route path="/invoices" element={<RequirePerm perm="invoices:read"><InvoicesPage /></RequirePerm>} />
             <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
+            <Route path="/reconciliation" element={<RequirePerm perm="payments:read"><CashReconciliationPage /></RequirePerm>} />
             <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
             <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
             <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />

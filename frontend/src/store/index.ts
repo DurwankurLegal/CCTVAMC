@@ -3,6 +3,7 @@ import authReducer from "./authSlice";
 import customerReducer from "./customerSlice";
 import ticketReducer from "./ticketSlice";
 import tenantReducer from "./tenantSlice";
+import companyReducer from "./companySlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     customers: customerReducer,
     tickets: ticketReducer,
     tenant: tenantReducer,
+    companies: companyReducer,
   },
 });
 

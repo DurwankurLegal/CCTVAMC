@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import apiClient from "../api/client";
+import { CompanySettingsTab } from "./CompanySettingsTab";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -342,6 +343,11 @@ export default function TenantSettingsPage() {
                     <Button type="primary" htmlType="submit" loading={saving}>Save Profile Changes</Button>
                   </Card>
                 )
+              },
+              {
+                key: "companies",
+                label: "Multi-Company & Templates",
+                children: <CompanySettingsTab />
               },
               {
                 key: "branding",

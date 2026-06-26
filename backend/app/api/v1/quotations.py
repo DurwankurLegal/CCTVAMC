@@ -77,3 +77,16 @@ async def convert_to_amc(
         payload.preventive_visits_per_year,
     )
     return {"amc_contract_id": str(contract.id), "contract_number": contract.contract_number}
+
+
+@router.get("/{qid}/pdf")
+async def quotation_pdf(
+    qid: UUID, db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Download the quotation as a branded PDF."""
+    from fastapi import Response
+    quote = await quotation_service.get_quotation(db, current_user.tenant_id, qid)
+    pdf = await quotation_service.render_company_quotation_pdf(db, quote)
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{quote.quotation_number}.pdf"'})

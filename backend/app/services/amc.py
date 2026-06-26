@@ -28,10 +28,13 @@ async def get_amc(db, tenant_id, amc_id):
 
 
 async def create_amc(db: AsyncSession, tenant_id: UUID, payload: AMCContractCreate) -> AMCContract:
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, tenant_id, payload.company_id)
     repo = AMCRepository(db, tenant_id)
     asset_repo = AMCAssetRepository(db, tenant_id)
 
     contract = AMCContract(
+        company_id=comp_id,
         customer_id=payload.customer_id,
         contract_number=await next_number(db, tenant_id, "amc", "AMC", width=4),
         start_date=payload.start_date,

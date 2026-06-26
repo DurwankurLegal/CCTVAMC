@@ -23,6 +23,7 @@ class InvoiceType(str, Enum):
 class Invoice(Base, TenantMixin):
     __tablename__ = "invoices"
 
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     invoice_number: Mapped[str] = mapped_column(String(100), nullable=False)
     invoice_type: Mapped[str] = mapped_column(String(50), default=InvoiceType.TAX_INVOICE)
     customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)

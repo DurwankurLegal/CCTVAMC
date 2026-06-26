@@ -18,6 +18,7 @@ class QuotationStatus(str, Enum):
 class Quotation(Base, TenantMixin):
     __tablename__ = "quotations"
 
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     quotation_number: Mapped[str] = mapped_column(String(100), nullable=False)
     customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     lead_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id"), nullable=True)

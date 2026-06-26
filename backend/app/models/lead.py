@@ -38,6 +38,7 @@ class InterestType(str, Enum):
 class Lead(Base, TenantMixin):
     __tablename__ = "leads"
 
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=True)

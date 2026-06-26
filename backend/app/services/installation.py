@@ -86,7 +86,10 @@ async def handover(db: AsyncSession, tenant_id: UUID, inst_id: UUID, payload: Ha
     from app.models.amc import AMCContract
     start = date.today()
     end = start + timedelta(days=30 * payload.amc_months)
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, tenant_id, getattr(inst, "company_id", None))
     contract = AMCContract(
+        company_id=comp_id,
         customer_id=inst.customer_id,
         contract_number=await next_number(db, tenant_id, "amc", "AMC", width=4),
         start_date=start, end_date=end,

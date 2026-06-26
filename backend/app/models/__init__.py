@@ -26,4 +26,8 @@ from app.models import (  # noqa: F401
     dashboard_snapshot,
     ticket_comment,
     customer_portal_user,
+    company,
+    company_template,
+    cash_collection,
+    cash_collection_log,
 )

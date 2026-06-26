@@ -28,9 +28,12 @@ async def get_quotation(db, tenant_id, qid):
 
 
 async def create_quotation(db: AsyncSession, tenant_id: UUID, payload: QuotationCreate) -> Quotation:
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, tenant_id, payload.company_id)
     items = [i.model_dump() for i in payload.line_items]
     subtotal, cgst, sgst, igst = compute_gst_totals(items, None, None)
     obj = Quotation(
+        company_id=comp_id,
         customer_id=payload.customer_id,
         lead_id=payload.lead_id,
         quotation_number=await next_number(db, tenant_id, "quotation", "QT"),
@@ -85,6 +88,7 @@ async def convert_to_amc(db, tenant_id, qid, start_date, end_date, preventive_vi
     from app.models.amc import AMCContract
     from app.services.pm_schedule import generate_for_contract
     contract = AMCContract(
+        company_id=obj.company_id,
         customer_id=obj.customer_id,
         contract_number=await next_number(db, tenant_id, "amc", "AMC", width=4),
         start_date=start_date, end_date=end_date,
@@ -116,3 +120,15 @@ async def update_quotation(db, tenant_id, qid, payload: QuotationUpdate):
         else:
             setattr(obj, k, v)
     return await repo.save(obj)
+
+
+async def render_company_quotation_pdf(db: AsyncSession, quotation: Quotation) -> bytes:
+    from app.services.company_template import render_company_document
+    from app.services.customer import get_customer
+    customer = await get_customer(db, quotation.tenant_id, quotation.customer_id)
+    context = {
+        "doc": quotation,
+        "items": quotation.line_items or [],
+        "customer": customer
+    }
+    return await render_company_document(db, quotation.tenant_id, quotation.company_id, "QUOTATION", context)

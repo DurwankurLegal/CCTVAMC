@@ -53,10 +53,16 @@ async def get_ticket(db: AsyncSession, tenant_id: UUID, ticket_id: UUID) -> Serv
 
 
 async def create_ticket(db: AsyncSession, tenant_id: UUID, payload: ServiceTicketCreate) -> ServiceTicket:
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, tenant_id, payload.company_id)
     repo = ServiceTicketRepository(db, tenant_id)
     sla_hours = SLA_HOURS.get(payload.priority.value, 24)
+    
+    data = payload.model_dump()
+    data["company_id"] = comp_id
+    
     obj = ServiceTicket(
-        **payload.model_dump(),
+        **data,
         ticket_number=await next_number(db, tenant_id, "ticket", "TKT"),
         sla_due_at=datetime.now(timezone.utc) + timedelta(hours=sla_hours),
     )

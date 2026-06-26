@@ -6,6 +6,7 @@ from app.models.service_ticket import TicketStatus, TicketPriority
 
 
 class ServiceTicketCreate(BaseModel):
+    company_id: Optional[UUID] = None
     customer_id: UUID
     site_id: Optional[UUID] = None
     asset_id: Optional[UUID] = None
@@ -25,6 +26,7 @@ class ServiceTicketResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: UUID
     tenant_id: UUID
+    company_id: UUID
     ticket_number: str
     customer_id: UUID
     status: str

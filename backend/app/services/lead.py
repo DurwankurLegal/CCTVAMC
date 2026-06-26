@@ -55,7 +55,7 @@ async def convert_to_customer(db: AsyncSession, tenant_id: UUID, lead_id: UUID) 
     from app.services.quotation import create_quotation
     from app.schemas.quotation import QuotationCreate
     await create_quotation(db, tenant_id, QuotationCreate(
-        customer_id=customer.id, lead_id=lead.id, line_items=[],
+        company_id=lead.company_id, customer_id=customer.id, lead_id=lead.id, line_items=[],
     ))
 
     lead.status = LeadStatus.CONVERTED
