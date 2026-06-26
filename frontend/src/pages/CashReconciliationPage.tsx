@@ -174,7 +174,6 @@ export const CashReconciliationPage: React.FC = () => {
               <Space>
                 <Button
                   type="primary"
-                  success
                   icon={<CheckCircleOutlined />}
                   size="small"
                   onClick={() => openReviewModal(record, "APPROVED")}
