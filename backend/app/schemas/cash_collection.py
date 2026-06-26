@@ -14,7 +14,10 @@ class CashCollectionBase(BaseModel):
     receipt_photo_url: Optional[str] = None
 
 class CashCollectionCreate(CashCollectionBase):
-    pass
+    employee_id: Optional[UUID] = None
+
+class CashCollectionUpdate(CashCollectionBase):
+    employee_id: Optional[UUID] = None
 
 class CashCollectionAction(BaseModel):
     action: str  # APPROVED, REJECTED

@@ -32,7 +32,7 @@ async def create_cash_collection(db: AsyncSession, tenant_id: UUID, employee_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
 
     obj = CashCollection(
-        employee_id=employee_id,
+        employee_id=payload.employee_id or employee_id,
         customer_name=payload.customer_name,
         company_id=payload.company_id,
         service_ticket_id=payload.service_ticket_id,
@@ -44,6 +44,39 @@ async def create_cash_collection(db: AsyncSession, tenant_id: UUID, employee_id:
         status=CashCollectionStatus.PENDING,
     )
     return await repo.create(obj)
+
+async def update_cash_collection(db: AsyncSession, tenant_id: UUID, cash_collection_id: UUID, payload: CashCollectionCreate) -> CashCollection:
+    repo = CashCollectionRepository(db, tenant_id)
+    collection = await repo.get(cash_collection_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cash Collection record not found")
+    if collection.status != CashCollectionStatus.PENDING:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending collections can be modified")
+
+    # Check if optional ticket or invoice exists
+    if payload.service_ticket_id:
+        from app.services.service_ticket import ServiceTicketRepository
+        ticket = await ServiceTicketRepository(db, tenant_id).get(payload.service_ticket_id)
+        if not ticket:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service Ticket not found")
+    if payload.invoice_id:
+        from app.services.invoice import InvoiceRepository
+        inv = await InvoiceRepository(db, tenant_id).get(payload.invoice_id)
+        if not inv:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+
+    collection.employee_id = payload.employee_id or collection.employee_id
+    collection.customer_name = payload.customer_name
+    collection.company_id = payload.company_id
+    collection.service_ticket_id = payload.service_ticket_id
+    collection.invoice_id = payload.invoice_id
+    collection.amount = payload.amount
+    collection.collected_at = payload.collected_at
+    collection.remarks = payload.remarks
+    collection.receipt_photo_url = payload.receipt_photo_url
+
+    await repo.save(collection)
+    return collection
 
 async def review_cash_collection(db: AsyncSession, tenant_id: UUID, cash_collection_id: UUID, action_by: UUID, payload: CashCollectionAction) -> CashCollection:
     repo = CashCollectionRepository(db, tenant_id)

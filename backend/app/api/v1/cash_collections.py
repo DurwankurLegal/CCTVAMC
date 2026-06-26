@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_permission
-from app.schemas.cash_collection import CashCollectionCreate, CashCollectionAction, CashCollectionResponse
+from app.schemas.cash_collection import CashCollectionCreate, CashCollectionAction, CashCollectionResponse, CashCollectionUpdate
 from app.models.cash_collection import CashCollection
 from app.services import cash_collection as cash_service
 
@@ -58,6 +58,18 @@ async def verify_cash_collection(
 ):
     return await cash_service.review_cash_collection(
         db, current_user.tenant_id, cash_collection_id, current_user.user_id, payload
+    )
+
+
+@router.put("/{cash_collection_id}", response_model=CashCollectionResponse)
+async def update_cash_collection(
+    cash_collection_id: UUID,
+    payload: CashCollectionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("tenants:write")),
+):
+    return await cash_service.update_cash_collection(
+        db, current_user.tenant_id, cash_collection_id, payload
     )
 
 

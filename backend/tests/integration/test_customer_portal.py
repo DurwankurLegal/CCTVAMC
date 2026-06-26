@@ -79,7 +79,10 @@ async def test_customer_cannot_see_other_customer_tickets(client: AsyncClient, d
     await _make_portal_user(db, tenant.id, cust_b.id, "b2@portal.test")
 
     # B has a ticket
+    from app.services.company import resolve_company_id
+    company_id = await resolve_company_id(db, tenant.id)
     b_ticket = ServiceTicket(id=uuid.uuid4(), tenant_id=tenant.id, customer_id=cust_b.id,
+                             company_id=company_id,
                              ticket_number="TKT-B-1", status=TicketStatus.OPEN,
                              priority=TicketPriority.LOW, complaint="B private issue")
     db.add(b_ticket)

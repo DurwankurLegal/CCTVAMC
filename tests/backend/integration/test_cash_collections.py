@@ -160,3 +160,75 @@ async def test_technician_cannot_perform_action(client, tech_headers, test_compa
     action_payload = {"action": "APPROVED", "notes": "I approve my own cash"}
     r_action = await client.post(f"{BASE}/{cid}/action", json=action_payload, headers=tech_headers)
     assert r_action.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_create_cash_collection_for_employee(client, auth_headers, tech_user, test_company):
+    # Admin creates on behalf of a technician
+    payload = {
+        "customer_name": "Admin Client",
+        "company_id": str(test_company.id),
+        "amount": 1500.00,
+        "collected_at": datetime.utcnow().isoformat(),
+        "employee_id": str(tech_user.id),
+    }
+    r = await client.post(BASE, json=payload, headers=auth_headers)
+    assert r.status_code == 201
+    assert r.json()["employee_id"] == str(tech_user.id)
+
+
+@pytest.mark.asyncio
+async def test_update_cash_collection_success(client, auth_headers, tech_headers, test_company):
+    # 1. Post a collection as Technician
+    payload = {
+        "customer_name": "Original Client",
+        "company_id": str(test_company.id),
+        "amount": 2000.00,
+        "collected_at": datetime.utcnow().isoformat(),
+    }
+    r_create = await client.post(BASE, json=payload, headers=tech_headers)
+    cid = r_create.json()["id"]
+
+    # 2. Update as Admin
+    update_payload = {
+        "customer_name": "Updated Client",
+        "company_id": str(test_company.id),
+        "amount": 2500.00,
+        "collected_at": datetime.utcnow().isoformat(),
+        "remarks": "Updated remarks",
+    }
+    r_update = await client.put(f"{BASE}/{cid}", json=update_payload, headers=auth_headers)
+    assert r_update.status_code == 200
+    body = r_update.json()
+    assert body["customer_name"] == "Updated Client"
+    assert body["amount"] == 2500.00
+    assert body["remarks"] == "Updated remarks"
+
+
+@pytest.mark.asyncio
+async def test_update_cash_collection_locked_after_reconciliation(client, auth_headers, tech_headers, test_company):
+    # 1. Post a collection
+    payload = {
+        "customer_name": "Audit Lock Client",
+        "company_id": str(test_company.id),
+        "amount": 3000.00,
+        "collected_at": datetime.utcnow().isoformat(),
+    }
+    r_create = await client.post(BASE, json=payload, headers=tech_headers)
+    cid = r_create.json()["id"]
+
+    # 2. Approve/reconcile it
+    action_payload = {"action": "APPROVED", "notes": "Approved"}
+    await client.post(f"{BASE}/{cid}/action", json=action_payload, headers=auth_headers)
+
+    # 3. Try to update it -> should fail with HTTP 400 Bad Request
+    update_payload = {
+        "customer_name": "Attempted Edit",
+        "company_id": str(test_company.id),
+        "amount": 3500.00,
+        "collected_at": datetime.utcnow().isoformat(),
+    }
+    r_update = await client.put(f"{BASE}/{cid}", json=update_payload, headers=auth_headers)
+    assert r_update.status_code == 400
+    assert "Only pending collections can be modified" in r_update.text
+

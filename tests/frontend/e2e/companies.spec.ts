@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? "admin@test.com";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "Admin@1234";
+const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "test-tenant";
 
 async function login(page: Page) {
   await page.goto("/login");
@@ -9,13 +10,15 @@ async function login(page: Page) {
   await page.fill("input[type='password']", ADMIN_PASSWORD);
   const tenantInput = page.locator("input[name='tenant_slug'], input[placeholder*='tenant' i]");
   if (await tenantInput.count() > 0) {
-    await tenantInput.fill("test-tenant");
+    await tenantInput.fill(TENANT_SLUG);
   }
   await page.click("button[type='submit'], button:has-text('Sign In'), button:has-text('Login')");
   await page.waitForURL(/dashboard/);
 }
 
 test.describe("Multi-Company & Templates Settings", () => {
+  const companyName = `Playwright E2E Company ${Math.floor(Math.random() * 1000000)}`;
+
   test("should navigate to Tenant Settings and show Companies tab", async ({ page }) => {
     await login(page);
     await page.goto("/settings");
@@ -39,30 +42,30 @@ test.describe("Multi-Company & Templates Settings", () => {
     const modal = page.locator(".ant-modal");
     await expect(modal).toBeVisible();
     
-    // Fill the form fields
-    await page.fill("input#name", "Playwright E2E Company");
-    await page.fill("input#gstin", "27ABCDE1234F1Z5");
-    await page.fill("textarea#address", "101 Playwright Blvd, E2E City");
+    // Fill the form fields inside the modal to avoid collisions with the parent settings page
+    await modal.locator("input#name").fill(companyName);
+    await modal.locator("input#gstin").fill("27ABCDE1234F1Z5");
+    await modal.locator("textarea#address").fill("101 Playwright Blvd, E2E City");
     
     // Nested inputs (AntD creates name fields like contact_details_email)
-    await page.fill("input#contact_details_email", "playwright@company.com");
-    await page.fill("input#contact_details_phone", "9876543210");
+    await modal.locator("input#contact_details_email").fill("playwright@company.com");
+    await modal.locator("input#contact_details_phone").fill("9876543210");
     
-    await page.fill("input#bank_details_bank_name", "E2E Playwright Bank");
-    await page.fill("input#bank_details_beneficiary_name", "Playwright E2E Company");
-    await page.fill("input#bank_details_account_number", "1234509876");
-    await page.fill("input#bank_details_ifsc_code", "PLAY0000123");
-    await page.fill("input#bank_details_branch", "Head Office");
+    await modal.locator("input#bank_details_bank_name").fill("E2E Playwright Bank");
+    await modal.locator("input#bank_details_beneficiary_name").fill(companyName);
+    await modal.locator("input#bank_details_account_number").fill("1234509876");
+    await modal.locator("input#bank_details_ifsc_code").fill("PLAY0000123");
+    await modal.locator("input#bank_details_branch").fill("Head Office");
     
-    await page.fill("input#authorized_signatory_name", "Test Signatory");
-    await page.fill("input#authorized_signatory_designation", "Director");
+    await modal.locator("input#authorized_signatory_name").fill("Test Signatory");
+    await modal.locator("input#authorized_signatory_designation").fill("Director");
     
     // Submit Form
-    await page.click(".ant-modal-footer button:has-text('OK'), button[type='submit']");
+    await modal.locator("button:has-text('OK'), button[type='submit']").click();
     
     // Modal should close and the new company should be listed in the table
     await expect(modal).not.toBeVisible();
-    await expect(page.locator("text=Playwright E2E Company")).toBeVisible();
+    await expect(page.locator(`text=${companyName}`)).toBeVisible();
   });
 
   test("should configure and save JINJA templates for a company", async ({ page }) => {
@@ -70,14 +73,14 @@ test.describe("Multi-Company & Templates Settings", () => {
     await page.goto("/settings");
     await page.click("text=Multi-Company & Templates");
     
-    // Find the row for 'Playwright E2E Company' and click 'Templates'
-    const row = page.locator("tr:has-text('Playwright E2E Company')");
+    // Find the row for companyName and click 'Templates'
+    const row = page.locator(`tr:has-text('${companyName}')`);
     await row.locator("button:has-text('Templates')").click();
     
     // Wait for the templates modal
     const modal = page.locator(".ant-modal");
     await expect(modal).toBeVisible();
-    await expect(modal.locator("text=Configure templates for: Playwright E2E Company")).toBeVisible();
+    await expect(modal.locator(`text=Configure templates for: ${companyName}`)).toBeVisible();
     
     // Edit template HTML (Jinja)
     const textarea = page.locator("textarea#template_html");

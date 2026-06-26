@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, Card, Row, Col, Typography, message, Tabs } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined, FilterOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, DatePicker, Card, Row, Col, Typography, message, Tabs, InputNumber, Upload } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined, FilterOutlined, PlusOutlined, EditOutlined, UploadOutlined } from "@ant-design/icons";
 import apiClient, { apiErrorMessage } from "../api/client";
 import dayjs from "dayjs";
 
@@ -28,6 +28,13 @@ export const CashReconciliationPage: React.FC = () => {
 
   // Receipt Preview State
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Create/Edit Modal State
+  const [isCreateEditOpen, setIsCreateEditOpen] = useState(false);
+  const [createEditRecord, setCreateEditRecord] = useState<any | null>(null);
+  const [createEditSaving, setCreateEditSaving] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
+  const [createEditForm] = Form.useForm();
 
   const loadFilterOptions = async () => {
     try {
@@ -95,6 +102,66 @@ export const CashReconciliationPage: React.FC = () => {
       message.error(apiErrorMessage(err, "Reconciliation action failed"));
     } finally {
       setReviewSaving(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setCreateEditRecord(null);
+    createEditForm.resetFields();
+    setFileList([]);
+    setIsCreateEditOpen(true);
+  };
+
+  const openEditModal = (record: any) => {
+    setCreateEditRecord(record);
+    createEditForm.resetFields();
+    setFileList([]);
+    createEditForm.setFieldsValue({
+      employee_id: record.employee_id,
+      company_id: record.company_id,
+      customer_name: record.customer_name,
+      amount: record.amount,
+      collected_at: dayjs(record.collected_at),
+      remarks: record.remarks,
+      service_ticket_id: record.service_ticket_id || undefined,
+      invoice_id: record.invoice_id || undefined,
+    });
+    setIsCreateEditOpen(true);
+  };
+
+  const handleCreateEditSubmit = async (values: any) => {
+    setCreateEditSaving(true);
+    try {
+      const payload = {
+        ...values,
+        collected_at: values.collected_at.toISOString(),
+      };
+      
+      let collectionId: string;
+      if (createEditRecord) {
+        const { data } = await apiClient.put(`/cash-collections/${createEditRecord.id}`, payload);
+        collectionId = data.id;
+        message.success("Cash collection updated successfully");
+      } else {
+        const { data } = await apiClient.post("/cash-collections", payload);
+        collectionId = data.id;
+        message.success("Cash collection created successfully");
+      }
+
+      if (fileList.length > 0) {
+        const formData = new FormData();
+        formData.append("file", fileList[0]);
+        await apiClient.post(`/cash-collections/${collectionId}/media`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+
+      setIsCreateEditOpen(false);
+      loadCollections();
+    } catch (err: any) {
+      message.error(apiErrorMessage(err, "Failed to save cash collection"));
+    } finally {
+      setCreateEditSaving(false);
     }
   };
 
@@ -189,6 +256,14 @@ export const CashReconciliationPage: React.FC = () => {
                 >
                   Reject
                 </Button>
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
+                  size="small"
+                  onClick={() => openEditModal(record)}
+                >
+                  Edit
+                </Button>
               </Space>
             )
           }
@@ -214,6 +289,9 @@ export const CashReconciliationPage: React.FC = () => {
     <div style={{ padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <Title level={3} style={{ margin: 0 }}>Employee Cash Reconciliation</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+          Add Record
+        </Button>
       </div>
 
       <Card className="glass-card" style={{ marginBottom: 20 }}>
@@ -300,6 +378,64 @@ export const CashReconciliationPage: React.FC = () => {
         {previewUrl && (
           <img src={previewUrl} alt="Receipt Attachment" style={{ width: "100%", maxHeight: "500px", objectFit: "contain", borderRadius: 4 }} />
         )}
+      </Modal>
+
+      {/* Create / Edit Modal */}
+      <Modal
+        title={createEditRecord ? "Edit Cash Collection Record" : "Add Cash Collection Record"}
+        open={isCreateEditOpen}
+        onCancel={() => setIsCreateEditOpen(false)}
+        onOk={() => createEditForm.submit()}
+        confirmLoading={createEditSaving}
+        destroyOnClose
+      >
+        <Form form={createEditForm} layout="vertical" onFinish={handleCreateEditSubmit} style={{ marginTop: 15 }}>
+          <Form.Item name="employee_id" label="Employee (Technician)" rules={[{ required: true, message: "Please select employee" }]}>
+            <Select placeholder="Select staff member" options={employees.map(e => ({ label: e.full_name, value: e.id }))} />
+          </Form.Item>
+
+          <Form.Item name="company_id" label="Operating Company" rules={[{ required: true, message: "Please select operating company" }]}>
+            <Select placeholder="Select company" options={companies.map(c => ({ label: c.name, value: c.id }))} />
+          </Form.Item>
+
+          <Form.Item name="customer_name" label="Customer Name" rules={[{ required: true, message: "Please enter customer name" }]}>
+            <Input placeholder="e.g. Green Valley Estates" />
+          </Form.Item>
+
+          <Form.Item name="amount" label="Amount Collected (INR)" rules={[{ required: true, message: "Please enter amount" }]}>
+            <InputNumber min={0.01} precision={2} style={{ width: "100%" }} placeholder="0.00" />
+          </Form.Item>
+
+          <Form.Item name="collected_at" label="Collected Date & Time" rules={[{ required: true, message: "Please select date and time" }]}>
+            <DatePicker showTime style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item name="service_ticket_id" label="Service Ticket ID (Optional)">
+            <Input placeholder="Copy/paste UUID if linked to a ticket" />
+          </Form.Item>
+
+          <Form.Item name="invoice_id" label="Invoice ID (Optional)">
+            <Input placeholder="Copy/paste UUID if linked to an invoice" />
+          </Form.Item>
+
+          <Form.Item name="remarks" label="Remarks">
+            <TextArea rows={2} placeholder="e.g. Collected via cheque / cash handover details" />
+          </Form.Item>
+
+          <Form.Item label="Receipt Attachment Photo (Optional)">
+            <Upload
+              fileList={fileList}
+              beforeUpload={(file) => {
+                setFileList([file]);
+                return false;
+              }}
+              onRemove={() => setFileList([])}
+              maxCount={1}
+            >
+              <Button icon={<UploadOutlined />}>Select Image File</Button>
+            </Upload>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

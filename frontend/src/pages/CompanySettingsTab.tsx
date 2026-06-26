@@ -120,6 +120,7 @@ export const CompanySettingsTab: React.FC = () => {
         document_type: selectedDocType
       });
       message.success("Template saved successfully");
+      setIsTemplateModalOpen(false);
     } catch (err: any) {
       message.error(apiErrorMessage(err, "Failed to save template"));
     } finally {
