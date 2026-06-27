@@ -42,9 +42,9 @@ export function filterTenantMenu<T extends MenuEntry>(menu: T[], user: AuthUser 
         return false;
       }
 
-      // Guard by active module subscription (skip check if platform admin or subscription info is missing)
-      if (m.module && activeModules && !user?.is_platform_admin) {
-        if (!activeModules.includes(m.module)) {
+      // Guard by active module subscription (skip check if platform admin)
+      if (m.module && !user?.is_platform_admin) {
+        if (!activeModules || !activeModules.includes(m.module)) {
           return false;
         }
       }

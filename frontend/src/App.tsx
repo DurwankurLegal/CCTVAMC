@@ -129,7 +129,7 @@ const tenantMenu = [
     module: "inventory",
     children: [
       { key: "/inventory", label: "Inventory", perm: "inventory:read" },
-      { key: "/assets", label: "Assets", perm: "assets:read" },
+      { key: "/assets", label: "Assets", perm: "assets:read", module: "assets" },
       { key: "/vendors", label: "Vendors", perm: "vendors:read" },
     ],
   },

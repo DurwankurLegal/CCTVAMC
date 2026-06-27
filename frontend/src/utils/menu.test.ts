@@ -44,4 +44,53 @@ describe("filterTenantMenu", () => {
     const out = filterTenantMenu(menu, null);
     expect(out.map((m) => m.key)).toEqual(["/dashboard"]);
   });
+
+  it("filters out modular items if subscription information is missing", () => {
+    const modMenu: MenuEntry[] = [
+      { key: "/dashboard", label: "Dashboard" },
+      { key: "/amc", label: "AMC Contracts", module: "amc", perm: "amc:read" },
+    ];
+    const out = filterTenantMenu(modMenu, user({ role: "admin", permissions: ["amc:read"], subscription: undefined }));
+    expect(out.map((m) => m.key)).not.toContain("/amc");
+  });
+
+  it("filters out modular items if module is not in active_modules", () => {
+    const modMenu: MenuEntry[] = [
+      { key: "/dashboard", label: "Dashboard" },
+      { key: "/amc", label: "AMC Contracts", module: "amc", perm: "amc:read" },
+    ];
+    const out = filterTenantMenu(modMenu, user({
+      role: "admin",
+      permissions: ["amc:read"],
+      subscription: { active_modules: ["sales"] }
+    }));
+    expect(out.map((m) => m.key)).not.toContain("/amc");
+  });
+
+  it("includes modular items if module is in active_modules", () => {
+    const modMenu: MenuEntry[] = [
+      { key: "/dashboard", label: "Dashboard" },
+      { key: "/amc", label: "AMC Contracts", module: "amc", perm: "amc:read" },
+    ];
+    const out = filterTenantMenu(modMenu, user({
+      role: "admin",
+      permissions: ["amc:read"],
+      subscription: { active_modules: ["amc"] }
+    }));
+    expect(out.map((m) => m.key)).toContain("/amc");
+  });
+
+  it("always allows modular items for platform admin", () => {
+    const modMenu: MenuEntry[] = [
+      { key: "/dashboard", label: "Dashboard" },
+      { key: "/amc", label: "AMC Contracts", module: "amc", perm: "amc:read" },
+    ];
+    const out = filterTenantMenu(modMenu, user({
+      role: "admin",
+      is_platform_admin: true,
+      permissions: ["amc:read"],
+      subscription: undefined
+    }));
+    expect(out.map((m) => m.key)).toContain("/amc");
+  });
 });

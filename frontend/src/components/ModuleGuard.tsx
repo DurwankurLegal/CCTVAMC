@@ -15,15 +15,10 @@ export const ModuleGuard: React.FC<ModuleGuardProps> = ({ moduleCode, children }
     return <>{children}</>;
   }
 
-  // Active modules list. If user has no subscription info (e.g. platform admin or legacy), fallback to allowing all.
+  // Active modules list.
   const activeModules = user?.subscription?.active_modules;
   
-  // If activeModules is null or undefined (e.g. unmigrated user info or portal user), bypass checks.
-  if (activeModules === undefined || activeModules === null) {
-    return <>{children}</>;
-  }
-
-  const isEnabled = activeModules.includes(moduleCode);
+  const isEnabled = !!activeModules && activeModules.includes(moduleCode);
 
   if (!isEnabled) {
     return (
