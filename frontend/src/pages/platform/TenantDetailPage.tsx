@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Card, Descriptions, Tag, Button, Space, Typography, message, Progress, Table,
-  Modal, Form, DatePicker, Row, Col, Spin, Result,
+  Modal, Form, DatePicker, Row, Col, Spin, Result, Switch, List,
 } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
@@ -47,17 +47,22 @@ export default function TenantDetailPage() {
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
+  const [activeModules, setActiveModules] = useState<string[]>([]);
+  const [updatingModules, setUpdatingModules] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, u, inv] = await Promise.all([
+      const [t, u, inv, mods] = await Promise.all([
         apiClient.get(`/tenants/${id}`),
         apiClient.get(`/tenants/${id}/usage`),
         apiClient.get(`/tenants/${id}/subscription-invoices`),
+        apiClient.get(`/tenants/${id}/modules`),
       ]);
       setTenant(t.data);
       setUsage(u.data);
       setInvoices(inv.data);
+      setActiveModules(mods.data.modules || []);
     } catch (e: any) {
       if (e?.response?.status === 404) setNotFound(true);
       else message.error(e?.response?.data?.detail || "Failed to load tenant");
@@ -67,6 +72,25 @@ export default function TenantDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleToggleModule = async (code: string) => {
+    let newModules = [...activeModules];
+    if (newModules.includes(code)) {
+      newModules = newModules.filter(m => m !== code);
+    } else {
+      newModules.push(code);
+    }
+    setUpdatingModules(true);
+    try {
+      await apiClient.post(`/tenants/${id}/modules`, { module_codes: newModules });
+      setActiveModules(newModules);
+      message.success("Tenant modules updated successfully");
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to update modules");
+    } finally {
+      setUpdatingModules(false);
+    }
+  };
 
   const changeStatus = async (action: "suspend" | "activate" | "cancel") => {
     try {
@@ -139,6 +163,34 @@ export default function TenantDetailPage() {
           <UsageBar label="Technicians" entry={usage?.technicians} />
           <UsageBar label="Sites" entry={usage?.sites} />
         </Row>
+      </Card>
+
+      <Card title="Subscribed Business Modules" style={{ marginBottom: 16 }} loading={updatingModules}>
+        <List
+          itemLayout="horizontal"
+          dataSource={[
+            { code: "sales", name: "Sales Management", description: "Quotations, sales orders, customer invoicing, payments" },
+            { code: "rental", name: "Rental Management", description: "Rental inventory, serial units, rental agreements and billings (requires Asset Tracking)" },
+            { code: "amc", name: "AMC Management", description: "Annual maintenance contracts, preventive schedules, service tickets, technician visits (requires Asset Tracking)" },
+            { code: "inventory", name: "Inventory Management", description: "Products parts list, stock tracking, vendor purchase orders" },
+            { code: "assets", name: "Asset Tracking", description: "Physical hardware assets registry tracked at client sites" }
+          ]}
+          renderItem={item => (
+            <List.Item
+              actions={[
+                <Switch
+                  checked={activeModules.includes(item.code)}
+                  onChange={() => handleToggleModule(item.code)}
+                />
+              ]}
+            >
+              <List.Item.Meta
+                title={item.name}
+                description={item.description}
+              />
+            </List.Item>
+          )}
+        />
       </Card>
 
       <Card title="Subscription Invoices"
