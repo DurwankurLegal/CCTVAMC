@@ -30,6 +30,7 @@ import {
   InfoCircleOutlined,
   WarningOutlined
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
 
 const { Title, Paragraph, Text } = Typography;
@@ -70,6 +71,7 @@ interface HelpArticleProps {
 }
 
 const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle, prevArticle }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [article, setArticle] = useState<ArticleData | null>(null);

@@ -12,6 +12,9 @@ export interface AuthUser {
   must_change_password?: boolean;
   permissions?: string[];
   totp_enabled?: boolean;
+  subscription?: {
+    active_modules: string[];
+  } | null;
 }
 
 interface AuthState {

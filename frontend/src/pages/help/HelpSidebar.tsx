@@ -145,7 +145,7 @@ const HelpSidebar: React.FC<HelpSidebarProps> = ({ onSelectArticle }) => {
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
-        <Spin size="medium" />
+        <Spin size="default" />
       </div>
     );
   }

@@ -33,7 +33,7 @@ interface RentalUnit {
   purchase_cost?: number;
   purchase_date?: string;
   notes?: string;
-  is_active: bool;
+  is_active: boolean;
 }
 
 export default function RentalUnitsPage() {
