@@ -87,12 +87,9 @@ services:
     image: nginx:1.25-alpine
     restart: unless-stopped
     volumes:
-      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
+      - ./nginx.prod.http.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
       - api
       - frontend
