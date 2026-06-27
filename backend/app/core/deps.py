@@ -154,3 +154,75 @@ async def get_current_portal_user(
         portal_user_id=str(uid), tenant_id=str(tid), customer_id=str(cid)
     )
     return PortalUser(user_id=uid, tenant_id=tid, customer_id=cid)
+
+
+async def get_tenant_active_modules(db: AsyncSession, tenant_id: UUID) -> set[str]:
+    """Fetch active module codes for a tenant, utilizing Redis cache."""
+    import redis.asyncio as aioredis
+    from sqlalchemy import select
+    from app.core.config import get_settings
+    from app.models.subscription import TenantModule
+
+    settings = get_settings()
+    redis_client = aioredis.from_url(settings.REDIS_URL)
+    cache_key = f"tenant:{tenant_id}:modules"
+
+    try:
+        cached_modules = await redis_client.smembers(cache_key)
+        if cached_modules:
+            return {m.decode("utf-8") for m in cached_modules}
+    except Exception:
+        pass
+
+    # Database Query
+    stmt = select(TenantModule.module_code).where(
+        TenantModule.tenant_id == tenant_id,
+        TenantModule.status == "active"
+    )
+    result = await db.execute(stmt)
+    modules = set(result.scalars().all())
+
+    # Self-healing fallback for legacy or test-created tenants without module config seeded
+    if not modules:
+        from sqlalchemy import func
+        stmt_count = select(func.count(TenantModule.id)).where(TenantModule.tenant_id == tenant_id)
+        has_any_config = (await db.execute(stmt_count)).scalar() or 0
+        if has_any_config == 0:
+            from app.models.subscription import Module
+            stmt_all = select(Module.code).where(Module.is_active == True)
+            all_modules = set((await db.execute(stmt_all)).scalars().all())
+            if not all_modules:
+                return {"sales", "rental", "amc", "inventory", "assets"}
+            modules = all_modules
+
+    try:
+        if modules:
+            await redis_client.sadd(cache_key, *modules)
+            await redis_client.expire(cache_key, 3600)
+    except Exception:
+        pass
+
+    return modules
+
+
+def require_module(module_code: str):
+    """Router dependency to assert the active tenant has subscribed to the specified module."""
+    async def checker(
+        current_user: CurrentUser = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ) -> CurrentUser:
+        if current_user.is_platform_admin:
+            return current_user
+
+        # Core modules always allowed
+        if module_code in ("dashboard", "customers", "users", "tenants"):
+            return current_user
+
+        active_modules = await get_tenant_active_modules(db, current_user.tenant_id)
+        if module_code not in active_modules:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Subscription upgrade required. The '{module_code}' module is disabled."
+            )
+        return current_user
+    return checker

@@ -2,7 +2,6 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import HTML
 from app.models.company_template import CompanyTemplate
 from app.models.company import Company
 from app.repositories.base import TenantRepository
@@ -456,5 +455,12 @@ async def render_company_document(
     rendered_html = tpl.render(**context)
 
     # 5. Compile to PDF bytes using WeasyPrint
-    pdf_bytes = HTML(string=rendered_html).write_pdf()
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=rendered_html).write_pdf()
+    except (OSError, ImportError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="PDF rendering is currently unavailable in this environment."
+        ) from exc
     return pdf_bytes

@@ -9,9 +9,9 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-const PORTAL_EMAIL    = process.env.E2E_PORTAL_EMAIL    ?? "customer@portal.com";
-const PORTAL_PASSWORD = process.env.E2E_PORTAL_PASSWORD ?? "Portal@1234";
-const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "durwankur";
+const PORTAL_EMAIL    = process.env.E2E_PORTAL_EMAIL    ?? "portal@greenvalley.in";
+const PORTAL_PASSWORD = process.env.E2E_PORTAL_PASSWORD ?? "Passw0rd@123";
+const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "company-e";
 
 async function portalLogin(page: Page) {
   await page.goto("/portal/login");

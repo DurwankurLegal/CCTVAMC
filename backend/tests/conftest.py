@@ -1,4 +1,12 @@
 import os
+import sys
+from unittest.mock import MagicMock
+
+# Mock weasyprint to prevent errors on environments missing GObject/Pango system libraries
+mock_weasyprint = MagicMock()
+mock_weasyprint.HTML = MagicMock()
+sys.modules['weasyprint'] = mock_weasyprint
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport

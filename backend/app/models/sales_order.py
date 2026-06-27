@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from enum import Enum
 from sqlalchemy import UUID, String, ForeignKey, Numeric, JSON, Text, Boolean, Date
 from sqlalchemy.orm import mapped_column, Mapped
@@ -24,6 +25,14 @@ class SalesOrder(Base, TenantMixin):
     delivery_date: Mapped[str] = mapped_column(Date, nullable=True)
     line_items: Mapped[list] = mapped_column(JSON, default=list)
     subtotal: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    cgst_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    sgst_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    igst_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     total_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    supply_state_code: Mapped[str] = mapped_column(String(2), nullable=True)
+    fulfilled_at: Mapped[date] = mapped_column(Date, nullable=True)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=True)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+

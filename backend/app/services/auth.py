@@ -140,6 +140,35 @@ async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
     else:
         permissions = sorted(await get_effective_permissions(db, _Principal()))
 
+    subscription_info = None
+    if user.tenant_id:
+        from app.models.subscription import TenantSubscription, SaasPlan
+        from app.core.deps import get_tenant_active_modules
+        sub = (await db.execute(
+            select(TenantSubscription, SaasPlan.code)
+            .join(SaasPlan, SaasPlan.id == TenantSubscription.plan_id)
+            .where(TenantSubscription.tenant_id == user.tenant_id)
+            .order_by(TenantSubscription.created_at.desc())
+            .limit(1)
+        )).first()
+
+        active_mods = await get_tenant_active_modules(db, user.tenant_id)
+        if sub:
+            tenant_sub, plan_code = sub
+            subscription_info = {
+                "plan_code": plan_code,
+                "status": tenant_sub.status,
+                "ends_at": tenant_sub.ends_at.isoformat() if tenant_sub.ends_at else None,
+                "active_modules": list(active_mods),
+            }
+        else:
+            subscription_info = {
+                "plan_code": "growth",
+                "status": "active",
+                "ends_at": None,
+                "active_modules": list(active_mods),
+            }
+
     return {
         "id": str(user.id),
         "email": user.email,
@@ -151,6 +180,7 @@ async def current_user_info(db: AsyncSession, user_id: UUID) -> dict:
         "totp_enabled": user.totp_enabled,
         "must_change_password": user.must_change_password,
         "permissions": permissions,
+        "subscription": subscription_info,
     }
 
 

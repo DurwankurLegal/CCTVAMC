@@ -11,7 +11,7 @@ MODULES = [
     "customers", "leads", "vendors", "assets", "quotations", "amc",
     "service_tickets", "engineer_visits", "inventory", "sales_orders",
     "invoices", "payments", "notifications", "reports", "users", "tenants",
-    "installations", "documents",
+    "installations", "documents", "products", "rentals",
 ]
 
 # Build "<module>:read" / "<module>:write" for every module.

@@ -4,6 +4,8 @@ export interface MenuEntry {
   key: string;
   label: string;
   perm?: string;
+  module?: string; // Modular SaaS subscription code check
+  children?: MenuEntry[];
 }
 
 /**
@@ -22,5 +24,34 @@ export function hasPerm(user: AuthUser | null, perm?: string): boolean {
 }
 
 export function filterTenantMenu<T extends MenuEntry>(menu: T[], user: AuthUser | null): T[] {
-  return menu.filter((m) => hasPerm(user, m.perm));
+  const activeModules = user?.subscription?.active_modules;
+
+  return menu
+    .map((m) => {
+      if (m.children) {
+        return {
+          ...m,
+          children: filterTenantMenu(m.children as T[], user)
+        } as T;
+      }
+      return m;
+    })
+    .filter((m) => {
+      // Guard by permission
+      if (!hasPerm(user, m.perm)) {
+        return false;
+      }
+
+      // Guard by active module subscription (skip check if platform admin or subscription info is missing)
+      if (m.module && activeModules && !user?.is_platform_admin) {
+        if (!activeModules.includes(m.module)) {
+          return false;
+        }
+      }
+
+      if (m.children && m.children.length === 0) {
+        return false;
+      }
+      return true;
+    });
 }

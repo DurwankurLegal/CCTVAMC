@@ -1,35 +1,41 @@
 from datetime import date
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_permission
+from app.core.deps import get_current_user, CurrentUser, require_permission, get_tenant_active_modules
 from app.services import reports as report_service
 
 router = APIRouter()
 
-# Report key -> (title, async producer returning a list[dict])
+# Report key -> (title, required_module, async producer returning a list[dict])
 _REPORTS = {
-    "lead-conversion": ("Lead Conversion", lambda db, t: report_service.lead_conversion_report(db, t)),
-    "revenue-by-customer": ("Revenue by Customer", lambda db, t: report_service.revenue_by_customer(db, t)),
-    "technician-productivity": ("Technician Productivity", lambda db, t: report_service.technician_productivity(db, t)),
-    "inventory-consumption": ("Inventory Consumption", lambda db, t: report_service.inventory_consumption(db, t)),
-    "amc-renewal-pipeline": ("AMC Renewal Pipeline", lambda db, t: report_service.amc_renewal_pipeline(db, t)),
-    "overdue-receivables": ("Overdue Receivables", lambda db, t: report_service.overdue_receivables(db, t)),
-    "payment-collection": ("Payment Collection", lambda db, t: report_service.payment_collection(db, t)),
-    "installation-pipeline": ("Installation Pipeline", lambda db, t: report_service.installation_pipeline(db, t)),
-    "purchase-orders": ("Purchase Orders", lambda db, t: report_service.purchase_orders_report(db, t)),
-    "inventory-valuation": ("Inventory Valuation", lambda db, t: report_service.inventory_valuation(db, t)),
+    "lead-conversion": ("Lead Conversion", None, lambda db, t: report_service.lead_conversion_report(db, t)),
+    "revenue-by-customer": ("Revenue by Customer", "sales", lambda db, t: report_service.revenue_by_customer(db, t)),
+    "technician-productivity": ("Technician Productivity", "amc", lambda db, t: report_service.technician_productivity(db, t)),
+    "inventory-consumption": ("Inventory Consumption", "inventory", lambda db, t: report_service.inventory_consumption(db, t)),
+    "amc-renewal-pipeline": ("AMC Renewal Pipeline", "amc", lambda db, t: report_service.amc_renewal_pipeline(db, t)),
+    "overdue-receivables": ("Overdue Receivables", None, lambda db, t: report_service.overdue_receivables(db, t)),
+    "payment-collection": ("Payment Collection", None, lambda db, t: report_service.payment_collection(db, t)),
+    "installation-pipeline": ("Installation Pipeline", "amc", lambda db, t: report_service.installation_pipeline(db, t)),
+    "purchase-orders": ("Purchase Orders", "inventory", lambda db, t: report_service.purchase_orders_report(db, t)),
+    "inventory-valuation": ("Inventory Valuation", "inventory", lambda db, t: report_service.inventory_valuation(db, t)),
 }
 
 
 @router.get("/catalogue")
 async def catalogue(
-    _: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """List of available standard reports (key + title) for the reports UI."""
-    return {"reports": [{"key": k, "title": title} for k, (title, _p) in _REPORTS.items()]}
+    active_modules = await get_tenant_active_modules(db, current_user.tenant_id)
+    available_reports = []
+    for k, (title, req_module, _p) in _REPORTS.items():
+        if req_module is None or req_module in active_modules:
+            available_reports.append({"key": k, "title": title})
+    return {"reports": available_reports}
 
 
 @router.get("/dashboard")
@@ -136,7 +142,16 @@ async def standard_report(
     from fastapi import HTTPException
     if report_key not in _REPORTS:
         raise HTTPException(status_code=404, detail="Unknown report")
-    _, producer = _REPORTS[report_key]
+    title, req_module, producer = _REPORTS[report_key]
+    
+    if req_module:
+        active_modules = await get_tenant_active_modules(db, current_user.tenant_id)
+        if req_module not in active_modules:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Subscription upgrade required. The '{req_module}' module is disabled."
+            )
+
     data = await producer(db, current_user.tenant_id)
     return data if isinstance(data, list) else data
 
@@ -150,9 +165,19 @@ async def export_report(
 ):
     """Export a standard report as CSV, Excel, or PDF (SRS 4.16)."""
     from fastapi import HTTPException
+    from fastapi import status as http_status
     if report_key not in _REPORTS:
         raise HTTPException(status_code=404, detail="Unknown report")
-    title, producer = _REPORTS[report_key]
+    title, req_module, producer = _REPORTS[report_key]
+
+    if req_module:
+        active_modules = await get_tenant_active_modules(db, current_user.tenant_id)
+        if req_module not in active_modules:
+            raise HTTPException(
+                status_code=http_status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Subscription upgrade required. The '{req_module}' module is disabled."
+            )
+
     data = await producer(db, current_user.tenant_id)
     rows = data if isinstance(data, list) else [data]
 

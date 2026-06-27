@@ -20,6 +20,9 @@ import {
   BarChartOutlined,
   BellOutlined,
   VideoCameraOutlined,
+  BarcodeOutlined,
+  AppstoreAddOutlined,
+  FileDoneOutlined,
   KeyOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
@@ -59,32 +62,96 @@ import TwoFAModal from "./components/TwoFAModal";
 import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
 import { fetchTenantConfig } from "./store/tenantSlice";
+import ModuleGuard from "./components/ModuleGuard";
 import TenantSettingsPage from "./pages/TenantSettingsPage";
 import { CashReconciliationPage } from "./pages/CashReconciliationPage";
+import ProductsPage from "./pages/ProductsPage";
+import SalesOrdersPage from "./pages/SalesOrdersPage";
+import RentalUnitsPage from "./pages/RentalUnitsPage";
+import RentalContractsPage from "./pages/RentalContractsPage";
+import HelpCenter from "./pages/help/HelpCenter";
+import HelpButton from "./components/HelpButton";
 
 const { Header, Sider, Content } = Layout;
 
 // `perm` gates menu visibility against the user's effective permissions from
 // /auth/me. Items without a perm are always shown (e.g. Dashboard).
 const tenantMenu = [
-  { key: "/dashboard",        icon: <DashboardOutlined />,    label: "Dashboard" },
-  { key: "/customers",        icon: <TeamOutlined />,         label: "Customers",       perm: "customers:read" },
-  { key: "/quotations",       icon: <SolutionOutlined />,     label: "Quotations",      perm: "quotations:read" },
-  { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts",   perm: "amc:read" },
-  { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
-  { key: "/visits",           icon: <CarOutlined />,          label: "Engineer Visits", perm: "engineer_visits:read" },
-  { key: "/installations",    icon: <BuildOutlined />,        label: "Installations",   perm: "installations:read" },
-  { key: "/assets",           icon: <VideoCameraOutlined />,  label: "Assets",          perm: "assets:read" },
-  { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
-  { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
-  { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
-  { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
-  { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
-  { key: "/reconciliation",   icon: <AuditOutlined />,        label: "Cash Reconciliation", perm: "payments:read" },
-  { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
-  { key: "/notifications",    icon: <BellOutlined />,         label: "Notifications",   perm: "notifications:write" },
-  { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
-  { key: "/settings",         icon: <SettingOutlined />,      label: "Tenant Settings",  perm: "tenants:write" },
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+  {
+    key: "crm",
+    icon: <TeamOutlined />,
+    label: "CRM (Core)",
+    children: [
+      { key: "/leads", label: "Leads", perm: "leads:read" },
+      { key: "/customers", label: "Customers", perm: "customers:read" },
+    ],
+  },
+  {
+    key: "sales",
+    icon: <ShoppingCartOutlined />,
+    label: "Sales (Optional)",
+    module: "sales",
+    children: [
+      { key: "/quotations", label: "Quotations", perm: "quotations:read" },
+      { key: "/sales-orders", label: "Sales Orders", perm: "sales_orders:read" },
+      { key: "/invoices", label: "Invoices", perm: "invoices:read" },
+      { key: "/payments", label: "Payments", perm: "payments:read" },
+    ],
+  },
+  {
+    key: "rental",
+    icon: <AppstoreAddOutlined />,
+    label: "Rental (Optional)",
+    module: "rental",
+    children: [
+      { key: "/products", label: "Product Catalog", perm: "products:read" },
+      { key: "/rentals/units", label: "Rental Assets", perm: "rentals:read" },
+      { key: "/rentals/contracts", label: "Rental Contracts", perm: "rentals:read" },
+    ],
+  },
+  {
+    key: "amc",
+    icon: <FileTextOutlined />,
+    label: "AMC (Optional)",
+    module: "amc",
+    children: [
+      { key: "/amc", label: "AMC Contracts", perm: "amc:read" },
+      { key: "/tickets", label: "Service Tickets", perm: "service_tickets:read" },
+      { key: "/visits", label: "Engineer Visits", perm: "engineer_visits:read" },
+      { key: "/installations", label: "Installations", perm: "installations:read" },
+    ],
+  },
+  {
+    key: "inventory",
+    icon: <DatabaseOutlined />,
+    label: "Inventory (Optional)",
+    module: "inventory",
+    children: [
+      { key: "/inventory", label: "Inventory", perm: "inventory:read" },
+      { key: "/assets", label: "Assets", perm: "assets:read" },
+      { key: "/vendors", label: "Vendors", perm: "vendors:read" },
+    ],
+  },
+  {
+    key: "finance",
+    icon: <DollarOutlined />,
+    label: "Finance (Optional)",
+    children: [
+      { key: "/reconciliation", label: "Cash Collection", perm: "payments:read" },
+    ],
+  },
+  { key: "/reports", icon: <BarChartOutlined />, label: "Reports (Core)", perm: "reports:read" },
+  { key: "/notifications", icon: <BellOutlined />, label: "Notifications (Core)", perm: "notifications:write" },
+  {
+    key: "admin",
+    icon: <SettingOutlined />,
+    label: "Administration (Core)",
+    children: [
+      { key: "/users", label: "Users & Roles", perm: "users:write" },
+      { key: "/settings", label: "Tenant Settings", perm: "tenants:write" },
+    ],
+  },
 ];
 
 const platformMenu = [
@@ -157,6 +224,7 @@ function ProtectedLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={["crm", "sales", "rental", "amc", "inventory", "finance", "admin"]}
           items={items}
           onClick={({ key }) => navigate(key)}
           style={{ marginTop: 8, background: "transparent" }}
@@ -189,6 +257,7 @@ function ProtectedLayout() {
           >
             2FA Security
           </Button>
+          {!onPlatform && <HelpButton />}
           <Button
             icon={<LogoutOutlined />}
             type="text"
@@ -280,19 +349,23 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/customers" element={<RequirePerm perm="customers:read"><CustomersPage /></RequirePerm>} />
-            <Route path="/amc" element={<RequirePerm perm="amc:read"><AMCPage /></RequirePerm>} />
-            <Route path="/tickets" element={<RequirePerm perm="service_tickets:read"><ServiceTicketsPage /></RequirePerm>} />
+            <Route path="/amc" element={<RequirePerm perm="amc:read"><ModuleGuard moduleCode="amc"><AMCPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/tickets" element={<RequirePerm perm="service_tickets:read"><ModuleGuard moduleCode="amc"><ServiceTicketsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/leads" element={<RequirePerm perm="leads:read"><LeadsPage /></RequirePerm>} />
             <Route path="/invoices" element={<RequirePerm perm="invoices:read"><InvoicesPage /></RequirePerm>} />
             <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
             <Route path="/reconciliation" element={<RequirePerm perm="payments:read"><CashReconciliationPage /></RequirePerm>} />
             <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
-            <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
-            <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />
-            <Route path="/quotations" element={<RequirePerm perm="quotations:read"><QuotationsPage /></RequirePerm>} />
-            <Route path="/installations" element={<RequirePerm perm="installations:read"><InstallationsPage /></RequirePerm>} />
-            <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><EngineerVisitsPage /></RequirePerm>} />
-            <Route path="/assets" element={<RequirePerm perm="assets:read"><AssetsPage /></RequirePerm>} />
+            <Route path="/vendors" element={<RequirePerm perm="vendors:read"><ModuleGuard moduleCode="inventory"><VendorsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/inventory" element={<RequirePerm perm="inventory:read"><ModuleGuard moduleCode="inventory"><InventoryPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/products" element={<RequirePerm perm="products:read"><ModuleGuard moduleCode="rental"><ProductsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/sales-orders" element={<RequirePerm perm="sales_orders:read"><ModuleGuard moduleCode="sales"><SalesOrdersPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/rentals/units" element={<RequirePerm perm="rentals:read"><ModuleGuard moduleCode="rental"><RentalUnitsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/rentals/contracts" element={<RequirePerm perm="rentals:read"><ModuleGuard moduleCode="rental"><RentalContractsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/quotations" element={<RequirePerm perm="quotations:read"><ModuleGuard moduleCode="sales"><QuotationsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/installations" element={<RequirePerm perm="installations:read"><ModuleGuard moduleCode="amc"><InstallationsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><ModuleGuard moduleCode="amc"><EngineerVisitsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/assets" element={<RequirePerm perm="assets:read"><ModuleGuard moduleCode="assets"><AssetsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/reports" element={<RequirePerm perm="reports:read"><ReportsPage /></RequirePerm>} />
             <Route path="/notifications" element={<RequirePerm perm="notifications:write"><NotificationsPage /></RequirePerm>} />
             <Route path="/settings" element={<RequirePerm perm="tenants:write"><TenantSettingsPage /></RequirePerm>} />
@@ -301,6 +374,8 @@ export default function App() {
               <Route path="/platform/tenants" element={<TenantsPage />} />
               <Route path="/platform/tenants/:id" element={<TenantDetailPage />} />
             </Route>
+            <Route path="/help" element={<Navigate to="/help/introduction" replace />} />
+            <Route path="/help/:articleSlug" element={<HelpCenter />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

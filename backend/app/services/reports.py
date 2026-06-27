@@ -14,62 +14,72 @@ from app.models.payment import Payment
 
 
 async def dashboard_kpis(db: AsyncSession, tenant_id: UUID) -> dict:
-    today = date.today()
-    thirty_days_ago = today - timedelta(days=30)
+    from app.core.deps import get_tenant_active_modules
+    active_modules = await get_tenant_active_modules(db, tenant_id)
 
-    # Open tickets
-    r = await db.execute(
-        select(func.count()).where(
-            ServiceTicket.tenant_id == tenant_id,
-            ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED])
+    open_tickets = 0
+    sla_breached = 0
+    active_amc = 0
+
+    if "amc" in active_modules:
+        # Open tickets
+        r = await db.execute(
+            select(func.count()).where(
+                ServiceTicket.tenant_id == tenant_id,
+                ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED])
+            )
         )
-    )
-    open_tickets = r.scalar() or 0
+        open_tickets = r.scalar() or 0
 
-    # SLA breached
-    r = await db.execute(
-        select(func.count()).where(
-            ServiceTicket.tenant_id == tenant_id,
-            ServiceTicket.sla_breached == True,
-            ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED])
+        # SLA breached
+        r = await db.execute(
+            select(func.count()).where(
+                ServiceTicket.tenant_id == tenant_id,
+                ServiceTicket.sla_breached == True,
+                ServiceTicket.status.not_in([TicketStatus.RESOLVED, TicketStatus.CLOSED])
+            )
         )
-    )
-    sla_breached = r.scalar() or 0
+        sla_breached = r.scalar() or 0
 
-    # Active AMC contracts
-    r = await db.execute(
-        select(func.count()).where(
-            AMCContract.tenant_id == tenant_id,
-            AMCContract.status == AMCStatus.ACTIVE,
+        # Active AMC contracts
+        r = await db.execute(
+            select(func.count()).where(
+                AMCContract.tenant_id == tenant_id,
+                AMCContract.status == AMCStatus.ACTIVE,
+            )
         )
-    )
-    active_amc = r.scalar() or 0
+        active_amc = r.scalar() or 0
 
-    # Revenue this month
-    r = await db.execute(
-        select(func.coalesce(func.sum(Payment.amount), 0)).where(
-            Payment.tenant_id == tenant_id,
-            Payment.payment_date >= today.replace(day=1),
+    # Revenue metrics (can check if sales, rental, or amc is active)
+    revenue_mtd = 0.0
+    outstanding = 0.0
+    if any(m in active_modules for m in ("sales", "rental", "amc")):
+        today = date.today()
+        # Revenue this month
+        r = await db.execute(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                Payment.tenant_id == tenant_id,
+                Payment.payment_date >= today.replace(day=1),
+            )
         )
-    )
-    revenue_mtd = float(r.scalar() or 0)
+        revenue_mtd = float(r.scalar() or 0)
 
-    # Lead pipeline
+        # Outstanding receivables
+        r = await db.execute(
+            select(func.coalesce(func.sum(Invoice.total_amount - Invoice.amount_paid), 0)).where(
+                Invoice.tenant_id == tenant_id,
+                Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
+            )
+        )
+        outstanding = float(r.scalar() or 0)
+
+    # Lead pipeline is core/mandatory
     r = await db.execute(
         select(Lead.status, func.count()).where(
             Lead.tenant_id == tenant_id
         ).group_by(Lead.status)
     )
     lead_pipeline = {row[0]: row[1] for row in r.all()}
-
-    # Outstanding receivables
-    r = await db.execute(
-        select(func.coalesce(func.sum(Invoice.total_amount - Invoice.amount_paid), 0)).where(
-            Invoice.tenant_id == tenant_id,
-            Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID]),
-        )
-    )
-    outstanding = float(r.scalar() or 0)
 
     return {
         "open_tickets": open_tickets,

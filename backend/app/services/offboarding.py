@@ -110,7 +110,13 @@ async def hard_delete_tenant_data(db: AsyncSession, tenant_id: UUID) -> None:
         "invoices",
         "sales_orders",
         "quotations",
+        "rental_movements",
+        "rental_contract_lines",
+        "rental_contracts",
+        "rental_units",
+        "products",
         "amc_assets",
+
         "amc_contracts",
         "cctv_assets",
         "leads",

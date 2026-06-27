@@ -1,8 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? "admin@test.com";
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "Admin@1234";
-const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "durwankur";
+const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? "admin@company-e.com";
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "Passw0rd@123";
+const TENANT_SLUG    = process.env.E2E_TENANT_SLUG    ?? "company-e";
 
 async function loginOnTenant(page: Page, tenantUrl: string) {
   await page.goto(tenantUrl + "/login");

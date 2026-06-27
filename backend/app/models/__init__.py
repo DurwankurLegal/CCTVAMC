@@ -30,4 +30,9 @@ from app.models import (  # noqa: F401
     company_template,
     cash_collection,
     cash_collection_log,
+    product,
+    rental,
+    subscription,
+    help,
 )
+

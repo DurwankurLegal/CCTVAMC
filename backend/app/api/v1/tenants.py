@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import date
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser, require_platform_admin
@@ -204,4 +205,70 @@ async def purge_tenant(
     await hard_delete_tenant_data(db, tenant_id)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+class TenantModulesUpdateRequest(BaseModel):
+    module_codes: List[str]
+
+
+@router.get("/{tenant_id}/modules")
+async def get_tenant_modules(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Retrieve the list of active modules for a tenant (platform-admin only)."""
+    from app.models.subscription import TenantModule
+    result = await db.execute(
+        select(TenantModule.module_code).where(
+            TenantModule.tenant_id == tenant_id,
+            TenantModule.status == "active"
+        )
+    )
+    return {"modules": list(result.scalars().all())}
+
+
+@router.post("/{tenant_id}/modules")
+async def update_tenant_modules(
+    tenant_id: UUID,
+    payload: TenantModulesUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Modify the active modules list for a tenant (platform-admin only)."""
+    import redis.asyncio as aioredis
+    from app.models.subscription import TenantModule, Module
+    from sqlalchemy import delete
+    from datetime import datetime, timezone
+    from fastapi import HTTPException
+
+    # Verify module codes exist in master
+    master_result = await db.execute(select(Module.code))
+    master_codes = set(master_result.scalars().all())
+    for code in payload.module_codes:
+        if code not in master_codes:
+            raise HTTPException(status_code=400, detail=f"Invalid module code: {code}")
+
+    # Remove existing active modules
+    await db.execute(delete(TenantModule).where(TenantModule.tenant_id == tenant_id))
+
+    # Insert new active modules
+    for code in payload.module_codes:
+        db.add(TenantModule(
+            tenant_id=tenant_id,
+            module_code=code,
+            status="active",
+            starts_at=datetime.now(timezone.utc)
+        ))
+
+    await db.commit()
+
+    # Invalidate Redis cache
+    try:
+        redis_client = aioredis.from_url(get_settings().REDIS_URL)
+        await redis_client.delete(f"tenant:{tenant_id}:modules")
+    except Exception:
+        pass
+
+    return {"status": "success", "modules": payload.module_codes}
 
