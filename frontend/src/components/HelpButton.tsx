@@ -15,7 +15,10 @@ const HelpButton: React.FC<HelpButtonProps> = ({ slug, type = "button" }) => {
   const getSlugFromPath = (path: string): string => {
     // Basic automatic mapping of routes to documentation slugs
     const cleanPath = path.replace(/^\//, "").split("?")[0];
-    if (!cleanPath) return "introduction";
+    if (!cleanPath || cleanPath === "help") return "introduction";
+    if (cleanPath.startsWith("help/")) {
+      return cleanPath.substring(5) || "introduction";
+    }
     
     // Map specific paths to user guide articles
     const mappings: Record<string, string> = {

@@ -7,6 +7,13 @@ mock_weasyprint = MagicMock()
 mock_weasyprint.HTML = MagicMock()
 sys.modules['weasyprint'] = mock_weasyprint
 
+# Point Redis to localhost for test runs BEFORE importing app
+import os
+os.environ["REDIS_URL"] = "redis://:redis_dev_pass@localhost:6379/0"
+
+from app.core.config import get_settings
+get_settings.cache_clear()
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport

@@ -34,7 +34,7 @@ DEFAULT_ROLE_MATRIX: dict[str, set[str]] = {
         "service_tickets:write", "engineer_visits:write", "amc:write",
     },
     "accounts": _reads() | {
-        "invoices:write", "payments:write", "quotations:write",
+        "invoices:write", "payments:write", "quotations:write", "sales_orders:write",
     },
     "technician": {
         "service_tickets:read", "engineer_visits:read", "engineer_visits:write",

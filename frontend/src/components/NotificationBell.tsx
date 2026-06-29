@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Badge, Dropdown, Button, List, Typography, Empty } from "antd";
+import { Badge, Dropdown, Button, List, Typography, Empty, theme } from "antd";
 import { BellOutlined } from "@ant-design/icons";
 import apiClient from "../api/client";
 
@@ -11,6 +11,7 @@ interface Note {
 }
 
 export default function NotificationBell() {
+  const { token } = theme.useToken();
   const [items, setItems] = useState<Note[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -37,8 +38,23 @@ export default function NotificationBell() {
   };
 
   const content = (
-    <div style={{ width: 340, maxHeight: 420, overflow: "auto", background: "#fff", borderRadius: 8, boxShadow: "0 6px 16px rgba(0,0,0,0.12)" }}>
-      <div style={{ padding: "10px 16px", borderBottom: "1px solid #f0f0f0", fontWeight: 600 }}>Notifications</div>
+    <div style={{ 
+      width: 340, 
+      maxHeight: 420, 
+      overflow: "auto", 
+      background: token.colorBgContainer, 
+      border: `1px solid ${token.colorBorder}`,
+      borderRadius: 8, 
+      boxShadow: token.boxShadowSecondary || "0 6px 16px rgba(0,0,0,0.12)" 
+    }}>
+      <div style={{ 
+        padding: "10px 16px", 
+        borderBottom: `1px solid ${token.colorBorderSecondary}`, 
+        fontWeight: 600,
+        color: token.colorText
+      }}>
+        Notifications
+      </div>
       {items.length === 0
         ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No notifications" style={{ padding: 24 }} />
         : (
@@ -46,12 +62,17 @@ export default function NotificationBell() {
             dataSource={items}
             renderItem={(n) => (
               <List.Item
-                style={{ padding: "10px 16px", cursor: "pointer", background: n.read_at ? undefined : "#e6f4ff" }}
+                style={{ 
+                  padding: "10px 16px", 
+                  cursor: "pointer", 
+                  background: n.read_at ? undefined : token.colorFillAlter,
+                  borderBottom: `1px solid ${token.colorBorderSecondary}`
+                }}
                 onClick={() => !n.read_at && markRead(n.id)}
               >
                 <List.Item.Meta
-                  title={<Text strong={!n.read_at}>{n.subject || n.event_type.replace(/_/g, " ")}</Text>}
-                  description={<span style={{ fontSize: 12 }}>{n.body}</span>}
+                  title={<Text strong={!n.read_at} style={{ color: token.colorText }}>{n.subject || n.event_type.replace(/_/g, " ")}</Text>}
+                  description={<span style={{ fontSize: 12, color: token.colorTextDescription }}>{n.body}</span>}
                 />
               </List.Item>
             )}
@@ -64,7 +85,7 @@ export default function NotificationBell() {
     <Dropdown open={open} onOpenChange={setOpen} trigger={["click"]}
       dropdownRender={() => content} placement="bottomRight">
       <Badge count={unread} size="small" offset={[-2, 4]}>
-        <Button type="text" icon={<BellOutlined style={{ fontSize: 18 }} />} />
+        <Button type="text" icon={<BellOutlined style={{ fontSize: 18, color: "#fff" }} />} />
       </Badge>
     </Dropdown>
   );

@@ -9,6 +9,12 @@ work without installing the package.
 """
 import sys
 import os
+from unittest.mock import MagicMock
+
+# Mock weasyprint to prevent errors on environments missing GObject/Pango system libraries
+mock_weasyprint = MagicMock()
+mock_weasyprint.HTML = MagicMock()
+sys.modules['weasyprint'] = mock_weasyprint
 
 # Make the backend package importable from the project root.
 BACKEND_DIR = os.path.join(os.path.dirname(__file__), "..", "backend")
@@ -23,10 +29,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.pool import StaticPool
 
 # Provide minimal env vars so Settings() doesn't raise at import time.
-os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-os.environ.setdefault("DATABASE_URL_SYNC", "sqlite:///")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-tests-only")
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_URL_SYNC"] = "sqlite:///"
+os.environ["REDIS_URL"] = "redis://:redis_dev_pass@localhost:6379/0"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-tests-only"
 
 from app.main import app
 from app.core.database import Base, get_db

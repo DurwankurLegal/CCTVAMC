@@ -129,3 +129,43 @@ async def list_bookmarks(
         db=db,
         user_id=current_user.user_id
     )
+
+
+@router.get("/attachments/{attachment_id}/download")
+async def download_help_attachment(
+    attachment_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    from app.models.help import HelpAttachment
+    from app.services import storage
+    from app.core.config import get_settings
+    from fastapi.responses import StreamingResponse
+    from sqlalchemy import select
+    import io
+
+    result = await db.execute(
+        select(HelpAttachment).where(HelpAttachment.id == attachment_id)
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    settings = get_settings()
+    bucket = settings.S3_BUCKET
+    url_parts = attachment.url.split(f"/{bucket}/")
+    if len(url_parts) < 2:
+        # Fallback to absolute url if not stored in default bucket structure
+        key = attachment.url.split("/")[-1]
+    else:
+        key = url_parts[1]
+
+    content, content_type = storage.download_bytes(key)
+    if content is None:
+        raise HTTPException(status_code=404, detail="File content not found in storage")
+
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{attachment.file_name}"'}
+    )

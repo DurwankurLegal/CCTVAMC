@@ -14,6 +14,8 @@ import {
 import apiClient from "../api/client";
 import SmartCard from "../components/SmartCard";
 import MetricProgressGauge from "../components/MetricProgressGauge";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -1012,6 +1014,11 @@ function SLAReportPanel() {
 // ─── Main Reports Hub Page ───────────────────────────────────────────────────
 
 export default function ReportsPage() {
+  const user = useSelector((s: RootState) => s.auth.user);
+  const isPlatformAdmin = !!user?.is_platform_admin;
+  const activeModules = user?.subscription?.active_modules || [];
+  const hasAMC = isPlatformAdmin || activeModules.includes("amc");
+
   return (
     <ConfigProvider theme={{}}>
       <div id="reports-page" style={{ padding: "8px 0 24px 0" }}>
@@ -1028,8 +1035,8 @@ export default function ReportsPage() {
           </Text>
         </div>
 
-        <SLAReportPanel />
-        <AMCConsolidatedPanel />
+        {hasAMC && <SLAReportPanel />}
+        {hasAMC && <AMCConsolidatedPanel />}
         <StandardReportsPanel />
       </div>
     </ConfigProvider>

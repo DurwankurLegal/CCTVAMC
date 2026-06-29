@@ -1,4 +1,4 @@
-import { Layout, Menu, Button, Grid } from "antd";
+import { Layout, Menu, Button, Grid, Modal } from "antd";
 import {
   DashboardOutlined, ToolOutlined, SafetyCertificateOutlined,
   FileTextOutlined, LogoutOutlined,
@@ -27,10 +27,19 @@ export default function PortalLayout() {
   })();
 
   const logout = () => {
-    localStorage.removeItem("portal_token");
-    localStorage.removeItem("portal_refresh");
-    localStorage.removeItem("portal_user");
-    navigate("/portal/login");
+    Modal.confirm({
+      title: "Sign Out",
+      content: "Are you sure you want to sign out of the Customer Portal?",
+      okText: "Sign Out",
+      cancelText: "Cancel",
+      okButtonProps: { danger: true },
+      onOk: () => {
+        localStorage.removeItem("portal_token");
+        localStorage.removeItem("portal_refresh");
+        localStorage.removeItem("portal_user");
+        navigate("/portal/login");
+      }
+    });
   };
 
   // Match the most specific menu key (so /portal/tickets/:id keeps Tickets active).

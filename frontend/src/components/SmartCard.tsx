@@ -48,6 +48,7 @@ export default function SmartCard({
       styles={{
         body: { padding: "20px 24px" }
       }}
+      style={{ height: "100%" }}
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 2 }} />

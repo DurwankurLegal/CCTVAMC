@@ -62,3 +62,17 @@ def delete_file(key: str) -> None:
         import structlog
         structlog.get_logger().warning("S3 delete failed", key=key, error=str(exc))
 
+
+def download_bytes(key: str) -> tuple[bytes | None, str | None]:
+    """Retrieve an object's bytes and content type from S3. Returns (bytes, content_type)."""
+    client = _client()
+    if client is None:
+        return None, None
+    try:
+        obj = client.get_object(Bucket=get_settings().S3_BUCKET, Key=key)
+        return obj["Body"].read(), obj.get("ContentType")
+    except Exception as exc:
+        import structlog
+        structlog.get_logger().warning("S3 download failed", key=key, error=str(exc))
+        return None, None
+

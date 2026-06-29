@@ -68,6 +68,8 @@ export default function InvoicesPage() {
     if (statusParam) {
       if (statusParam === "overdue") {
         if (!isOverdue) return false;
+      } else if (statusParam === "outstanding") {
+        if (!["issued", "partially_paid"].includes(item.status)) return false;
       } else if (item.status !== statusParam) {
         return false;
       }

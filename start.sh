@@ -216,6 +216,7 @@ done
   cd "$BACKEND_DIR"
   # shellcheck source=/dev/null
   source venv/bin/activate
+  export DYLD_FALLBACK_LIBRARY_PATH="/opt/homebrew/lib:/usr/local/lib:$DYLD_FALLBACK_LIBRARY_PATH"
   uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \

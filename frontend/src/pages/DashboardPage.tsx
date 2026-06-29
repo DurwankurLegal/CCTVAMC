@@ -250,7 +250,7 @@ export default function DashboardPage() {
             value={`₹${(stats?.outstanding ?? 0).toLocaleString("en-IN")}`}
             prefix={<ExclamationCircleOutlined />}
             status="warning"
-            onClick={() => navigate("/invoices?status=overdue")}
+            onClick={() => navigate("/invoices?status=outstanding")}
             loading={loading}
           />
         </Col>

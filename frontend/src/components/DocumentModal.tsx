@@ -73,6 +73,31 @@ export default function DocumentModal({ open, entityType, entityId, entityName, 
     return false; // prevent antd auto-upload
   };
 
+  const handleViewFile = async (d: Document) => {
+    try {
+      const response = await apiClient.get(`/documents/${d.id}/view`, {
+        responseType: "blob"
+      });
+      const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch {
+      message.error("Failed to load/view document");
+    }
+  };
+
+  const handleDeleteFile = async (d: Document) => {
+    try {
+      await apiClient.delete(`/documents/${d.id}`);
+      message.success("Document deleted");
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Delete failed");
+    }
+  };
+
   return (
     <Modal
       title={`Documents — ${entityName}`}
@@ -87,7 +112,11 @@ export default function DocumentModal({ open, entityType, entityId, entityName, 
             <Option key={d} value={d}>{d.toUpperCase()}</Option>
           ))}
         </Select>
-        <Upload beforeUpload={(f) => handleUpload(f as File)} showUploadList={false}>
+        <Upload 
+          beforeUpload={(f) => handleUpload(f as File)} 
+          showUploadList={false}
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+        >
           <Button icon={<UploadOutlined />} loading={uploading}>Upload</Button>
         </Upload>
       </Space>
@@ -96,7 +125,10 @@ export default function DocumentModal({ open, entityType, entityId, entityName, 
         locale={{ emptyText: <span><InboxOutlined /> No documents yet</span> }}
         renderItem={(d) => (
           <List.Item
-            actions={d.url ? [<a key="v" href={d.url} target="_blank" rel="noreferrer">View</a>] : []}
+            actions={[
+              <Button key="v" type="link" size="small" style={{ padding: 0 }} onClick={() => handleViewFile(d)}>View</Button>,
+              <Button key="d" type="link" size="small" danger style={{ padding: 0 }} onClick={() => handleDeleteFile(d)}>Delete</Button>
+            ]}
           >
             <List.Item.Meta
               avatar={<FileOutlined />}

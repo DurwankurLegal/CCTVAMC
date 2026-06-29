@@ -3,6 +3,7 @@ import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, mess
 import { PlusOutlined, MoreOutlined, ReloadOutlined, CopyOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
+import { copyToClipboard } from "../../utils/clipboard";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -85,12 +86,15 @@ export default function TenantsPage() {
     }
   };
 
-  const copyCredentials = () => {
+  const copyCredentials = async () => {
     if (!credentials) return;
-    navigator.clipboard
-      ?.writeText(`Email: ${credentials.email}\nTemporary password: ${credentials.password}`)
-      .then(() => message.success("Copied"))
-      .catch(() => message.error("Copy failed"));
+    const text = `Email: ${credentials.email}\nTemporary password: ${credentials.password}`;
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      message.success("Copied");
+    } else {
+      message.error("Copy failed");
+    }
   };
 
   const changeStatus = async (id: string, action: "suspend" | "activate" | "cancel") => {

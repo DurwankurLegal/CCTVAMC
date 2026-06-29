@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Layout, Menu, Button, theme, ConfigProvider } from "antd";
+import { Layout, Menu, Button, theme, ConfigProvider, Modal, Dropdown } from "antd";
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -25,6 +25,8 @@ import {
   FileDoneOutlined,
   KeyOutlined,
   SettingOutlined,
+  BgColorsOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
 import { useEffect, useState, type ReactNode } from "react";
@@ -171,6 +173,53 @@ function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [twoFAOpen, setTwoFAOpen] = useState(false);
 
+  const handleLogout = () => {
+    Modal.confirm({
+      title: "Sign Out",
+      content: "Are you sure you want to sign out of the system?",
+      okText: "Sign Out",
+      cancelText: "Cancel",
+      okButtonProps: { danger: true },
+      onOk: () => {
+        dispatch(logout());
+        navigate("/login");
+      }
+    });
+  };
+
+  const currentThemeKey = localStorage.getItem("theme_override") || (tenantConfig?.branding as any)?.theme_key || "dark_professional";
+
+  const themeMenuItems = [
+    { key: "light_professional", label: "Light Professional" },
+    { key: "dark_professional", label: "Dark Professional" },
+    { key: "blue_corporate", label: "Blue Corporate" },
+    { key: "green_nature", label: "Green Nature" },
+  ];
+
+  const handleThemeChange = async (key: string) => {
+    localStorage.setItem("theme_override", key);
+    const hasWritePermission = user?.permissions?.includes("tenants:write") || user?.role === "admin" || user?.is_platform_admin;
+    if (hasWritePermission && tenantConfig) {
+      try {
+        await apiClient.patch("/tenant-admin/settings", {
+          branding: {
+            ...tenantConfig.branding,
+            theme_key: key
+          }
+        });
+      } catch (err) {
+        console.error("Failed to sync theme to backend settings", err);
+      }
+    }
+    window.location.reload();
+  };
+
+  const itemsTheme = themeMenuItems.map(t => ({
+    key: t.key,
+    label: t.label,
+    icon: currentThemeKey === t.key ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : null
+  }));
+
   // Refresh identity once if we have a token but no resolved user (e.g. after reload).
   useEffect(() => {
     if (isLoggedIn && !user) dispatch(fetchMe());
@@ -274,11 +323,28 @@ function ProtectedLayout() {
           >
             2FA Security
           </Button>
+          {!onPlatform && (
+            <Dropdown
+              menu={{
+                items: itemsTheme,
+                onClick: ({ key }) => handleThemeChange(key)
+              }}
+              trigger={["click"]}
+            >
+              <Button
+                icon={<BgColorsOutlined />}
+                type="text"
+                style={{ color: token.colorTextSecondary, marginRight: 8 }}
+              >
+                Theme
+              </Button>
+            </Dropdown>
+          )}
           {!onPlatform && <HelpButton />}
           <Button
             icon={<LogoutOutlined />}
             type="text"
-            onClick={() => { dispatch(logout()); navigate("/login"); }}
+            onClick={handleLogout}
             style={{ color: token.colorTextSecondary }}
           >
             Sign Out
@@ -387,7 +453,8 @@ export default function App() {
     dispatch(fetchTenantConfig(window.location.host));
   }, [dispatch]);
 
-  const themeKey = (tenantConfig?.branding as any)?.theme_key || "dark_professional";
+  const localOverride = localStorage.getItem("theme_override");
+  const themeKey = localOverride || (tenantConfig?.branding as any)?.theme_key || "dark_professional";
   const selectedTheme = THEMES[themeKey as keyof typeof THEMES] || THEMES.dark_professional;
   const primaryColor = tenantConfig?.branding?.primary_color || selectedTheme.token.colorPrimary;
   const isDark = selectedTheme.algorithm === "dark";

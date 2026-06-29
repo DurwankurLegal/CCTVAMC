@@ -30,15 +30,22 @@ async def test_get_template_by_type_query():
         assert res is None
 
 @pytest.mark.asyncio
+@patch("app.services.company_template.get_tenant")
 @patch("app.services.company_template.HTML")
 @patch("app.services.company_template.get_template_by_type")
 @patch("app.services.company_template.TenantRepository")
 async def test_render_company_document_success_default_template(
-    MockTenantRepository, mock_get_template_by_type, MockHTML,
+    MockTenantRepository, mock_get_template_by_type, MockHTML, mock_get_tenant,
 ):
     db = AsyncMock()
     tenant_id = uuid4()
     company_id = uuid4()
+    
+    mock_tenant = MagicMock()
+    mock_tenant.settings = {}
+    mock_tenant.branding = {}
+    mock_tenant.registered_address = ""
+    mock_get_tenant.return_value = mock_tenant
     
     # Mock company object
     company = Company(
@@ -91,15 +98,22 @@ async def test_render_company_document_success_default_template(
     mock_html_inst.write_pdf.assert_called_once()
 
 @pytest.mark.asyncio
+@patch("app.services.company_template.get_tenant")
 @patch("app.services.company_template.HTML")
 @patch("app.services.company_template.get_template_by_type")
 @patch("app.services.company_template.TenantRepository")
 async def test_render_company_document_success_custom_template(
-    MockTenantRepository, mock_get_template_by_type, MockHTML,
+    MockTenantRepository, mock_get_template_by_type, MockHTML, mock_get_tenant,
 ):
     db = AsyncMock()
     tenant_id = uuid4()
     company_id = uuid4()
+    
+    mock_tenant = MagicMock()
+    mock_tenant.settings = {}
+    mock_tenant.branding = {}
+    mock_tenant.registered_address = ""
+    mock_get_tenant.return_value = mock_tenant
     
     company = Company(
         id=company_id,
@@ -160,14 +174,21 @@ async def test_render_company_document_company_not_found(MockTenantRepository):
     assert "Company not found" in exc_info.value.detail
 
 @pytest.mark.asyncio
+@patch("app.services.company_template.get_tenant")
 @patch("app.services.company_template.get_template_by_type")
 @patch("app.services.company_template.TenantRepository")
 async def test_render_company_document_unsupported_type(
-    MockTenantRepository, mock_get_template_by_type
+    MockTenantRepository, mock_get_template_by_type, mock_get_tenant
 ):
     db = AsyncMock()
     tenant_id = uuid4()
     company_id = uuid4()
+    
+    mock_tenant = MagicMock()
+    mock_tenant.settings = {}
+    mock_tenant.branding = {}
+    mock_tenant.registered_address = ""
+    mock_get_tenant.return_value = mock_tenant
     
     company = Company(id=company_id, tenant_id=tenant_id, name="Acme Solutions", gst_status="GST", contact_details={}, bank_details={})
     mock_company_repo = AsyncMock()

@@ -22,7 +22,7 @@ def _payload(cid):
         "customer_id": cid,
         "order_date": str(date.today()),
         "line_items": [
-            {"description": "DVR", "quantity": 2, "unit_price": 8000.0, "amount": 16000.0},
+            {"description": "DVR", "quantity": 2, "unit_price": 8000.0, "amount": 16000.0, "gst_rate": 0.0},
         ],
     }
 

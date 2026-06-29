@@ -7,7 +7,8 @@ import {
 import {
   SettingOutlined, UserOutlined, FileTextOutlined, AppstoreOutlined,
   MailOutlined, SafetyCertificateOutlined, TeamOutlined, GlobalOutlined,
-  EditOutlined, PlusOutlined, SafetyOutlined
+  EditOutlined, PlusOutlined, SafetyOutlined, BgColorsOutlined,
+  SolutionOutlined, CreditCardOutlined, BuildOutlined, BankOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -290,6 +291,7 @@ export default function TenantSettingsPage() {
       };
       await apiClient.patch("/tenant-admin/settings", payload);
       message.success("Tenant settings updated successfully");
+      localStorage.removeItem("theme_override"); // Clear local override so global theme applies
       loadData();
       // Reload page to apply new branding dynamically
       setTimeout(() => {
@@ -385,7 +387,12 @@ export default function TenantSettingsPage() {
             items={[
               {
                 key: "profile",
-                label: "Company Profile & Tax",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <SolutionOutlined />
+                    Company Profile &amp; Tax
+                  </span>
+                ),
                 forceRender: true,
                 children: (
                   <Card className="glass-card" title="Company Profile & Tax Details">
@@ -495,7 +502,12 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "branding",
-                label: "Branding & Theme",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <BgColorsOutlined />
+                    Branding &amp; Theme
+                  </span>
+                ),
                 forceRender: true,
                 children: (
                   <Card className="glass-card" title="Branding & System Theme">
@@ -540,7 +552,12 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "bank",
-                label: "Bank & Signatory",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <BankOutlined />
+                    Bank &amp; Signatory
+                  </span>
+                ),
                 forceRender: true,
                 children: (
                   <Card className="glass-card" title="Banking & Authorized Signatory Details">
@@ -611,7 +628,12 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "defaults",
-                label: "Quotation & Defaults",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <FileTextOutlined />
+                    Quotation &amp; Defaults
+                  </span>
+                ),
                 forceRender: true,
                 children: (
                   <Card className="glass-card" title="Quotation Terms &amp; Default pre-fills">
@@ -661,12 +683,22 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "companies",
-                label: "Multi-Company & Templates",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <BuildOutlined />
+                    Multi-Company &amp; Templates
+                  </span>
+                ),
                 children: <CompanySettingsTab />
               },
               {
                 key: "users",
-                label: "Staff Directory",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <TeamOutlined />
+                    Staff Directory
+                  </span>
+                ),
                 children: (
                   <Card
                     className="glass-card"
@@ -683,7 +715,12 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "subscription",
-                label: "Subscription & Resource Limits",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <CreditCardOutlined />
+                    Subscription &amp; Resource Limits
+                  </span>
+                ),
                 children: (
                   <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                     <Card className="glass-card" title="Subscription Status">
@@ -741,7 +778,12 @@ export default function TenantSettingsPage() {
               },
               {
                 key: "domain",
-                label: "Custom Domain & Mail",
+                label: (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <GlobalOutlined />
+                    Custom Domain &amp; Mail
+                  </span>
+                ),
                 forceRender: true,
                 children: (
                   <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

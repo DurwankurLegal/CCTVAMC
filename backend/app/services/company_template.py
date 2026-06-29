@@ -7,6 +7,12 @@ from app.models.company import Company
 from app.repositories.base import TenantRepository
 from app.services.crud_base import make_crud
 from app.schemas.company_template import CompanyTemplateCreate, CompanyTemplateUpdate
+from app.services.tenant import get_tenant
+
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
 
 
 class CompanyTemplateRepository(TenantRepository[CompanyTemplate]):
@@ -461,7 +467,6 @@ async def render_company_document(
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    from app.services.tenant import get_tenant
     tenant = await get_tenant(db, tenant_id)
     t_settings = tenant.settings or {}
     t_branding = tenant.branding or {}
@@ -552,8 +557,11 @@ async def render_company_document(
 
     # 5. Compile to PDF bytes using WeasyPrint
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=rendered_html).write_pdf()
+        if HTML is None:
+            from weasyprint import HTML as RealHTML
+            pdf_bytes = RealHTML(string=rendered_html).write_pdf()
+        else:
+            pdf_bytes = HTML(string=rendered_html).write_pdf()
     except (OSError, ImportError) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

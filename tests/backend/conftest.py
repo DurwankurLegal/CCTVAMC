@@ -11,6 +11,12 @@ import os
 import sys
 import uuid
 from typing import AsyncGenerator
+from unittest.mock import MagicMock
+
+# Mock weasyprint to prevent errors on environments missing GObject/Pango system libraries
+mock_weasyprint = MagicMock()
+mock_weasyprint.HTML = MagicMock()
+sys.modules['weasyprint'] = mock_weasyprint
 
 import pytest
 import pytest_asyncio
@@ -25,11 +31,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # ── Point settings at an in-memory SQLite database before importing app ──────
-os.environ.setdefault("DATABASE_URL",      "sqlite+aiosqlite:///:memory:")
-os.environ.setdefault("DATABASE_URL_SYNC", "sqlite:///:memory:")
-os.environ.setdefault("REDIS_URL",         "redis://localhost:6379/0")
-os.environ.setdefault("JWT_SECRET_KEY",    "test-secret-key-for-pytest-only")
-os.environ.setdefault("JWT_ALGORITHM",     "HS256")
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_URL_SYNC"] = "sqlite:///:memory:"
+os.environ["REDIS_URL"] = "redis://:redis_dev_pass@localhost:6379/0"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-pytest-only"
+os.environ["JWT_ALGORITHM"] = "HS256"
 
 # ── Imports AFTER env is set ─────────────────────────────────────────────────
 from app.core.config import get_settings          # noqa: E402  (order matters)

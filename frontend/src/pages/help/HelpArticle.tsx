@@ -32,6 +32,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
+import { copyToClipboard } from "../../utils/clipboard";
 
 const { Title, Paragraph, Text } = Typography;
 const { Panel } = Collapse;
@@ -82,6 +83,7 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackComments, setFeedbackComments] = useState("");
   const [isOutdated, setIsOutdated] = useState(false);
+  const [attachmentBlobUrls, setAttachmentBlobUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -93,7 +95,26 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
       setIsOutdated(false);
       try {
         const response = await apiClient.get(`/help/articles/${slug}`);
-        setArticle(response.data);
+        const data: ArticleData = response.data;
+        setArticle(data);
+
+        // Prefetch attachments as secure blobs
+        const urlsMap: Record<string, string> = {};
+        await Promise.all(
+          data.attachments.map(async (att) => {
+            try {
+              const res = await apiClient.get(`/help/attachments/${att.id}/download`, {
+                responseType: "blob"
+              });
+              const contentType = (res.headers["content-type"] as string) || "application/octet-stream";
+              const blob = new Blob([res.data], { type: contentType });
+              urlsMap[att.id] = window.URL.createObjectURL(blob);
+            } catch (err) {
+              console.error("Failed to load attachment blob for", att.file_name, err);
+            }
+          })
+        );
+        setAttachmentBlobUrls(urlsMap);
         
         // Fetch bookmarks to see if this one is saved
         const bResponse = await apiClient.get("/help/bookmarks");
@@ -107,6 +128,13 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
       }
     };
     if (slug) fetchArticle();
+
+    return () => {
+      setAttachmentBlobUrls((prev) => {
+        Object.values(prev).forEach((url) => window.URL.revokeObjectURL(url));
+        return {};
+      });
+    };
   }, [slug]);
 
   const handleBookmarkToggle = async () => {
@@ -135,78 +163,136 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    message.success("Article link copied to clipboard!");
+  const handleCopyLink = async () => {
+    const ok = await copyToClipboard(window.location.href);
+    if (ok) {
+      message.success("Article link copied to clipboard!");
+    } else {
+      message.error("Failed to copy link");
+    }
   };
 
   // Helper to convert Markdown to structured elements
   const parseMarkdown = (markdown: string) => {
     const lines = markdown.split("\n");
-    return lines.map((line, idx) => {
-      // Headers
-      if (line.startsWith("### ")) {
-        return <Title key={idx} level={4} style={{ marginTop: "16px", color: "#1e293b" }}>{line.slice(4)}</Title>;
-      }
-      if (line.startsWith("## ")) {
-        return <Title key={idx} level={3} style={{ marginTop: "24px", color: "#0F2A43" }}>{line.slice(3)}</Title>;
-      }
-      if (line.startsWith("# ")) {
-        return <Title key={idx} level={2} style={{ marginTop: "28px", color: "#0F2A43" }}>{line.slice(2)}</Title>;
-      }
-
-      // Callouts / Alerts (e.g. > [!TIP], > [!WARNING])
-      if (line.startsWith("> [!TIP]") || line.startsWith("> [!NOTE]")) {
-        return null; // Grouped below
-      }
-
-      if (line.startsWith("> ")) {
-        const cleanText = line.slice(2);
-        if (cleanText.includes("[!TIP]") || cleanText.includes("[!NOTE]")) {
-          return null;
+    const elements: React.ReactNode[] = [];
+    
+    let inQuote = false;
+    let quoteType: "note" | "tip" | "warning" | "info" = "info";
+    let quoteLines: string[] = [];
+    
+    const flushQuote = (keyIdx: number) => {
+      if (quoteLines.length === 0) return;
+      const textContent = quoteLines.join("\n");
+      
+      const typeMap = {
+        note: { type: "info" as const, title: "Note", bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.2)" },
+        tip: { type: "success" as const, title: "Tip", bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.2)" },
+        warning: { type: "warning" as const, title: "Warning", bg: "rgba(245, 158, 11, 0.08)", border: "rgba(245, 158, 11, 0.2)" },
+        info: { type: "info" as const, title: "Info", bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.2)" }
+      };
+      
+      const cfg = typeMap[quoteType];
+      elements.push(
+        <Alert
+          key={`quote-${keyIdx}`}
+          type={cfg.type}
+          showIcon
+          message={<span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{cfg.title}</span>}
+          description={
+            <div style={{ color: "var(--text-secondary)", whiteSpace: "pre-line" }}>
+              {textContent}
+            </div>
+          }
+          style={{
+            margin: "16px 0",
+            backgroundColor: cfg.bg,
+            border: `1px solid ${cfg.border}`,
+            borderRadius: "8px"
+          }}
+        />
+      );
+      quoteLines = [];
+    };
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (line.startsWith("> ") || (inQuote && line.trim() !== "")) {
+        const clean = line.startsWith("> ") ? line.slice(2).trim() : line.trim();
+        
+        if (clean.startsWith("[!NOTE]")) {
+          flushQuote(i);
+          inQuote = true;
+          quoteType = "note";
+          const remainder = clean.slice(7).trim();
+          if (remainder) quoteLines.push(remainder);
+        } else if (clean.startsWith("[!TIP]")) {
+          flushQuote(i);
+          inQuote = true;
+          quoteType = "tip";
+          const remainder = clean.slice(6).trim();
+          if (remainder) quoteLines.push(remainder);
+        } else if (clean.startsWith("[!WARNING]")) {
+          flushQuote(i);
+          inQuote = true;
+          quoteType = "warning";
+          const remainder = clean.slice(10).trim();
+          if (remainder) quoteLines.push(remainder);
+        } else {
+          quoteLines.push(clean);
         }
-        return (
-          <Alert
-            key={idx}
-            type="info"
-            showIcon
-            icon={<InfoCircleOutlined />}
-            message={cleanText.replace("[!TIP]", "").replace("[!NOTE]", "").trim()}
-            style={{ margin: "12px 0", backgroundColor: "#f0f9ff", border: "1px solid #bae6fd" }}
-          />
-        );
+      } else {
+        if (inQuote) {
+          flushQuote(i);
+          inQuote = false;
+        }
+        
+        // Parse list items
+        if (line.startsWith("- ") || line.startsWith("* ")) {
+          const parts = line.slice(2).split("**");
+          const formatted = parts.map((part, pIdx) => {
+            if (pIdx % 2 === 1) return <strong key={pIdx}>{part}</strong>;
+            return part;
+          });
+          elements.push(
+            <li key={i} style={{ marginLeft: "20px", margin: "4px 0", color: "var(--text-secondary)" }}>
+              {formatted}
+            </li>
+          );
+        } else if (line.match(/^\d+\.\s/)) {
+          const parts = line.replace(/^\d+\.\s/, "").split("**");
+          const formatted = parts.map((part, pIdx) => {
+            if (pIdx % 2 === 1) return <strong key={pIdx}>{part}</strong>;
+            return part;
+          });
+          elements.push(
+            <p key={i} style={{ paddingLeft: "16px", margin: "6px 0", color: "var(--text-secondary)" }}>
+              <strong>{line.match(/^\d+/)?.[0]}.</strong> {formatted}
+            </p>
+          );
+        } else if (line.startsWith("### ")) {
+          elements.push(<Title key={i} level={4} style={{ marginTop: "16px", color: "var(--text-primary)" }}>{line.slice(4)}</Title>);
+        } else if (line.startsWith("## ")) {
+          elements.push(<Title key={i} level={3} style={{ marginTop: "24px", color: "var(--text-primary)" }}>{line.slice(3)}</Title>);
+        } else if (line.startsWith("# ")) {
+          elements.push(<Title key={i} level={2} style={{ marginTop: "28px", color: "var(--text-primary)" }}>{line.slice(2)}</Title>);
+        } else if (line.trim()) {
+          const parts = line.split("**");
+          const formattedLine = parts.map((part, pIdx) => {
+            if (pIdx % 2 === 1) return <strong key={pIdx}>{part}</strong>;
+            return part;
+          });
+          elements.push(<Paragraph key={i} style={{ color: "var(--text-primary)", lineHeight: "1.6", margin: "12px 0" }}>{formattedLine}</Paragraph>);
+        }
       }
-
-      // Ordered / Unordered lists
-      if (line.match(/^\d+\.\s/)) {
-        return (
-          <p key={idx} style={{ paddingLeft: "16px", margin: "6px 0", color: "#475569" }}>
-            <strong>{line.split(".")[0]}.</strong>{line.split(".").slice(1).join(".")}
-          </p>
-        );
-      }
-      if (line.startsWith("- ") || line.startsWith("* ")) {
-        return (
-          <li key={idx} style={{ marginLeft: "24px", margin: "4px 0", color: "#475569" }}>
-            {line.slice(2)}
-          </li>
-        );
-      }
-
-      // Plain paragraphs
-      if (line.trim()) {
-        // Parse bold text
-        const parts = line.split("**");
-        const formattedLine = parts.map((part, pIdx) => {
-          if (pIdx % 2 === 1) return <strong key={pIdx}>{part}</strong>;
-          return part;
-        });
-
-        return <Paragraph key={idx} style={{ fontSize: "14px", lineHeight: "1.6", color: "#334155" }}>{formattedLine}</Paragraph>;
-      }
-
-      return <div key={idx} style={{ height: "8px" }} />;
-    });
+    }
+    
+    if (inQuote) {
+      flushQuote(lines.length);
+    }
+    
+    return elements;
   };
 
   if (loading) {
@@ -322,7 +408,7 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
           {/* Images */}
           {images.map(img => (
             <Card key={img.id} style={{ marginBottom: "20px", borderRadius: "8px", overflow: "hidden" }} bodyStyle={{ padding: 0 }}>
-              <img src={img.url} alt={img.file_name} style={{ width: "100%", maxHeight: "400px", objectFit: "contain", display: "block" }} />
+              <img src={attachmentBlobUrls[img.id] || img.url} alt={img.file_name} style={{ width: "100%", maxHeight: "400px", objectFit: "contain", display: "block" }} />
               <div style={{ padding: "8px 12px", backgroundColor: "#f8fafc", textAlign: "center" }}>
                 <Text type="secondary">{img.file_name}</Text>
               </div>
@@ -333,7 +419,7 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
           {videos.map(vid => (
             <Card key={vid.id} style={{ marginBottom: "20px", borderRadius: "8px", overflow: "hidden" }}>
               <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
-                <video controls src={vid.url} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
+                <video controls src={attachmentBlobUrls[vid.id] || vid.url} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
               </div>
               <div style={{ padding: "12px 0 0 0" }}>
                 <Space>
@@ -351,7 +437,22 @@ const HelpArticle: React.FC<HelpArticleProps> = ({ slug, onNavigate, nextArticle
               bordered
               dataSource={pdfs}
               renderItem={pdf => (
-                <List.Item actions={[<Button type="link" href={pdf.url} target="_blank" icon={<FilePdfOutlined />}>View PDF</Button>]}>
+                <List.Item actions={[
+                  <Button 
+                    type="link" 
+                    icon={<FilePdfOutlined />}
+                    onClick={() => {
+                      const bUrl = attachmentBlobUrls[pdf.id];
+                      if (bUrl) {
+                        window.open(bUrl, "_blank");
+                      } else {
+                        message.error("PDF not loaded yet");
+                      }
+                    }}
+                  >
+                    View PDF
+                  </Button>
+                ]}>
                   <Text>{pdf.file_name}</Text>
                 </List.Item>
               )}

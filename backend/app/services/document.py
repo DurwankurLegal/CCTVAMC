@@ -37,3 +37,18 @@ async def list_documents(db: AsyncSession, tenant_id: UUID, entity_type: str, en
         )
     )
     return list(result.scalars().all())
+
+
+async def get_document(db: AsyncSession, tenant_id: UUID, document_id: UUID) -> Document | None:
+    return await DocumentRepository(db, tenant_id).get(document_id)
+
+
+async def delete_document(db: AsyncSession, tenant_id: UUID, document_id: UUID) -> None:
+    from fastapi import HTTPException, status
+    repo = DocumentRepository(db, tenant_id)
+    doc = await repo.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    if doc.s3_key:
+        storage.delete_file(doc.s3_key)
+    await repo.delete(document_id)
