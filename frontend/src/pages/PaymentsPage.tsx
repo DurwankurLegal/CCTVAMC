@@ -224,7 +224,7 @@ export default function PaymentsPage() {
             {ageingData.map((d: any) => (
               <Col xs={24} sm={12} md={6} key={d.bucket}>
                 <Card 
-                  title={<span style={{ color: "#e5e7eb", fontWeight: 600 }}>{d.bucket.replace("_", " ").toUpperCase()}</span>} 
+                  title={<span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{d.bucket.replace("_", " ").toUpperCase()}</span>} 
                   bordered={false} 
                   style={{ textAlign: "center", background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.04)" }}
                 >

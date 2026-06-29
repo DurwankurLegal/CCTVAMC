@@ -453,7 +453,7 @@ function AMCConsolidatedPanel() {
             >
               <Row gutter={[24, 24]}>
                 <Col xs={24} md={12}>
-                  <Descriptions title={<span style={{ color: "#e5e7eb", fontSize: "13px" }}>Contract Identity</span>} size="small" column={1} bordered>
+                  <Descriptions title={<span style={{ color: "var(--text-primary)", fontSize: "13px" }}>Contract Identity</span>} size="small" column={1} bordered>
                     <Descriptions.Item label="Number">{preview.contract.contract_number}</Descriptions.Item>
                     <Descriptions.Item label="Status"><Tag color={preview.contract.status === "active" ? "green" : "orange"}>{preview.contract.status.toUpperCase()}</Tag></Descriptions.Item>
                     <Descriptions.Item label="Period">{preview.contract.start_date} → {preview.contract.end_date}</Descriptions.Item>
@@ -463,7 +463,7 @@ function AMCConsolidatedPanel() {
                   </Descriptions>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Descriptions title={<span style={{ color: "#e5e7eb", fontSize: "13px" }}>Customer Identity</span>} size="small" column={1} bordered>
+                  <Descriptions title={<span style={{ color: "var(--text-primary)", fontSize: "13px" }}>Customer Identity</span>} size="small" column={1} bordered>
                     <Descriptions.Item label="Name">{preview.customer.name}</Descriptions.Item>
                     <Descriptions.Item label="Category">{preview.customer.category || "—"}</Descriptions.Item>
                     <Descriptions.Item label="GSTIN">{preview.customer.gstin || "—"}</Descriptions.Item>
@@ -647,7 +647,7 @@ function AMCConsolidatedPanel() {
               }
               style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
-              <Text strong style={{ display: "block", marginBottom: 12, color: "#e5e7eb", fontSize: "13px" }}>Invoices Summary</Text>
+              <Text strong style={{ display: "block", marginBottom: 12, color: "var(--text-primary)", fontSize: "13px" }}>Invoices Summary</Text>
               {preview.invoices.length ? (
                 <Table
                   id="amc-invoices-table"
@@ -683,7 +683,7 @@ function AMCConsolidatedPanel() {
                 />
               ) : <Empty description="No invoices for this contract" />}
 
-              <Text strong style={{ display: "block", margin: "24px 0 12px", color: "#e5e7eb", fontSize: "13px" }}>Payments Received</Text>
+              <Text strong style={{ display: "block", margin: "24px 0 12px", color: "var(--text-primary)", fontSize: "13px" }}>Payments Received</Text>
               {preview.payments.length ? (
                 <Table
                   id="amc-payments-table"
@@ -826,7 +826,7 @@ function StandardReportsPanel() {
                   onClick={() => run(r)}
                   actions={[<PlayCircleOutlined key="run" style={{ color: isActive ? "#8b5cf6" : "#9ca3af" }} />]}
                 >
-                  <Text style={{ color: isActive ? "#c084fc" : "#e5e7eb", fontWeight: isActive ? 600 : 400 }}>{r.title}</Text>
+                  <Text style={{ color: isActive ? "var(--text-primary)" : "var(--text-secondary)", fontWeight: isActive ? 600 : 400 }}>{r.title}</Text>
                 </List.Item>
               );
             }}
