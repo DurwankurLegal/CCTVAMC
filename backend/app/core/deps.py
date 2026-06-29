@@ -188,6 +188,13 @@ async def get_tenant_active_modules(db: AsyncSession, tenant_id: UUID) -> set[st
         stmt_count = select(func.count(TenantModule.id)).where(TenantModule.tenant_id == tenant_id)
         has_any_config = (await db.execute(stmt_count)).scalar() or 0
         if has_any_config == 0:
+            from app.models.subscription import TenantSubscription
+            stmt_sub = select(func.count(TenantSubscription.id)).where(TenantSubscription.tenant_id == tenant_id)
+            has_sub = (await db.execute(stmt_sub)).scalar() or 0
+            if has_sub > 0:
+                # Provisioned tenant with explicit empty configuration
+                return set()
+            
             from app.models.subscription import Module
             stmt_all = select(Module.code).where(Module.is_active == True)
             all_modules = set((await db.execute(stmt_all)).scalars().all())
