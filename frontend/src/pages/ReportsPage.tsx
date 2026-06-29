@@ -198,7 +198,7 @@ function AMCConsolidatedPanel() {
       title={
         <Space>
           <SafetyCertificateOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
             Consolidated AMC Performance &amp; Service Report
           </span>
           <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
@@ -210,7 +210,7 @@ function AMCConsolidatedPanel() {
       {/* ── Controls ── */}
       <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
         <Col xs={24} md={8}>
-          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             AMC Contract
           </Text>
           <Select
@@ -235,7 +235,7 @@ function AMCConsolidatedPanel() {
           </Select>
         </Col>
         <Col xs={24} md={10}>
-          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Report Period
           </Text>
           <RangePicker
@@ -306,7 +306,7 @@ function AMCConsolidatedPanel() {
       {!generating && preview && (
         <>
           {/* KPI Cards */}
-          <Divider orientation="left" style={{ fontWeight: 600, color: "#f3f4f6", borderColor: "rgba(255, 255, 255, 0.08)", fontSize: 13, marginBottom: 20 }}>
+          <Divider orientation="left" style={{ fontWeight: 600, color: "var(--text-primary)", borderColor: "var(--glass-border)", fontSize: 13, marginBottom: 20 }}>
             Executive Summary — {preview.report_period.from_date} to {preview.report_period.to_date}
           </Divider>
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -337,7 +337,7 @@ function AMCConsolidatedPanel() {
                 value={preview.kpis.total_visits}
                 prefix={<ToolOutlined />}
                 suffix={
-                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                     {preview.kpis.corrective_visits} corrective · {preview.kpis.preventive_visits} preventive
                   </span>
                 }
@@ -351,7 +351,7 @@ function AMCConsolidatedPanel() {
                 value={preview.kpis.tickets_resolved}
                 prefix={<AuditOutlined />}
                 suffix={
-                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                     of {preview.kpis.total_tickets} service tickets closed
                   </span>
                 }
@@ -366,7 +366,7 @@ function AMCConsolidatedPanel() {
                 prefix={<DollarOutlined />}
                 status="success"
                 suffix={
-                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                     of {fmtINR(preview.kpis.total_billed)} billed
                   </span>
                 }
@@ -381,7 +381,7 @@ function AMCConsolidatedPanel() {
                 prefix={<ExclamationCircleOutlined />}
                 status={preview.kpis.outstanding_balance > 0 ? "warning" : "success"}
                 suffix={
-                  <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                     remaining receivables pending
                   </span>
                 }
@@ -403,7 +403,7 @@ function AMCConsolidatedPanel() {
             gap: 12
           }}>
             <div>
-              <Text strong style={{ color: "#f3f4f6", fontSize: "14px" }}>Consolidated Report Ready</Text>
+              <Text strong style={{ color: "var(--text-primary)", fontSize: "14px" }}>Consolidated Report Ready</Text>
               <Text type="secondary" style={{ marginLeft: 12, fontSize: 12, display: "inline-block" }}>
                 Compiled at {preview.generated_at}
               </Text>
@@ -446,7 +446,7 @@ function AMCConsolidatedPanel() {
             {/* Contract + Customer */}
             <Panel
               key="contract"
-              header={<span style={{ color: "#f3f4f6", fontWeight: 600 }}><SafetyCertificateOutlined style={{ marginRight: 8, color: "#3b82f6" }} /> Contract &amp; Customer Details</span>}
+              header={<span style={{ color: "var(--text-primary)", fontWeight: 600 }}><SafetyCertificateOutlined style={{ marginRight: 8, color: "#3b82f6" }} /> Contract &amp; Customer Details</span>}
               style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: 8, marginBottom: 12, overflow: "hidden" }}
             >
               <Row gutter={[24, 24]}>
@@ -477,7 +477,7 @@ function AMCConsolidatedPanel() {
             <Panel
               key="assets"
               header={
-                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                   <BarChartOutlined style={{ marginRight: 8, color: "#a855f7" }} />
                   Covered CCTV Assets
                   <Badge count={preview.assets.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
@@ -511,7 +511,7 @@ function AMCConsolidatedPanel() {
             <Panel
               key="tickets"
               header={
-                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                   <AuditOutlined style={{ marginRight: 8, color: "#10b981" }} />
                   Service Ticket Log
                   <Badge count={preview.tickets.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
@@ -555,7 +555,7 @@ function AMCConsolidatedPanel() {
             <Panel
               key="visits"
               header={
-                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                   <ToolOutlined style={{ marginRight: 8, color: "#f59e0b" }} />
                   Engineer Visit Log
                   <Badge count={preview.visits.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
@@ -591,7 +591,7 @@ function AMCConsolidatedPanel() {
             <Panel
               key="pm"
               header={
-                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                   <ClockCircleOutlined style={{ marginRight: 8, color: "#ec4899" }} />
                   Preventive Maintenance Tracker
                   <Badge count={preview.pm_schedules.length} style={{ backgroundColor: "#3b82f6", marginLeft: 8 }} />
@@ -633,7 +633,7 @@ function AMCConsolidatedPanel() {
             <Panel
               key="financial"
               header={
-                <span style={{ color: "#f3f4f6", fontWeight: 600 }}>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
                   <DollarOutlined style={{ marginRight: 8, color: "#14b8a6" }} />
                   Financial Ledger
                   <Tag color={preview.kpis.outstanding_balance > 0 ? "orange" : "green"} style={{ marginLeft: 8 }}>
@@ -791,7 +791,7 @@ function StandardReportsPanel() {
       title={
         <Space>
           <BarChartOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 16 }}>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 16 }}>
             Standard Operational Reports
           </span>
           <Tag color="purple" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(139, 92, 246, 0.12)", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
@@ -803,7 +803,7 @@ function StandardReportsPanel() {
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
         {/* Left Side: Available Reports */}
         <Card
-          title={<span style={{ color: "#f3f4f6", fontWeight: 600 }}>Available Templates</span>}
+          title={<span style={{ color: "var(--text-primary)", fontWeight: 600 }}>Available Templates</span>}
           style={{ width: 300, flexShrink: 0, background: "rgba(255, 255, 255, 0.01)", borderColor: "rgba(255, 255, 255, 0.06)" }}
           styles={{ body: { padding: 0 } }}
         >
@@ -835,7 +835,7 @@ function StandardReportsPanel() {
         {/* Right Side: Report Workspace Output */}
         <Card
           style={{ flex: 1, minWidth: 360, background: "rgba(255, 255, 255, 0.01)", borderColor: "rgba(255, 255, 255, 0.06)" }}
-          title={<span style={{ color: "#f3f4f6", fontWeight: 600 }}>{active ? active.title : "Workspace Output"}</span>}
+          title={<span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{active ? active.title : "Workspace Output"}</span>}
           extra={active && (
             <Space>
               <Button id="export-csv-btn" icon={<FileTextOutlined />} loading={exporting === "csv"} onClick={() => doExport("csv")}>CSV</Button>
@@ -911,7 +911,7 @@ function SLAReportPanel() {
       title={
         <Space>
           <BarChartOutlined style={{ color: "#10b981", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
             SLA Compliance Report
           </span>
           <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
@@ -922,7 +922,7 @@ function SLAReportPanel() {
     >
       <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
         <Col xs={24} md={18}>
-          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Report Period
           </Text>
           <RangePicker
@@ -999,7 +999,7 @@ function SLAReportPanel() {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
             <span>
-              Select a date range, then click <Text strong style={{ color: "#f3f4f6" }}>Generate Report</Text> to view SLA stats.
+              Select a date range, then click <Text strong style={{ color: "var(--text-primary)" }}>Generate Report</Text> to view SLA stats.
             </span>
           }
           style={{ padding: "32px 0" }}
@@ -1013,28 +1013,7 @@ function SLAReportPanel() {
 
 export default function ReportsPage() {
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#3b82f6",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          },
-          Descriptions: {
-            labelBg: "rgba(255, 255, 255, 0.02)",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div id="reports-page" style={{ padding: "8px 0 24px 0" }}>
         {/* Page Header */}
         <div style={{ marginBottom: 28 }}>
@@ -1044,7 +1023,7 @@ export default function ReportsPage() {
               Analytics &amp; Intelligence Hub
             </span>
           </Title>
-          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+          <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
             Real-time service execution metrics, operational SLA tracking, and financial contract assessments.
           </Text>
         </div>

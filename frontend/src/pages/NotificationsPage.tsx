@@ -68,7 +68,7 @@ function TemplatesTab() {
         title={
           <Space>
             <MailOutlined style={{ color: "#ec4899", fontSize: 18 }} />
-            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
               Message Templates
             </span>
             <Tag color="pink" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(236, 72, 153, 0.12)", border: "1px solid rgba(236, 72, 153, 0.2)" }}>
@@ -135,7 +135,7 @@ function LogsTab() {
       title={
         <Space>
           <HistoryOutlined style={{ color: "#ec4899", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
             Message Transmission Logs
           </span>
           <Tag color="pink" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(236, 72, 153, 0.12)", border: "1px solid rgba(236, 72, 153, 0.2)" }}>
@@ -151,25 +151,7 @@ function LogsTab() {
 
 export default function NotificationsPage() {
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#ec4899",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {/* Header Block */}
         <div>
@@ -179,7 +161,7 @@ export default function NotificationsPage() {
               Alerts &amp; Notifications Hub
             </span>
           </Title>
-          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+          <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
             Configure automated system alerts, manage email &amp; SMS message templates, and track delivery reports.
           </Text>
         </div>

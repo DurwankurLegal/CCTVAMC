@@ -7,6 +7,7 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
   
   /* Brand accents */
   --brand-indigo: #6366f1;
@@ -40,7 +41,7 @@ body {
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid var(--glass-border) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  box-shadow: var(--glass-shadow, 0 8px 32px 0 rgba(0, 0, 0, 0.25)) !important;
   border-radius: 12px !important;
   transition: var(--transition-smooth) !important;
 }

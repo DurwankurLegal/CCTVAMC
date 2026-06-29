@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Tabs, Card, Form, Input, Button, Table, Tag, Space, Typography, message,
   ConfigProvider, theme, ColorPicker, Progress, Descriptions, Spin, List, Collapse,
-  Switch, Tooltip, Modal, Alert, Select
+  Switch, Tooltip, Modal, Alert, Select, Row, Col, Divider
 } from "antd";
 import {
   SettingOutlined, UserOutlined, FileTextOutlined, AppstoreOutlined,
@@ -14,6 +14,9 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store";
 import apiClient from "../api/client";
 import { CompanySettingsTab } from "./CompanySettingsTab";
+import { RichTextEditor } from "../components/RichTextEditor";
+import { BrandedFileUpload } from "../components/BrandedFileUpload";
+import { THEMES as THEMES_CONFIG } from "../App";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -76,9 +79,10 @@ export default function TenantSettingsPage() {
       setUsage(usageRes.data);
       setInvoices(invoicesRes.data);
       const emailTemplates = settingsRes.data.email_templates || {};
+      const settingsObj = settingsRes.data.settings || {};
       form.setFieldsValue({
         ...settingsRes.data,
-        gstin: settingsRes.data.gstin || "",
+        gstin: settingsRes.data.gstin || settingsObj.tax_information?.gst_number || "",
         registered_address: settingsRes.data.registered_address || "",
         billing_contact_name: settingsRes.data.billing_contact_name || "",
         billing_contact_email: settingsRes.data.billing_contact_email || "",
@@ -86,6 +90,44 @@ export default function TenantSettingsPage() {
         custom_email_sender: settingsRes.data.custom_email_sender || "",
         primary_color: settingsRes.data.branding?.primary_color || "#1677ff",
         logo_url: settingsRes.data.branding?.logo_url || "",
+        theme_key: settingsRes.data.branding?.theme_key || "dark_professional",
+        // Address Details
+        address_line1: settingsObj.company_address?.address_line1 || "",
+        address_line2: settingsObj.company_address?.address_line2 || "",
+        city: settingsObj.company_address?.city || "",
+        state: settingsObj.company_address?.state || "",
+        pin_code: settingsObj.company_address?.pin_code || "",
+        country: settingsObj.company_address?.country || "",
+        // Tax Information
+        pan_number: settingsObj.tax_information?.pan_number || "",
+        // Contact Information
+        contact_person: settingsObj.contact_information?.contact_person || "",
+        mobile_number: settingsObj.contact_information?.mobile_number || "",
+        telephone_number: settingsObj.contact_information?.telephone_number || "",
+        email_address: settingsObj.contact_information?.email_address || "",
+        website: settingsObj.contact_information?.website || "",
+        // Bank Details
+        bank_name: settingsObj.bank_details?.bank_name || "",
+        branch_name: settingsObj.bank_details?.branch_name || "",
+        account_holder_name: settingsObj.bank_details?.account_holder_name || "",
+        account_number: settingsObj.bank_details?.account_number || "",
+        ifsc_code: settingsObj.bank_details?.ifsc_code || "",
+        upi_id: settingsObj.bank_details?.upi_id || "",
+        // Signatory Details
+        signatory_name: settingsObj.authorized_signatory?.name || "",
+        signatory_designation: settingsObj.authorized_signatory?.designation || "",
+        signature_url: settingsObj.authorized_signatory?.signature_url || "",
+        seal_url: settingsObj.authorized_signatory?.seal_url || "",
+        // Default Customer
+        default_customer_name: settingsObj.default_customer_info?.name || "",
+        default_customer_address: settingsObj.default_customer_info?.address || "",
+        default_customer_gstin: settingsObj.default_customer_info?.gstin || "",
+        default_customer_contact_person: settingsObj.default_customer_info?.contact_person || "",
+        default_customer_mobile: settingsObj.default_customer_info?.mobile_number || "",
+        default_customer_email: settingsObj.default_customer_info?.email_address || "",
+        // Quotation Settings
+        default_terms: settingsObj.quotation_settings?.default_terms || "",
+        // Email templates
         amc_expiry_subject: emailTemplates.amc_expiry?.subject || "Your AMC {{contract_number}} expires in {{days}} days",
         amc_expiry_body: emailTemplates.amc_expiry?.body || "Dear customer,\n\nYour AMC contract {{contract_number}} is due to expire on {{end_date}} ({{days}} days from now). Please contact us to renew and avoid any interruption in service.\n\nThank you.",
         payment_due_subject: emailTemplates.payment_due?.subject || "Invoice {{invoice_number}} — payment due",
@@ -181,7 +223,55 @@ export default function TenantSettingsPage() {
         custom_email_sender: values.custom_email_sender || null,
         branding: {
           primary_color: typeof values.primary_color === 'string' ? values.primary_color : values.primary_color.toHexString(),
-          logo_url: values.logo_url || null
+          logo_url: values.logo_url || null,
+          theme_key: values.theme_key || "dark_professional"
+        },
+        settings: {
+          ...(tenant?.settings || {}),
+          company_address: {
+            address_line1: values.address_line1 || "",
+            address_line2: values.address_line2 || "",
+            city: values.city || "",
+            state: values.state || "",
+            pin_code: values.pin_code || "",
+            country: values.country || ""
+          },
+          tax_information: {
+            gst_number: values.gstin || "",
+            pan_number: values.pan_number || ""
+          },
+          contact_information: {
+            contact_person: values.contact_person || "",
+            mobile_number: values.mobile_number || "",
+            telephone_number: values.telephone_number || "",
+            email_address: values.email_address || "",
+            website: values.website || ""
+          },
+          bank_details: {
+            bank_name: values.bank_name || "",
+            branch_name: values.branch_name || "",
+            account_holder_name: values.account_holder_name || "",
+            account_number: values.account_number || "",
+            ifsc_code: values.ifsc_code || "",
+            upi_id: values.upi_id || ""
+          },
+          authorized_signatory: {
+            name: values.signatory_name || "",
+            designation: values.signatory_designation || "",
+            signature_url: values.signature_url || "",
+            seal_url: values.seal_url || ""
+          },
+          default_customer_info: {
+            name: values.default_customer_name || "",
+            address: values.default_customer_address || "",
+            gstin: values.default_customer_gstin || "",
+            contact_person: values.default_customer_contact_person || "",
+            mobile_number: values.default_customer_mobile || "",
+            email_address: values.default_customer_email || ""
+          },
+          quotation_settings: {
+            default_terms: values.default_terms || ""
+          }
         },
         email_templates: {
           amc_expiry: {
@@ -258,25 +348,7 @@ export default function TenantSettingsPage() {
   const caps: any = PLAN_CAPACITIES[tenant.plan as keyof typeof PLAN_CAPACITIES] || {};
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: tenant?.branding?.primary_color || "#6366f1",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {/* Header */}
         <div>
@@ -286,7 +358,7 @@ export default function TenantSettingsPage() {
               Tenant Settings &amp; Customization
             </span>
           </Title>
-          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+          <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
             Configure white-labeled branding parameters, update legal business profile, manage subscription tiers, and audit workspace quotas.
           </Text>
         </div>
@@ -313,25 +385,97 @@ export default function TenantSettingsPage() {
             items={[
               {
                 key: "profile",
-                label: "Business Profile",
+                label: "Company Profile & Tax",
                 forceRender: true,
                 children: (
-                  <Card className="glass-card" title="Company Business Profile">
+                  <Card className="glass-card" title="Company Profile & Tax Details">
                     <Form.Item name="name" label="Company Registered Name" rules={[{ required: true }]}>
-                      <Input />
+                      <Input placeholder="e.g. Acme Security Systems" />
                     </Form.Item>
-                    <Space style={{ display: "flex", width: "100%" }} size="large">
-                      <Form.Item name="gstin" label="GSTIN" style={{ width: 250 }}>
-                        <Input placeholder="e.g. 27AAAAA1111A1Z1" />
-                      </Form.Item>
-                      <Form.Item name="invoice_prefix" label="Invoice Prefix" style={{ width: 250 }} rules={[{ required: true }]}>
-                        <Input placeholder="e.g. INV-2026" />
-                      </Form.Item>
-                    </Space>
-                    <Form.Item name="registered_address" label="Registered Address">
-                      <Input.TextArea rows={3} />
-                    </Form.Item>
-                    <Title level={5} style={{ marginTop: 24, marginBottom: 16 }}>Billing Contact</Title>
+
+                    <Title level={5} style={{ marginTop: 16 }}>Address Details</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="address_line1" label="Address Line 1">
+                          <Input placeholder="e.g. 101, Business Park" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="address_line2" label="Address Line 2">
+                          <Input placeholder="e.g. M.G. Road" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Form.Item name="city" label="City">
+                          <Input placeholder="e.g. Pune" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="state" label="State">
+                          <Input placeholder="e.g. Maharashtra" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="pin_code" label="PIN Code">
+                          <Input placeholder="e.g. 411001" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="country" label="Country">
+                          <Input placeholder="e.g. India" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Title level={5} style={{ marginTop: 16 }}>Tax Information</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="gstin" label="GSTIN (GST Number)">
+                          <Input placeholder="e.g. 27AAAAA1111A1Z1" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="pan_number" label="PAN Number">
+                          <Input placeholder="e.g. ABCDE1234F" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Title level={5} style={{ marginTop: 16 }}>Contact Information</Title>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="contact_person" label="Contact Person">
+                          <Input placeholder="e.g. Rajesh Patil" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="mobile_number" label="Mobile Number">
+                          <Input placeholder="e.g. +91 9999988888" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="telephone_number" label="Telephone Number">
+                          <Input placeholder="e.g. 020-2567890" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="email_address" label="Email Address">
+                          <Input type="email" placeholder="e.g. contact@acmesecurity.com" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="website" label="Website">
+                          <Input placeholder="e.g. www.acmesecurity.com" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Divider style={{ borderColor: "rgba(255,255,255,0.08)" }} />
+                    <Title level={5}>Billing Contact (Workspace Subscriptions)</Title>
                     <Space style={{ display: "flex", width: "100%" }} size="large">
                       <Form.Item name="billing_contact_name" label="Contact Name" style={{ width: 300 }}>
                         <Input />
@@ -340,7 +484,178 @@ export default function TenantSettingsPage() {
                         <Input type="email" />
                       </Form.Item>
                     </Space>
+
+                    <Form.Item name="invoice_prefix" label="Invoice Prefix" style={{ width: 250 }} rules={[{ required: true }]}>
+                      <Input placeholder="e.g. INV-2026" />
+                    </Form.Item>
+
                     <Button type="primary" htmlType="submit" loading={saving}>Save Profile Changes</Button>
+                  </Card>
+                )
+              },
+              {
+                key: "branding",
+                label: "Branding & Theme",
+                forceRender: true,
+                children: (
+                  <Card className="glass-card" title="Branding & System Theme">
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="logo_url" label="Company Logo (PNG, JPG, JPEG, SVG < 2MB)">
+                          <BrandedFileUpload label="Upload Logo" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="theme_key" label="Built-in System Theme">
+                          <Select placeholder="Select theme" onChange={(val) => {
+                            const baseTheme = THEMES_CONFIG[val as keyof typeof THEMES_CONFIG];
+                            if (baseTheme) {
+                              form.setFieldsValue({ primary_color: baseTheme.token.colorPrimary });
+                            }
+                          }}>
+                            <Option value="light_professional">Light Professional</Option>
+                            <Option value="dark_professional">Dark Professional</Option>
+                            <Option value="blue_corporate">Blue Corporate</Option>
+                            <Option value="green_nature">Green Nature</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="primary_color" label="Brand Primary Color Theme" getValueFromEvent={(color) => color.toHexString()}>
+                          <ColorPicker showText />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <div style={{ marginTop: 24, marginBottom: 24, padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.08)" }}>
+                      <Text style={{ color: "var(--text-secondary)", display: "block", marginBottom: 12 }}>Visual Theme Preview:</Text>
+                      <Space>
+                        <Button type="primary">Primary Brand Button</Button>
+                        <Button>Secondary Button</Button>
+                        <Tag color="success">Active Workspace Status</Tag>
+                      </Space>
+                    </div>
+                    <Button type="primary" htmlType="submit" loading={saving}>Apply Brand &amp; Theme Settings</Button>
+                  </Card>
+                )
+              },
+              {
+                key: "bank",
+                label: "Bank & Signatory",
+                forceRender: true,
+                children: (
+                  <Card className="glass-card" title="Banking & Authorized Signatory Details">
+                    <Title level={5}>Bank details for Invoices / Quotations</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="bank_name" label="Bank Name">
+                          <Input placeholder="e.g. HDFC Bank" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="branch_name" label="Branch Name">
+                          <Input placeholder="e.g. Shivaji Nagar, Pune" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="account_holder_name" label="Account Holder Name">
+                          <Input placeholder="e.g. Acme Security Systems" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="account_number" label="Account Number">
+                          <Input placeholder="e.g. 5010000123456" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="ifsc_code" label="IFSC Code">
+                          <Input placeholder="e.g. HDFC0000123" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Form.Item name="upi_id" label="UPI ID (Optional)" style={{ width: 350 }}>
+                      <Input placeholder="e.g. acme@okhdfcbank" />
+                    </Form.Item>
+
+                    <Divider style={{ borderColor: "var(--glass-border)" }} />
+                    <Title level={5}>Authorized Signatory</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="signatory_name" label="Signatory Name">
+                          <Input placeholder="e.g. Mr. Rajesh Patil" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="signatory_designation" label="Designation">
+                          <Input placeholder="e.g. Director / Proprietor" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="signature_url" label="Signature Upload (PNG, JPG, JPEG, SVG < 2MB)">
+                          <BrandedFileUpload label="Upload Signature" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="seal_url" label="Company Seal Upload (Optional, PNG, JPG, JPEG, SVG < 2MB)">
+                          <BrandedFileUpload label="Upload Company Seal" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Button type="primary" htmlType="submit" loading={saving} style={{ marginTop: 16 }}>Save Bank &amp; Signatory Changes</Button>
+                  </Card>
+                )
+              },
+              {
+                key: "defaults",
+                label: "Quotation & Defaults",
+                forceRender: true,
+                children: (
+                  <Card className="glass-card" title="Quotation Terms &amp; Default pre-fills">
+                    <Title level={5}>Default Customer Information (for templates)</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="default_customer_name" label="Customer Name">
+                          <Input placeholder="e.g. Green Valley Apartments" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="default_customer_gstin" label="Customer GSTIN">
+                          <Input placeholder="e.g. 27BBBBB2222B2Z2" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Form.Item name="default_customer_address" label="Customer Address">
+                      <Input.TextArea rows={2} placeholder="Customer site address..." />
+                    </Form.Item>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="default_customer_contact_person" label="Contact Person">
+                          <Input placeholder="e.g. Mr. Amit Shah" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="default_customer_mobile" label="Mobile Number">
+                          <Input placeholder="e.g. +91 98888 77777" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="default_customer_email" label="Email Address">
+                          <Input type="email" placeholder="e.g. manager@greenvalley.com" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Divider style={{ borderColor: "var(--glass-border)" }} />
+                    <Title level={5}>Default Quotation Terms &amp; Conditions</Title>
+                    <Form.Item name="default_terms" label="Terms and Conditions (WYSIWYG Rich Text Editor)">
+                      <RichTextEditor minHeight={200} placeholder="Type the default terms &amp; conditions that will pre-fill every new quotation..." />
+                    </Form.Item>
+
+                    <Button type="primary" htmlType="submit" loading={saving} style={{ marginTop: 16 }}>Save Quotations &amp; Defaults</Button>
                   </Card>
                 )
               },
@@ -348,30 +663,6 @@ export default function TenantSettingsPage() {
                 key: "companies",
                 label: "Multi-Company & Templates",
                 children: <CompanySettingsTab />
-              },
-              {
-                key: "branding",
-                label: "Branding & Theme",
-                forceRender: true,
-                children: (
-                  <Card className="glass-card" title="White-label Branding">
-                    <Form.Item name="logo_url" label="Company Logo URL">
-                      <Input placeholder="https://example.com/logo.png" />
-                    </Form.Item>
-                    <Form.Item name="primary_color" label="Brand Primary Color Theme" getValueFromEvent={(color) => color.toHexString()}>
-                      <ColorPicker showText />
-                    </Form.Item>
-                    <div style={{ marginTop: 24, marginBottom: 24, padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.08)" }}>
-                      <Text style={{ color: "#9ca3af", display: "block", marginBottom: 12 }}>Visual Theme Preview:</Text>
-                      <Space>
-                        <Button type="primary">Primary Brand Button</Button>
-                        <Button>Secondary Button</Button>
-                        <Tag color="success">Active Workspace Status</Tag>
-                      </Space>
-                    </div>
-                    <Button type="primary" htmlType="submit" loading={saving}>Apply Brand Settings</Button>
-                  </Card>
-                )
               },
               {
                 key: "users",
@@ -465,7 +756,7 @@ export default function TenantSettingsPage() {
                     </Card>
 
                     <Card className="glass-card" title="Custom Email Templates">
-                      <Typography.Paragraph style={{ color: "#9ca3af" }}>
+                      <Typography.Paragraph style={{ color: "var(--text-secondary)" }}>
                         Customize notification email subjects and bodies. You can use placeholders like <code>{"{{contract_number}}"}</code>, <code>{"{{invoice_number}}"}</code>, etc.
                       </Typography.Paragraph>
                       <Collapse 

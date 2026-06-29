@@ -106,25 +106,7 @@ export default function CustomersPage() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#10b981",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <div>
@@ -134,7 +116,7 @@ export default function CustomersPage() {
                 Customers Registry
               </span>
             </Title>
-            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
               Manage corporate housing societies, commercial entities, and retail shop customer records.
             </Text>
           </div>
@@ -155,7 +137,7 @@ export default function CustomersPage() {
           title={
             <Space>
               <UserOutlined style={{ color: "#10b981", fontSize: 18 }} />
-              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
                 Customer Database
               </span>
               <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>

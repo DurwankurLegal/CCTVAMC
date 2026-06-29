@@ -316,7 +316,7 @@ export default function ServiceTicketsPage() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 700, textTransform: "capitalize", color: "#f3f4f6", fontSize: "13px" }}>
+                <span style={{ fontWeight: 700, textTransform: "capitalize", color: "var(--text-primary)", fontSize: "13px" }}>
                   {status.replace("_", " ")}
                 </span>
                 <Tag color="blue" style={{ margin: 0 }}>{columnTickets.length}</Tag>
@@ -335,7 +335,7 @@ export default function ServiceTicketsPage() {
                     }}
                     style={{ 
                       background: "rgba(11, 15, 25, 0.6)", 
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      border: "1px solid var(--glass-border)",
                       borderRadius: "8px",
                       cursor: "grab"
                     }}
@@ -350,10 +350,10 @@ export default function ServiceTicketsPage() {
                           {ticket.priority}
                         </Tag>
                       </div>
-                      <div style={{ fontSize: "11px", color: "#9ca3af", fontWeight: 500 }}>
+                      <div style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: 500 }}>
                         {customers.find(c => c.id === ticket.customer_id)?.name || "—"}
                       </div>
-                      <span style={{ color: "#f3f4f6", fontSize: "12px", lineHeight: "1.4" }}>
+                      <span style={{ color: "var(--text-primary)", fontSize: "12px", lineHeight: "1.4" }}>
                         {ticket.complaint}
                       </span>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
@@ -371,7 +371,7 @@ export default function ServiceTicketsPage() {
                               type="text" 
                               icon={<MessageOutlined />} 
                               onClick={() => openEdit(ticket, "comments")} 
-                              style={{ color: "#9ca3af", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
+                              style={{ color: "var(--text-secondary)", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
                             />
                           </Tooltip>
                           <Tooltip title="Attachments">
@@ -380,7 +380,7 @@ export default function ServiceTicketsPage() {
                               type="text" 
                               icon={<FileOutlined />} 
                               onClick={() => openEdit(ticket, "docs")} 
-                              style={{ color: "#9ca3af", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
+                              style={{ color: "var(--text-secondary)", height: 22, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }} 
                             />
                           </Tooltip>
                         </Space>
@@ -402,25 +402,7 @@ export default function ServiceTicketsPage() {
   };
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#3b82f6",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <div>
@@ -430,7 +412,7 @@ export default function ServiceTicketsPage() {
                 Service Tickets Hub
               </span>
             </Title>
-            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
               Log customer complaints, allocate technicians, check SLA performance compliance, and register comments.
             </Text>
           </div>
@@ -521,7 +503,7 @@ export default function ServiceTicketsPage() {
           title={
             <Space>
               <ToolOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
-              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
                 Active Service Tickets Ledger
               </span>
               <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
@@ -587,8 +569,8 @@ export default function ServiceTicketsPage() {
                           renderItem={(c: any) => (
                             <List.Item style={{ padding: "8px 0" }}>
                               <List.Item.Meta
-                                title={<span style={{ fontSize: "11px", color: "#9ca3af" }}>{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : ""}</span>}
-                                description={<span style={{ color: "#f3f4f6", fontSize: "13px" }}>{c.body}</span>}
+                                title={<span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : ""}</span>}
+                                description={<span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{c.body}</span>}
                               />
                             </List.Item>
                           )}
@@ -636,7 +618,7 @@ export default function ServiceTicketsPage() {
                             >
                               <List.Item.Meta
                                 avatar={<FileOutlined style={{ fontSize: "16px", marginTop: "4px" }} />}
-                                title={<span style={{ fontSize: "13px", color: "#f3f4f6" }}>{d.file_name}</span>}
+                                title={<span style={{ fontSize: "13px", color: "var(--text-primary)" }}>{d.file_name}</span>}
                                 description={<Tag style={{ fontSize: "10px", lineHeight: "14px" }}>{d.doc_type.toUpperCase()}</Tag>}
                               />
                             </List.Item>

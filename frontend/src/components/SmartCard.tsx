@@ -54,7 +54,7 @@ export default function SmartCard({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "14px", fontWeight: 500, color: "#9ca3af" }}>
+            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)" }}>
               {title}
             </span>
             {prefix && (
@@ -64,7 +64,7 @@ export default function SmartCard({
             )}
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "4px" }}>
-            <span style={{ fontSize: "28px", fontWeight: 700, color: "#f3f4f6", letterSpacing: "-0.5px" }}>
+            <span style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
               {value}
             </span>
           </div>

@@ -26,7 +26,7 @@ from app.services.tenant import create_tenant, _set_rls
 from app.services.notification_templates import DEFAULT_TEMPLATES
 
 # Sensible workspace defaults; only fill what the admin didn't already set.
-DEFAULT_BRANDING = {"primary_color": "#1677ff", "logo_url": None}
+DEFAULT_BRANDING = {"primary_color": "#1677ff", "logo_url": None, "theme_key": "dark_professional"}
 DEFAULT_SETTINGS = {"timezone": "Asia/Kolkata", "currency": "INR"}
 
 TEMP_PASSWORD_BYTES = 12

@@ -41,6 +41,27 @@ async def get_public_tenant_config(
     """Public endpoint to resolve tenant identity and branding from Host header or host query param.
     Returns default branding if no tenant is matched (main portal).
     """
+    # Resolve directly from authenticated JWT if header is present (crucial for local dev on localhost)
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            from app.core.security import decode_token
+            payload = decode_token(token)
+            if payload and payload.get("tenant_id"):
+                tenant_id = payload.get("tenant_id")
+                tenant = await tenant_service.get_tenant(db, UUID(tenant_id))
+                if tenant:
+                    return {
+                        "resolved": True,
+                        "id": str(tenant.id),
+                        "name": tenant.name,
+                        "slug": tenant.slug,
+                        "branding": tenant.branding or {"primary_color": "#1677ff", "logo_url": None},
+                    }
+        except Exception:
+            pass
+
     settings = get_settings()
     query_host = host
     if not query_host:

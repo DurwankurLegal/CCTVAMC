@@ -187,16 +187,19 @@ function ProtectedLayout() {
   const onPlatform = location.pathname.startsWith("/platform");
   const items = isPlatformAdmin && onPlatform ? platformMenu : filterTenantMenu(tenantMenu, user);
 
+  const themeKey = (tenantConfig?.branding as any)?.theme_key || "dark_professional";
+  const isDark = themeKey === "dark_professional" || themeKey === "blue_corporate";
+
   return (
-    <Layout style={{ minHeight: "100vh", background: "#0b0f19" }}>
+    <Layout style={{ minHeight: "100vh", background: token.colorBgLayout }}>
       <Sider 
         width={220} 
         collapsible 
         collapsed={collapsed} 
         onCollapse={(v) => setCollapsed(v)}
         style={{ 
-          background: "rgba(11, 15, 25, 0.9)", 
-          borderRight: "1px solid rgba(255, 255, 255, 0.08)" 
+          background: isDark ? token.colorBgContainer : "#f8fafc", 
+          borderRight: `1px solid ${token.colorBorder}` 
         }}
       >
         <div style={{ 
@@ -204,10 +207,10 @@ function ProtectedLayout() {
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center", 
-          color: "#fff", 
+          color: token.colorTextHeading, 
           fontWeight: 700, 
           fontSize: collapsed ? 11 : 16, 
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: `1px solid ${token.colorBorder}`,
           transition: "font-size 0.2s"
         }}>
           {collapsed ? (
@@ -221,39 +224,53 @@ function ProtectedLayout() {
           )}
         </div>
         <Menu
-          theme="dark"
+          theme={isDark ? "dark" : "light"}
           mode="inline"
           selectedKeys={[location.pathname]}
           defaultOpenKeys={["crm", "sales", "rental", "amc", "inventory", "finance", "admin"]}
           items={items}
           onClick={({ key }) => navigate(key)}
-          style={{ marginTop: 8, background: "transparent" }}
+          style={{ marginTop: 8, background: "transparent", borderRight: 0 }}
         />
         {isPlatformAdmin && !collapsed && (
           <div style={{ padding: 16 }}>
-            <Button block ghost onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}>
+            <Button 
+              block 
+              type="dashed" 
+              onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}
+              style={{ color: token.colorText, borderColor: token.colorBorder }}
+            >
               {onPlatform ? "Tenant App →" : "Platform Console →"}
             </Button>
           </div>
         )}
       </Sider>
-      <Layout style={{ background: "#0b0f19" }}>
+      <Layout style={{ background: token.colorBgLayout }}>
         <Header style={{ 
-          background: "rgba(22, 28, 45, 0.5)", 
+          background: token.colorBgContainer, 
           padding: "0 24px", 
           display: "flex", 
           alignItems: "center", 
           justifyContent: "flex-end", 
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          backdropFilter: "blur(8px)"
+          borderBottom: `1px solid ${token.colorBorder}`
         }}>
+          {isPlatformAdmin && (
+            <Button
+              icon={onPlatform ? <DashboardOutlined /> : <CloudServerOutlined />}
+              type="text"
+              onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}
+              style={{ color: token.colorTextSecondary, marginRight: "auto", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              {onPlatform ? "← Back to Tenant App" : "Platform Console →"}
+            </Button>
+          )}
           {!onPlatform && <NotificationBell />}
-          <span style={{ margin: "0 16px", color: "#9ca3af" }}>{user?.email}</span>
+          <span style={{ margin: "0 16px", color: token.colorTextSecondary }}>{user?.email}</span>
           <Button
             icon={<KeyOutlined />}
             type="text"
             onClick={() => setTwoFAOpen(true)}
-            style={{ color: "#9ca3af", marginRight: 8 }}
+            style={{ color: token.colorTextSecondary, marginRight: 8 }}
           >
             2FA Security
           </Button>
@@ -262,7 +279,7 @@ function ProtectedLayout() {
             icon={<LogoutOutlined />}
             type="text"
             onClick={() => { dispatch(logout()); navigate("/login"); }}
-            style={{ color: "#9ca3af" }}
+            style={{ color: token.colorTextSecondary }}
           >
             Sign Out
           </Button>
@@ -270,9 +287,9 @@ function ProtectedLayout() {
         <Content style={{ 
           margin: 24, 
           padding: 24, 
-          background: "rgba(22, 28, 45, 0.3)", 
+          background: token.colorBgContainer, 
           borderRadius: 12, 
-          border: "1px solid rgba(255, 255, 255, 0.05)",
+          border: `1px solid ${token.colorBorder}`,
           minHeight: 360 
         }}>
           <Outlet />
@@ -307,6 +324,61 @@ function PlatformGuard() {
   return <Outlet />;
 }
 
+export const THEMES = {
+  light_professional: {
+    name: "Light Professional",
+    algorithm: "light",
+    token: {
+      colorPrimary: "#0958d9",
+      colorBgContainer: "#ffffff",
+      colorBgLayout: "#f1f5f9",
+      colorBorder: "#cbd5e1",
+      colorText: "#0f172a",
+      colorTextSecondary: "#475569",
+      colorTextHeading: "#0f172a",
+    }
+  },
+  dark_professional: {
+    name: "Dark Professional",
+    algorithm: "dark",
+    token: {
+      colorPrimary: "#6366f1",
+      colorBgContainer: "#161c2d",
+      colorBgLayout: "#0b0f19",
+      colorBorder: "rgba(255, 255, 255, 0.08)",
+      colorText: "#f3f4f6",
+      colorTextSecondary: "#9ca3af",
+      colorTextHeading: "#ffffff",
+    }
+  },
+  blue_corporate: {
+    name: "Blue Corporate",
+    algorithm: "dark",
+    token: {
+      colorPrimary: "#096dd9",
+      colorBgContainer: "#111d2c",
+      colorBgLayout: "#001529",
+      colorBorder: "#1f385c",
+      colorText: "#e6f7ff",
+      colorTextSecondary: "#69c0ff",
+      colorTextHeading: "#ffffff",
+    }
+  },
+  green_nature: {
+    name: "Green Nature",
+    algorithm: "light",
+    token: {
+      colorPrimary: "#135200",
+      colorBgContainer: "#f6ffed",
+      colorBgLayout: "#f4f9f4",
+      colorBorder: "#b7eb8f",
+      colorText: "#061d02",
+      colorTextSecondary: "#2d5c28",
+      colorTextHeading: "#061d02",
+    }
+  }
+};
+
 export default function App() {
   const dispatch = useDispatch<AppDispatch>();
   const tenantConfig = useSelector((s: RootState) => s.tenant.config);
@@ -315,22 +387,79 @@ export default function App() {
     dispatch(fetchTenantConfig(window.location.host));
   }, [dispatch]);
 
-  const primaryColor = tenantConfig?.branding?.primary_color || "#1677ff";
+  const themeKey = (tenantConfig?.branding as any)?.theme_key || "dark_professional";
+  const selectedTheme = THEMES[themeKey as keyof typeof THEMES] || THEMES.dark_professional;
+  const primaryColor = tenantConfig?.branding?.primary_color || selectedTheme.token.colorPrimary;
+  const isDark = selectedTheme.algorithm === "dark";
 
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.darkAlgorithm,
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: primaryColor,
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
+          colorBgContainer: selectedTheme.token.colorBgContainer,
+          colorBgLayout: selectedTheme.token.colorBgLayout,
+          colorBorder: selectedTheme.token.colorBorder,
+          colorText: selectedTheme.token.colorText,
+          colorTextSecondary: selectedTheme.token.colorTextSecondary,
+          colorTextHeading: selectedTheme.token.colorTextHeading,
+        },
+        components: {
+          Table: {
+            headerBg: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.02)",
+            headerColor: selectedTheme.token.colorTextHeading,
+          }
         }
       }}
     >
+      <style>{`
+        :root {
+          --dashboard-bg: ${selectedTheme.token.colorBgLayout};
+          --glass-bg: ${isDark ? "rgba(22, 28, 45, 0.6)" : "rgba(255, 255, 255, 0.85)"};
+          --glass-border: ${selectedTheme.token.colorBorder};
+          --text-primary: ${selectedTheme.token.colorText};
+          --text-secondary: ${selectedTheme.token.colorTextSecondary};
+          --glass-shadow: ${isDark ? "0 8px 32px 0 rgba(0, 0, 0, 0.25)" : "0 8px 24px 0 rgba(148, 163, 184, 0.08), 0 1px 3px 0 rgba(148, 163, 184, 0.04)"};
+        }
+        body {
+          background-color: var(--dashboard-bg) !important;
+          color: var(--text-primary) !important;
+          ${!isDark ? `background: radial-gradient(at 0% 0%, #ffffff 0, #f1f5f9 100%) !important;` : ""}
+        }
+        ${!isDark ? `
+        .ant-layout-sider {
+          background: #f8fafc !important;
+          border-right: 1px solid #cbd5e1 !important;
+        }
+        .ant-menu {
+          background: transparent !important;
+        }
+        .ant-menu-item {
+          color: #334155 !important;
+        }
+        .ant-menu-submenu-title {
+          color: #334155 !important;
+        }
+        .ant-menu-item-selected {
+          background-color: rgba(9, 88, 217, 0.08) !important;
+          color: ${selectedTheme.token.colorPrimary} !important;
+          font-weight: 600;
+        }
+        .ant-menu-item-selected .ant-menu-item-icon {
+          color: ${selectedTheme.token.colorPrimary} !important;
+        }
+        .ant-tag {
+          border-radius: 6px !important;
+          padding: 2px 8px !important;
+          font-weight: 500 !important;
+        }
+        .ant-card-title {
+          font-weight: 700 !important;
+          letter-spacing: -0.3px;
+        }
+        ` : ""}
+      `}</style>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

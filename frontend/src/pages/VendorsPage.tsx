@@ -97,7 +97,7 @@ function VendorsTab() {
         title={
           <Space>
             <ShopOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
-            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
               Approved Partner Directory
             </span>
             <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
@@ -204,7 +204,7 @@ function PurchaseOrdersTab() {
         title={
           <Space>
             <FileTextOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
-            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
               Purchase Order Ledger
             </span>
             <Tag color="purple" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(139, 92, 246, 0.12)", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
@@ -253,25 +253,7 @@ function PurchaseOrdersTab() {
 
 export default function VendorsPage() {
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#3b82f6",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {/* Header Block */}
         <div>
@@ -281,7 +263,7 @@ export default function VendorsPage() {
               Vendors &amp; Procurement Hub
             </span>
           </Title>
-          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+          <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
             Manage service suppliers, track purchase orders, and monitor procurement payables.
           </Text>
         </div>

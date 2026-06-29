@@ -32,7 +32,7 @@ export default function LoginPage() {
         style={{ 
           width: 400, 
           background: "rgba(22, 28, 45, 0.6)", 
-          border: "1px solid rgba(255, 255, 255, 0.08)", 
+          border: "1px solid var(--glass-border)", 
           borderRadius: 16,
           boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
           backdropFilter: "blur(8px)"
@@ -52,7 +52,7 @@ export default function LoginPage() {
               {isResolved ? tenantConfig.name : "CCTV AMC Platform"}
             </Title>
           )}
-          <Typography.Text style={{ color: "#9ca3af" }}>Sign in to your account</Typography.Text>
+          <Typography.Text style={{ color: "var(--text-secondary)" }}>Sign in to your account</Typography.Text>
         </div>
         {error && <Alert message={error} type="error" style={{ marginBottom: 16 }} />}
         <Form layout="vertical" onFinish={onFinish} size="large">

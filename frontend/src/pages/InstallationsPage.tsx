@@ -145,25 +145,7 @@ export default function InstallationsPage() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#06b6d4",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <div>
@@ -173,7 +155,7 @@ export default function InstallationsPage() {
                 Installations Control Center
               </span>
             </Title>
-            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
               Oversee survey feasibility reports, material allocations, and customer OTP handovers.
             </Text>
           </div>
@@ -194,7 +176,7 @@ export default function InstallationsPage() {
           title={
             <Space>
               <BuildOutlined style={{ color: "#06b6d4", fontSize: 18 }} />
-              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
                 Active Installation Work Orders
               </span>
               <Tag color="cyan" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(6, 182, 212, 0.12)", border: "1px solid rgba(6, 182, 212, 0.2)" }}>

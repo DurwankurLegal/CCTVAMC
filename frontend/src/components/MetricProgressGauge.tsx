@@ -67,7 +67,7 @@ export default function MetricProgressGauge({
             cy="40"
             r={radius}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.05)"
+            stroke="var(--glass-border)"
             strokeWidth={strokeWidth}
           />
           
@@ -98,7 +98,7 @@ export default function MetricProgressGauge({
           justifyContent: "center",
           flexDirection: "column"
         }}>
-          <span style={{ fontSize: "16px", fontWeight: 700, color: "#f3f4f6" }}>
+          <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
             {percent.toFixed(0)}%
           </span>
         </div>
@@ -106,11 +106,11 @@ export default function MetricProgressGauge({
 
       {/* Info details */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        <span style={{ fontSize: "14px", fontWeight: 500, color: "#9ca3af" }}>
+        <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-secondary)" }}>
           {title}
         </span>
         {subtext && (
-          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
             {subtext}
           </div>
         )}

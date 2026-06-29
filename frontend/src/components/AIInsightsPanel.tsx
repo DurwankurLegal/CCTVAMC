@@ -57,13 +57,13 @@ export default function AIInsightsPanel() {
     <Card
       className="glass-card"
       styles={{
-        header: { borderBottom: "1px solid rgba(255, 255, 255, 0.05)", padding: "16px 24px" },
+        header: { borderBottom: "1px solid var(--glass-border)", padding: "16px 24px" },
         body: { padding: "20px 24px" }
       }}
       title={
         <Space>
           <BulbOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700 }}>AI Operational Insights</span>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>AI Operational Insights</span>
         </Space>
       }
     >
@@ -73,14 +73,14 @@ export default function AIInsightsPanel() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
               <Space direction="vertical" size={2}>
                 <Space>
-                  <span style={{ fontWeight: 600, color: "#f3f4f6", fontSize: "14px" }}>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
                     {insight.title}
                   </span>
                   <Tag color={getTagColor(insight.category)} style={{ fontSize: "10px" }}>
                     {insight.category.toUpperCase()}
                   </Tag>
                 </Space>
-                <Paragraph style={{ color: "#9ca3af", fontSize: "12px", margin: 0, marginTop: 4 }}>
+                <Paragraph style={{ color: "var(--text-secondary)", fontSize: "12px", margin: 0, marginTop: 4 }}>
                   {insight.description}
                 </Paragraph>
               </Space>

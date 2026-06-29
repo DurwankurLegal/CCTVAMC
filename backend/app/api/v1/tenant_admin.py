@@ -15,6 +15,23 @@ async def get_tenant_settings(
     """Retrieve settings for the logged-in user's tenant."""
     return await tenant_service.get_tenant(db, current_user.tenant_id)
 
+
+@router.get("/settings/defaults")
+async def get_tenant_settings_defaults(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Retrieve basic defaults for any logged-in user of the tenant."""
+    tenant = await tenant_service.get_tenant(db, current_user.tenant_id)
+    return {
+        "name": tenant.name,
+        "gstin": tenant.gstin,
+        "registered_address": tenant.registered_address,
+        "branding": tenant.branding or {},
+        "settings": tenant.settings or {}
+    }
+
+
 @router.patch("/settings", response_model=TenantResponse)
 async def update_tenant_settings(
     payload: TenantUpdate,

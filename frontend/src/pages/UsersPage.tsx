@@ -117,25 +117,7 @@ export default function UsersPage() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#6366f1",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <div>
@@ -145,7 +127,7 @@ export default function UsersPage() {
                 Access Control Registry
               </span>
             </Title>
-            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
               Configure administrative staff profiles, coordinate operations, assign role capabilities, and toggle status.
             </Text>
           </div>
@@ -166,7 +148,7 @@ export default function UsersPage() {
           title={
             <Space>
               <TeamOutlined style={{ color: "#6366f1", fontSize: 18 }} />
-              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
                 Staff &amp; Key Accounts
               </span>
               <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>

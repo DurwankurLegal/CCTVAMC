@@ -46,13 +46,13 @@ export default function ActivityTimeline() {
     <Card
       className="glass-card"
       styles={{
-        header: { borderBottom: "1px solid rgba(255, 255, 255, 0.05)", padding: "16px 24px" },
+        header: { borderBottom: "1px solid var(--glass-border)", padding: "16px 24px" },
         body: { padding: "20px 24px" }
       }}
       title={
         <Space>
           <HistoryOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
-          <span style={{ color: "#f3f4f6", fontWeight: 700 }}>Recent Activities</span>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>Recent Activities</span>
         </Space>
       }
     >
@@ -61,14 +61,14 @@ export default function ActivityTimeline() {
           <div key={act.id} className="timeline-node">
             <div className={`timeline-node-dot ${act.status}`} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "#f3f4f6" }}>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
                 {act.title}
               </span>
-              <span style={{ fontSize: "11px", color: "#6b7280" }}>
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
                 {act.time}
               </span>
             </div>
-            <span style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
               {act.description}
             </span>
           </div>

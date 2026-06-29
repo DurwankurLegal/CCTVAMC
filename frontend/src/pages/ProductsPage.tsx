@@ -138,25 +138,7 @@ export default function ProductsPage() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#8b5cf6",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <div>
@@ -166,7 +148,7 @@ export default function ProductsPage() {
                 Product SKU Catalog
               </span>
             </Title>
-            <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+            <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
               Define equipment SKUs, configure pricing plans, serial number tracking settings, and map catalog items to warehouse inventory.
             </Text>
           </div>
@@ -186,7 +168,7 @@ export default function ProductsPage() {
           title={
             <Space>
               <ShoppingOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
-              <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
                 Master Products List
               </span>
             </Space>

@@ -171,7 +171,7 @@ export default function DashboardPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Title level={4} style={{ margin: 0 }}>Operational Intelligence Command Center</Title>
-        <span style={{ color: "#9ca3af", fontSize: "12px", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: "4px" }}>
+        <span style={{ color: "var(--text-secondary)", fontSize: "12px", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: "4px" }}>
           Metrics updated live
         </span>
       </div>
@@ -196,13 +196,13 @@ export default function DashboardPage() {
           <Card 
             className="glass-card"
             styles={{
-              header: { borderBottom: "1px solid rgba(255, 255, 255, 0.05)", padding: "12px 24px" },
+              header: { borderBottom: "1px solid var(--glass-border)", padding: "12px 24px" },
               body: { padding: "16px 20px" }
             }}
             title={
               <Space>
                 <BarChartOutlined style={{ color: "#14b8a6", fontSize: 18 }} />
-                <span style={{ color: "#f3f4f6", fontWeight: 700 }}>Financial Ledger Trends (₹)</span>
+                <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>Financial Ledger Trends (₹)</span>
               </Space>
             }
           >
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
                   <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
                   <Tooltip contentStyle={{ backgroundColor: "#0b0f19", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }} />
-                  <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-secondary)" }} />
                   <Area type="monotone" dataKey="billed" name="Billed Amount" stroke="#6366f1" fillOpacity={1} fill="url(#colorBilled)" strokeWidth={2} />
                   <Area type="monotone" dataKey="collected" name="Collected Amount" stroke="#10b981" fillOpacity={1} fill="url(#colorCollected)" strokeWidth={2} />
                 </AreaChart>

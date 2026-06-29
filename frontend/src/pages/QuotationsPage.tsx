@@ -6,6 +6,7 @@ import {
 import { PlusOutlined, CheckOutlined, CloseOutlined, SwapOutlined, MinusCircleOutlined, FileTextOutlined, ShopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
+import { RichTextEditor } from "../components/RichTextEditor";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -42,7 +43,25 @@ function QuotationsTab() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { form.resetFields(); form.setFieldsValue({ line_items: [{ description: "", quantity: 1, unit_price: 0, gst_rate: 18 }] }); setOpen(true); };
+  const openCreate = async () => {
+    form.resetFields();
+    form.setFieldsValue({
+      line_items: [{ description: "", quantity: 1, unit_price: 0, gst_rate: 18 }],
+      terms: ""
+    });
+    setOpen(true);
+
+    try {
+      const { data } = await apiClient.get("/tenant-admin/settings/defaults");
+      if (data?.settings?.quotation_settings?.default_terms) {
+        form.setFieldsValue({
+          terms: data.settings.quotation_settings.default_terms
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load default quotation terms", e);
+    }
+  };
 
   const save = async () => {
     const v = await form.validateFields();
@@ -113,7 +132,7 @@ function QuotationsTab() {
         title={
           <Space>
             <FileTextOutlined style={{ color: "#6366f1", fontSize: 18 }} />
-            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
               Quotations Ledger
             </span>
             <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
@@ -151,7 +170,9 @@ function QuotationsTab() {
               </>
             )}
           </Form.List>
-          <Form.Item name="terms" label="Terms" style={{ marginTop: 12 }}><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="terms" label="Terms &amp; Conditions" style={{ marginTop: 12 }}>
+            <RichTextEditor minHeight={120} placeholder="Custom terms for this quotation..." />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -222,7 +243,7 @@ function SalesOrdersTab() {
         title={
           <Space>
             <ShopOutlined style={{ color: "#6366f1", fontSize: 18 }} />
-            <span style={{ color: "#f3f4f6", fontWeight: 700, fontSize: 15 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
               Sales Orders Ledger
             </span>
             <Tag color="indigo" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
@@ -270,25 +291,7 @@ function SalesOrdersTab() {
 
 export default function QuotationsPage() {
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgContainer: "#161c2d",
-          colorBorder: "rgba(255, 255, 255, 0.08)",
-          colorText: "#f3f4f6",
-          colorTextSecondary: "#9ca3af",
-          colorTextHeading: "#ffffff",
-          colorPrimary: "#6366f1",
-        },
-        components: {
-          Table: {
-            headerBg: "rgba(255, 255, 255, 0.04)",
-            headerColor: "#f3f4f6",
-          }
-        }
-      }}
-    >
+    <ConfigProvider theme={{}}>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {/* Header Block */}
         <div>
@@ -298,7 +301,7 @@ export default function QuotationsPage() {
               Quotations &amp; Sales Orders Hub
             </span>
           </Title>
-          <Text style={{ color: "#9ca3af", fontSize: "13.5px" }}>
+          <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
             Draft estimation proposals, convert approved quotes to AMC contracts, and manage active sales orders.
           </Text>
         </div>

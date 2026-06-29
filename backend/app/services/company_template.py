@@ -146,11 +146,16 @@ DEFAULT_HTML_TEMPLATES = {
       </div>
 
       {% if company.authorized_signatory and company.authorized_signatory.get('name') %}
-      <div class="signature-box">
+      <div class="signature-box" style="text-align: right; margin-top: 30px; position: relative;">
         <div>For <strong>{{ company.name }}</strong></div>
-        {% if company.authorized_signatory.get('signature_url') %}
-          <img class="signature-img" src="{{ company.authorized_signatory.get('signature_url') }}" /><br/>
-        {% endif %}
+        <div style="position: relative; display: inline-block; height: 50px; margin: 5px 0;">
+          {% if company.authorized_signatory.get('signature_url') %}
+            <img class="signature-img" src="{{ company.authorized_signatory.get('signature_url') }}" style="max-height: 40px; position: relative; z-index: 2;" />
+          {% endif %}
+          {% if company.seal_url %}
+            <img class="seal-img" src="{{ company.seal_url }}" style="max-height: 50px; position: absolute; right: 10px; top: -5px; opacity: 0.85; z-index: 1;" />
+          {% endif %}
+        </div>
         <div>Authorized Signatory ({{ company.authorized_signatory.get('name') }})</div>
       </div>
       {% endif %}
@@ -340,12 +345,46 @@ DEFAULT_HTML_TEMPLATES = {
         </tr>
       </table>
 
-      {% if doc.terms %}
-      <div class="terms">
-        <strong>Terms & Conditions:</strong><br/>
-        {{ doc.terms | replace('\n', '<br/>') }}
+      <div class="bank-details" style="margin-top: 20px; background-color: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid #eee; font-size: 11px;">
+        <strong>Bank Details:</strong><br/>
+        Bank Name: {{ company.bank_details.get('bank_name', '') }} | 
+        A/C Name: {{ company.bank_details.get('beneficiary_name', company.name) }}<br/>
+        A/C No: {{ company.bank_details.get('account_number', '') }} | 
+        IFSC: {{ company.bank_details.get('ifsc_code', '') }} | 
+        Branch: {{ company.bank_details.get('branch', '') }}
+        {% if company.bank_details.get('upi_id') %}
+          | UPI ID: {{ company.bank_details.get('upi_id') }}
+        {% endif %}
       </div>
-      {% endif %}
+
+      <table style="width: 100%; margin-top: 30px; border: none; border-collapse: collapse;">
+        <tr>
+          <td style="width: 50%; vertical-align: top; border: none; padding: 0;">
+            {% if doc.terms %}
+            <div class="terms" style="margin-top: 0; font-size: 11px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #0F2A43;">
+              <strong>Terms & Conditions:</strong><br/>
+              {{ doc.terms | safe }}
+            </div>
+            {% endif %}
+          </td>
+          <td style="width: 50%; text-align: right; vertical-align: top; border: none; padding: 0;">
+            {% if company.authorized_signatory and company.authorized_signatory.get('name') %}
+            <div class="signature-box" style="position: relative; display: inline-block; min-height: 80px; text-align: right;">
+              <div>For <strong>{{ company.name }}</strong></div>
+              <div style="position: relative; display: inline-block; height: 50px; margin: 5px 0;">
+                {% if company.authorized_signatory.get('signature_url') %}
+                  <img class="signature-img" src="{{ company.authorized_signatory.get('signature_url') }}" style="max-height: 40px; position: relative; z-index: 2;" />
+                {% endif %}
+                {% if company.seal_url %}
+                  <img class="seal-img" src="{{ company.seal_url }}" style="max-height: 50px; position: absolute; right: 10px; top: -5px; opacity: 0.85; z-index: 1;" />
+                {% endif %}
+              </div>
+              <div>Authorized Signatory ({{ company.authorized_signatory.get('name') }})</div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
     """,
@@ -422,16 +461,73 @@ async def render_company_document(
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    from app.services.tenant import get_tenant
+    tenant = await get_tenant(db, tenant_id)
+    t_settings = tenant.settings or {}
+    t_branding = tenant.branding or {}
+    t_address = tenant.registered_address or ""
+
+    # Clean fallback address from split fields if registered_address is not set in Tenant directly
+    if not t_address and t_settings.get("company_address"):
+        addr = t_settings["company_address"]
+        t_address = ", ".join(filter(None, [
+            addr.get("address_line1"),
+            addr.get("address_line2"),
+            addr.get("city"),
+            addr.get("state"),
+            addr.get("pin_code"),
+            addr.get("country")
+        ]))
+
+    # Signatory details
+    t_sig = t_settings.get("authorized_signatory", {})
+    c_sig = company.authorized_signatory or {}
+    sig_name = c_sig.get("name") or t_sig.get("name") or ""
+    sig_desg = c_sig.get("designation") or t_sig.get("designation") or ""
+    sig_url = c_sig.get("signature_url") or t_sig.get("signature_url") or ""
+
+    # Bank details
+    t_bank = t_settings.get("bank_details", {})
+    c_bank = company.bank_details or {}
+    bank_details = {
+        "bank_name": c_bank.get("bank_name") or t_bank.get("bank_name") or "",
+        "branch": c_bank.get("branch") or t_bank.get("branch_name") or "",
+        "beneficiary_name": c_bank.get("beneficiary_name") or t_bank.get("account_holder_name") or company.name or tenant.name,
+        "account_number": c_bank.get("account_number") or t_bank.get("account_number") or "",
+        "ifsc_code": c_bank.get("ifsc_code") or t_bank.get("ifsc_code") or "",
+        "upi_id": c_bank.get("upi_id") or t_bank.get("upi_id") or ""
+    }
+
+    # Contact details
+    t_contact = t_settings.get("contact_information", {})
+    c_contact = company.contact_details or {}
+    contact_details = {
+        "email": c_contact.get("email") or t_contact.get("email_address") or "",
+        "phone": c_contact.get("phone") or t_contact.get("mobile_number") or t_contact.get("telephone_number") or "",
+        "contact_person": t_contact.get("contact_person") or "",
+        "website": t_contact.get("website") or ""
+    }
+
+    # Tax details
+    gstin = company.gstin or tenant.gstin or t_settings.get("tax_information", {}).get("gst_number") or ""
+    pan = t_settings.get("tax_information", {}).get("pan_number") or ""
+
     # Merge company into template rendering context
     context["company"] = {
-        "name": company.name,
+        "name": company.name or tenant.name,
         "gst_status": company.gst_status,
-        "gstin": company.gstin,
-        "address": company.address,
-        "contact_details": company.contact_details,
-        "bank_details": company.bank_details,
-        "logo_url": company.logo_url,
-        "authorized_signatory": company.authorized_signatory
+        "gstin": gstin,
+        "pan_number": pan,
+        "address": company.address or t_address,
+        "contact_details": contact_details,
+        "bank_details": bank_details,
+        "logo_url": company.logo_url or t_branding.get("logo_url") or "",
+        "authorized_signatory": {
+            "name": sig_name,
+            "designation": sig_desg,
+            "signature_url": sig_url
+        },
+        "seal_url": t_sig.get("seal_url") or ""
     }
 
     # 2. Try to fetch company custom template override
