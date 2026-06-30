@@ -34,6 +34,494 @@ async def get_template_by_type(db: AsyncSession, tenant_id: UUID, company_id: UU
 
 # Default HTML structures for fallback dynamic rendering
 DEFAULT_HTML_TEMPLATES = {
+    "QUOTATION_TEMPLATE1": """
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 10px;
+          font-size: 11px;
+          color: #000;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-bold { font-weight: bold; }
+        
+        .border-all { border: 1px solid #000; }
+        .border-bottom { border-bottom: 1px solid #000; }
+        .border-right { border-right: 1px solid #000; }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 0;
+          padding: 0;
+        }
+        
+        td, th {
+          padding: 5px;
+          vertical-align: top;
+        }
+        
+        .header-table td {
+          border: 1px solid #000;
+          padding: 6px;
+        }
+        
+        .items-table {
+          border-left: 1px solid #000;
+          border-right: 1px solid #000;
+          border-bottom: 1px solid #000;
+        }
+        .items-table th {
+          border: 1px solid #000;
+          background-color: #f2f2f2;
+          font-weight: bold;
+          text-align: center;
+        }
+        .items-table td {
+          border-right: 1px solid #000;
+          padding: 4px 6px;
+        }
+        
+        .hsn-table {
+          border: 1px solid #000;
+          margin-top: 10px;
+          width: 100%;
+        }
+        .hsn-table th, .hsn-table td {
+          border: 1px solid #000;
+          text-align: center;
+          padding: 4px;
+        }
+        
+        .footer-table td {
+          border: 1px solid #000;
+          padding: 6px;
+        }
+        
+        .title {
+          font-size: 14px;
+          font-weight: bold;
+          letter-spacing: 1px;
+          margin-bottom: 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <div style="border: 1px solid #000;">
+        <!-- Title -->
+        <div class="text-center border-bottom" style="padding: 5px; position: relative;">
+          <span class="title">QUOTATION</span>
+          <span style="position: absolute; right: 10px; top: 5px; font-weight: bold;">e-Invoice</span>
+        </div>
+        
+        <!-- Header: Company & Quote Meta Details -->
+        <table class="header-table" style="border: none;">
+          <tr>
+            <td style="width: 55%; border-left: none; border-top: none;">
+              <div style="display: flex; align-items: flex-start; gap: 10px;">
+                {% if company.logo_url %}
+                  <img src="{{ company.logo_url }}" style="max-height: 45px; max-width: 150px; margin-right: 8px;" />
+                {% endif %}
+                <div>
+                  <div class="text-bold" style="font-size: 13px;">{{ company.name }}</div>
+                  <div>{{ company.address or '' }}</div>
+                  {% if company.contact_details.phone %}<div>Ph No: {{ company.contact_details.phone }}</div>{% endif %}
+                  {% if company.gstin %}<div>GSTIN/UIN: {{ company.gstin }}</div>{% endif %}
+                  <div>State Name: Maharashtra, Code: 27</div>
+                  {% if company.pan_number %}<div>Company PAN: {{ company.pan_number }}</div>{% endif %}
+                </div>
+              </div>
+            </td>
+            <td style="width: 45%; border-right: none; border-top: none; padding: 0;">
+              <table style="height: 100%; border: none;">
+                <tr class="border-bottom">
+                  <td class="border-right" style="width: 50%;">
+                    <span style="color: #555;">Quotation No.</span><br/>
+                    <span class="text-bold">{{ doc.quotation_number }}</span>
+                  </td>
+                  <td>
+                    <span style="color: #555;">Dated</span><br/>
+                    <span class="text-bold">{{ doc.created_at.strftime('%d-%b-%y') if doc.created_at else '' }}</span>
+                  </td>
+                </tr>
+                <tr class="border-bottom">
+                  <td class="border-right">
+                    <span style="color: #555;">Valid Until</span><br/>
+                    <span class="text-bold">{{ doc.valid_until.strftime('%d-%b-%y') if doc.valid_until else '—' }}</span>
+                  </td>
+                  <td>
+                    <span style="color: #555;">Terms of Payment</span><br/>
+                    <span class="text-bold">Advance</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2">
+                    <span style="color: #555;">Terms of Delivery</span><br/>
+                    <span>Immediate / As per schedule</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Addresses -->
+          <tr>
+            <td style="border-left: none; border-bottom: none;">
+              <span style="color: #555;">Consignee (Ship to)</span><br/>
+              <div class="text-bold">{{ customer.name }}</div>
+              <div>{{ customer.shipping_address or customer.address or '' }}</div>
+              {% if customer.phone %}<div>Mob: {{ customer.phone }}</div>{% endif %}
+              {% if customer.gstin %}<div>GSTIN/UIN: {{ customer.gstin }}</div>{% endif %}
+            </td>
+            <td style="border-right: none; border-bottom: none;">
+              <span style="color: #555;">Buyer (Bill to)</span><br/>
+              <div class="text-bold">{{ customer.name }}</div>
+              <div>{{ customer.billing_address or customer.address or '' }}</div>
+              {% if customer.phone %}<div>Mob: {{ customer.phone }}</div>{% endif %}
+              {% if customer.gstin %}<div>GSTIN/UIN: {{ customer.gstin }}</div>{% endif %}
+            </td>
+          </tr>
+        </table>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width: 5%;">Sl No.</th>
+              <th style="width: 50%;">Description of Goods</th>
+              <th style="width: 12%;">HSN/SAC</th>
+              <th style="width: 8%;">Quantity</th>
+              <th style="width: 10%;">Rate</th>
+              <th style="width: 5%;">per</th>
+              <th style="width: 10%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr style="min-height: 25px;">
+              <td class="text-center">{{ loop.index }}</td>
+              <td>
+                <div class="text-bold">{{ item.get('description', '') }}</div>
+                {% if item.get('details') %}
+                  <div style="color: #555; font-size: 9px;">{{ item.get('details') }}</div>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ item.get('hsn_code') or '84713010' }}</td>
+              <td class="text-center">{{ item.get('quantity', 0) }} Pcs</td>
+              <td class="text-right">{{ item.get('unit_price', 0) | float | round(2) }}</td>
+              <td class="text-center">Pcs</td>
+              <td class="text-right text-bold">{{ item.get('amount', 0) | float | round(2) }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% if items|length < 5 %}
+              {% for i in range(5 - items|length) %}
+              <tr style="height: 20px;">
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+            
+            {% if doc.cgst_amount or doc.sgst_amount or doc.igst_amount %}
+              {% if doc.cgst_amount %}
+              <tr>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">Output CGST</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">{{ doc.cgst_amount | float | round(2) }}</td>
+              </tr>
+              {% endif %}
+              {% if doc.sgst_amount %}
+              <tr>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">Output SGST</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">{{ doc.sgst_amount | float | round(2) }}</td>
+              </tr>
+              {% endif %}
+              {% if doc.igst_amount %}
+              <tr>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">Output IGST</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td class="text-right text-bold">{{ doc.igst_amount | float | round(2) }}</td>
+              </tr>
+              {% endif %}
+            {% endif %}
+            
+            <tr style="border-top: 1px solid #000; background-color: #f9f9f9; font-weight: bold;">
+              <td colspan="3" class="text-right">Total</td>
+              <td class="text-center">
+                {% set total_qty = 0 %}
+                {% for item in items %}
+                  {% set total_qty = total_qty + (item.get('quantity', 0) | int) %}
+                {% endfor %}
+                {{ total_qty }} Pcs
+              </td>
+              <td colspan="2">&nbsp;</td>
+              <td class="text-right">₹ {{ doc.total_amount | float | round(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="border-bottom" style="padding: 6px;">
+          <div>Amount Chargeable (in words)</div>
+          <div class="text-bold" style="font-size: 11px;">INR {{ doc.total_amount | float | round(2) }} (Approx.)</div>
+        </div>
+        
+        {% if doc.cgst_amount or doc.sgst_amount or doc.igst_amount %}
+        <div style="padding: 6px;" class="border-bottom">
+          <table class="hsn-table">
+            <thead>
+              <tr>
+                <th rowspan="2">HSN/SAC</th>
+                <th rowspan="2">Taxable Value</th>
+                <th colspan="2">Central Tax</th>
+                <th colspan="2">State Tax</th>
+                <th rowspan="2">Total Tax Amount</th>
+              </tr>
+              <tr>
+                <th>Rate</th>
+                <th>Amount</th>
+                <th>Rate</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>84713010</td>
+                <td>{{ doc.subtotal | float | round(2) }}</td>
+                <td>9%</td>
+                <td>{{ doc.cgst_amount | float | round(2) if doc.cgst_amount else '0.00' }}</td>
+                <td>9%</td>
+                <td>{{ doc.sgst_amount | float | round(2) if doc.sgst_amount else '0.00' }}</td>
+                <td>{{ (doc.cgst_amount | float + doc.sgst_amount | float) | round(2) if (doc.cgst_amount and doc.sgst_amount) else '0.00' }}</td>
+              </tr>
+              <tr style="font-weight: bold;">
+                <td>Total</td>
+                <td>{{ doc.subtotal | float | round(2) }}</td>
+                <td>&nbsp;</td>
+                <td>{{ doc.cgst_amount | float | round(2) if doc.cgst_amount else '0.00' }}</td>
+                <td>&nbsp;</td>
+                <td>{{ doc.sgst_amount | float | round(2) if doc.sgst_amount else '0.00' }}</td>
+                <td>{{ (doc.cgst_amount | float + doc.sgst_amount | float) | round(2) if (doc.cgst_amount and doc.sgst_amount) else '0.00' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+        
+        <table class="footer-table" style="border: none;">
+          <tr>
+            <td style="width: 50%; border-left: none; border-bottom: none;">
+              <div class="text-bold">Company's Bank Details</div>
+              <div>Bank Name: {{ company.bank_details.bank_name or 'HDFC Bank' }}</div>
+              <div>A/c Holder's Name: {{ company.bank_details.beneficiary_name or company.name }}</div>
+              <div>A/c No: {{ company.bank_details.account_number or '05922560003360' }}</div>
+              <div>Branch & IFS Code: {{ company.bank_details.branch or 'Mumbai' }} &amp; {{ company.bank_details.ifsc_code or 'HDFC0000592' }}</div>
+              
+              {% if doc.terms %}
+                <div style="margin-top: 10px; font-size: 8px; color: #555;">
+                  <span class="text-bold">Terms &amp; Conditions:</span><br/>
+                  {{ doc.terms | safe }}
+                </div>
+              {% endif %}
+            </td>
+            <td style="width: 50%; border-right: none; border-bottom: none; text-align: right; position: relative;">
+              <div>For <span class="text-bold">{{ company.name }}</span></div>
+              
+              <div style="margin-top: 15px; display: inline-block; position: relative; height: 50px;">
+                {% if company.authorized_signatory.signature_url %}
+                  <img src="{{ company.authorized_signatory.signature_url }}" style="max-height: 35px; z-index: 2; position: relative;" />
+                {% endif %}
+                {% if company.seal_url %}
+                  <img src="{{ company.seal_url }}" style="max-height: 45px; position: absolute; right: 10px; top: -5px; opacity: 0.85; z-index: 1;" />
+                {% endif %}
+              </div>
+              
+              <div style="margin-top: 5px;">Authorized Signatory</div>
+              {% if company.authorized_signatory.name %}
+                <div style="font-size: 9px; color: #555;">({{ company.authorized_signatory.name }})</div>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="text-center" style="margin-top: 10px; font-size: 9px; color: #555;">
+        SUBJECT TO MUMBAI JURISDICTION<br/>
+        This is a Computer Generated Invoice
+      </div>
+    </body>
+    </html>
+    """,
+    "QUOTATION_TEMPLATE2": """
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: sans-serif;
+          padding: 30px;
+          font-size: 12px;
+          color: #333;
+          background-color: #f7f9fb;
+        }
+        .receipt-card {
+          border: 1px solid #d3dbde;
+          background-color: #ffffff;
+          border-radius: 8px;
+          padding: 30px;
+          max-width: 600px;
+          margin: 0 auto;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .logo {
+          max-height: 50px;
+          margin-bottom: 10px;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 2px solid #003366;
+          padding-bottom: 15px;
+          margin-bottom: 20px;
+        }
+        .title {
+          font-size: 20px;
+          font-weight: bold;
+          color: #003366;
+          letter-spacing: 1px;
+        }
+        .subtitle {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+          font-weight: bold;
+        }
+        .details-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+        }
+        .details-table tr {
+          border-bottom: 1px solid #f0f0f0;
+        }
+        .details-table td {
+          padding: 10px 8px;
+          vertical-align: middle;
+        }
+        .details-table td:first-child {
+          font-weight: bold;
+          color: #555;
+          width: 40%;
+        }
+        .details-table td:last-child {
+          text-align: left;
+          color: #000;
+        }
+        .footer {
+          text-align: center;
+          font-size: 10px;
+          color: #888;
+          margin-top: 25px;
+          border-top: 1px solid #eee;
+          padding-top: 15px;
+        }
+        .status-badge {
+          background-color: #e3f2fd;
+          color: #0d47a1;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-weight: bold;
+          font-size: 10px;
+          display: inline-block;
+          text-transform: uppercase;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="receipt-card">
+        <div class="header">
+          {% if company.logo_url %}
+            <img class="logo" src="{{ company.logo_url }}" /><br/>
+          {% endif %}
+          <div class="title">e-Quotation</div>
+          <div class="subtitle">Other Bank Transaction Details</div>
+        </div>
+
+        <table class="details-table">
+          <tr>
+            <td>Txn Date</td>
+            <td>{{ doc.created_at.strftime('%d/%m/%Y') if doc.created_at else '' }}</td>
+          </tr>
+          <tr>
+            <td>Quotation Number</td>
+            <td style="font-weight: bold; color: #003366;">{{ doc.quotation_number }}</td>
+          </tr>
+          <tr>
+            <td>Name (Customer)</td>
+            <td style="text-transform: uppercase; font-weight: bold;">{{ customer.name }}</td>
+          </tr>
+          {% if customer.phone %}
+          <tr>
+            <td>Customer Phone</td>
+            <td>{{ customer.phone }}</td>
+          </tr>
+          {% endif %}
+          {% if customer.gstin %}
+          <tr>
+            <td>Ifsc Code (GSTIN)</td>
+            <td>{{ customer.gstin }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td>From Company</td>
+            <td>{{ company.name }}</td>
+          </tr>
+          <tr>
+            <td>Sender Information (Bank details)</td>
+            <td>{{ company.bank_details.bank_name or 'Indian Overseas Bank' }} - A/C {{ company.bank_details.account_number or '264302000040133' }}</td>
+          </tr>
+          <tr>
+            <td>Amount</td>
+            <td style="font-size: 15px; font-weight: bold; color: #003366;">₹ {{ doc.total_amount }}</td>
+          </tr>
+          <tr>
+            <td>UTR Number (Quote Status)</td>
+            <td><span class="status-badge">{{ doc.status }}</span></td>
+          </tr>
+          <tr>
+            <td>Status</td>
+            <td style="font-weight: bold; color: #2e7d32;">Amount Sent to Other Bank (Approved)</td>
+          </tr>
+        </table>
+
+        <div class="footer">
+          This is a computer generated electronic receipt. For any questions, please contact {{ company.contact_details.email or 'support@durwankur.com' }}.
+        </div>
+      </div>
+    </body>
+    </html>
+    """,
     "TAX_INVOICE": """
     <html>
     <head>

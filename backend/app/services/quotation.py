@@ -122,8 +122,8 @@ async def update_quotation(db, tenant_id, qid, payload: QuotationUpdate):
     return await repo.save(obj)
 
 
-async def render_company_quotation_pdf(db: AsyncSession, quotation: Quotation) -> bytes:
-    from app.services.company_template import render_company_document
+async def render_company_quotation_pdf(db: AsyncSession, quotation: Quotation, template_name: str = "template1") -> bytes:
+    from app.services.company_template import render_company_document, get_template_by_type
     from app.services.customer import get_customer
     customer = await get_customer(db, quotation.tenant_id, quotation.customer_id)
     context = {
@@ -131,4 +131,13 @@ async def render_company_quotation_pdf(db: AsyncSession, quotation: Quotation) -
         "items": quotation.line_items or [],
         "customer": customer
     }
-    return await render_company_document(db, quotation.tenant_id, quotation.company_id, "QUOTATION", context)
+    
+    # Default to the requested template type
+    doc_type = "QUOTATION_TEMPLATE2" if template_name == "template2" else "QUOTATION_TEMPLATE1"
+    
+    # Fallback to general custom override if configured
+    custom_exist = await get_template_by_type(db, quotation.tenant_id, quotation.company_id, "QUOTATION")
+    if custom_exist and custom_exist.template_html:
+        doc_type = "QUOTATION"
+        
+    return await render_company_document(db, quotation.tenant_id, quotation.company_id, doc_type, context)

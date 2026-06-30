@@ -330,7 +330,9 @@ export const CompanySettingsTab: React.FC = () => {
               options={[
                 { label: "Tax Invoice (GST)", value: "TAX_INVOICE" },
                 { label: "Invoice (Non-GST)", value: "NON_GST_INVOICE" },
-                { label: "Quotation", value: "QUOTATION" },
+                { label: "Quotation (Standard Fallback)", value: "QUOTATION" },
+                { label: "Quotation Template 1 (GST)", value: "QUOTATION_TEMPLATE1" },
+                { label: "Quotation Template 2 (IOB Receipt)", value: "QUOTATION_TEMPLATE2" },
                 { label: "Payment Receipt", value: "PAYMENT_RECEIPT" },
                 { label: "AMC Service Report", value: "AMC_REPORT" }
               ]}
