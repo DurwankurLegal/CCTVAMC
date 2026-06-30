@@ -63,6 +63,7 @@ import { logout, fetchMe } from "./store/authSlice";
 import TwoFAModal from "./components/TwoFAModal";
 import type { AppDispatch, RootState } from "./store";
 import { filterTenantMenu, hasPerm } from "./utils/menu";
+import apiClient from "./api/client";
 import { fetchTenantConfig } from "./store/tenantSlice";
 import ModuleGuard from "./components/ModuleGuard";
 import TenantSettingsPage from "./pages/TenantSettingsPage";
