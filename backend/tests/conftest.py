@@ -4,7 +4,9 @@ from unittest.mock import MagicMock
 
 # Mock weasyprint to prevent errors on environments missing GObject/Pango system libraries
 mock_weasyprint = MagicMock()
-mock_weasyprint.HTML = MagicMock()
+mock_html_instance = MagicMock()
+mock_html_instance.write_pdf.return_value = b"%PDF-1.4 mock pdf content"
+mock_weasyprint.HTML.return_value = mock_html_instance
 sys.modules['weasyprint'] = mock_weasyprint
 
 # Point Redis to localhost for test runs BEFORE importing app

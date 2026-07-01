@@ -12,6 +12,7 @@ class CompanyTemplate(Base, TenantMixin):
     template_html: Mapped[str] = mapped_column(Text, nullable=False)
     header_html: Mapped[str] = mapped_column(Text, nullable=True)
     footer_html: Mapped[str] = mapped_column(Text, nullable=True)
+    selected_style: Mapped[str] = mapped_column(String(50), nullable=True, default="style1")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     company: Mapped["Company"] = relationship("Company", back_populates="templates")

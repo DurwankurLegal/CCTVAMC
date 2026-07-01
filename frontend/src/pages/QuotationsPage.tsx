@@ -25,7 +25,7 @@ function useCustomers() {
   return { customers, name };
 }
 
-function QuotationsTab() {
+export function QuotationsTab() {
   const { customers, name } = useCustomers();
   const [rows, setRows] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,22 +95,21 @@ function QuotationsTab() {
     finally { setSaving(false); }
   };
 
-  const downloadPDF = async (q: Quotation, template: string) => {
+  const downloadPDF = async (q: Quotation) => {
     try {
       const response = await apiClient.get(`/quotations/${q.id}/pdf`, {
-        params: { template },
         responseType: "blob",
       });
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${q.quotation_number}-${template}.pdf`);
+      link.setAttribute("download", `${q.quotation_number}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-      message.success(`Quotation PDF (${template}) downloaded successfully`);
+      message.success("Quotation PDF downloaded successfully");
     } catch (e: any) {
       message.error("Failed to download quotation PDF");
     }
@@ -125,8 +124,7 @@ function QuotationsTab() {
       title: "Actions", key: "actions",
       render: (_: unknown, q: Quotation) => (
         <Space>
-          <Button size="small" type="link" onClick={() => downloadPDF(q, "template1")}>PDF T1</Button>
-          <Button size="small" type="link" onClick={() => downloadPDF(q, "template2")}>PDF T2</Button>
+          <Button size="small" type="link" icon={<FileTextOutlined />} onClick={() => downloadPDF(q)}>PDF</Button>
           {["draft", "sent"].includes(q.status) && <>
             <Button size="small" type="primary" ghost icon={<CheckOutlined />} onClick={() => act(q, "approve")}>Approve</Button>
             <Popconfirm title="Reject this quotation?" onConfirm={() => act(q, "reject")}>

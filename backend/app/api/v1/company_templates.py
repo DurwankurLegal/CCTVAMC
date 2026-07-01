@@ -43,6 +43,7 @@ async def upsert_company_template(
                 template_html=payload.template_html,
                 header_html=payload.header_html,
                 footer_html=payload.footer_html,
+                selected_style=payload.selected_style,
                 is_active=payload.is_active
             )
         )

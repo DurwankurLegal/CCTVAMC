@@ -213,7 +213,8 @@ async def inventory_valuation(db: AsyncSession, tenant_id: UUID) -> list:
 
 # ── Export helpers (CSV / Excel / PDF) ────────────────────────
 def to_csv(rows: list[dict]) -> bytes:
-    import csv, io
+    import csv
+    import io
     if not rows:
         return b""
     buf = io.StringIO()
@@ -270,7 +271,7 @@ async def amc_consolidated_report(
     PM schedules, invoices, payments, and computed KPIs.
     """
     from datetime import datetime, timezone
-    from sqlalchemy import select, func, and_
+    from sqlalchemy import select, and_
     from app.models.amc import AMCContract, AMCAsset
     from app.models.asset import CCTVAsset
     from app.models.customer import Customer
@@ -765,6 +766,9 @@ def to_xlsx_amc_report(data: dict) -> bytes:
 
 
 async def ticket_sla_report(db: AsyncSession, tenant_id: UUID, from_date: date, to_date: date) -> dict:
+    from sqlalchemy import select
+    from app.models.service_ticket import ServiceTicket
+
     # created_at is a DateTime; comparing `<= to_date` coerces to midnight and
     # drops tickets created later on the final day. Use an exclusive upper bound
     # of the *next* day so the whole `to_date` is included.
@@ -792,10 +796,227 @@ async def ticket_sla_report(db: AsyncSession, tenant_id: UUID, from_date: date, 
     )
     breached = r.scalar() or 0
 
+    # Fetch list of tickets in date range to return details
+    stmt = (
+        select(ServiceTicket)
+        .where(
+            and_(
+                ServiceTicket.tenant_id == tenant_id,
+                ServiceTicket.created_at >= from_date,
+                ServiceTicket.created_at < upper,
+            )
+        )
+        .order_by(ServiceTicket.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    tickets_list = []
+    for t in res.scalars().all():
+        tickets_list.append({
+            "id": str(t.id),
+            "ticket_number": t.ticket_number,
+            "title": t.complaint,
+            "priority": t.priority,
+            "status": t.status,
+            "sla_breached": t.sla_breached,
+            "created_at": t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else "",
+            "resolution_time_hours": t.resolution_time_hours or 0.0
+        })
+
     return {
         "period": {"from": str(from_date), "to": str(to_date)},
         "total_tickets": total,
         "sla_met": total - breached,
         "sla_breached": breached,
         "compliance_pct": round((total - breached) / total * 100, 1) if total else 100.0,
+        "tickets": tickets_list
     }
+
+
+async def to_pdf_sla_report(db: AsyncSession, tenant_id: UUID, company_id: UUID, from_date: date, to_date: date) -> bytes:
+    from app.services.company_template import render_company_document
+    data = await ticket_sla_report(db, tenant_id, from_date, to_date)
+    return await render_company_document(db, tenant_id, company_id, "SLA_COMPLIANCE_REPORT", data)
+
+
+async def service_consolidated_report(db: AsyncSession, tenant_id: UUID, company_id: UUID, from_date: date, to_date: date) -> dict:
+    from sqlalchemy import select, and_
+    from app.models.service_ticket import ServiceTicket
+    from app.models.engineer_visit import EngineerVisit
+
+    upper = to_date + timedelta(days=1)
+    
+    # 1. Fetch tickets in date range
+    t_stmt = select(ServiceTicket).where(
+        and_(
+            ServiceTicket.tenant_id == tenant_id,
+            ServiceTicket.created_at >= from_date,
+            ServiceTicket.created_at < upper
+        )
+    )
+    res_t = await db.execute(t_stmt)
+    tickets = []
+    resolved_count = 0
+    for t in res_t.scalars().all():
+        if t.status in ("resolved", "closed"):
+            resolved_count += 1
+        tickets.append({
+            "id": str(t.id),
+            "ticket_number": t.ticket_number,
+            "title": t.title,
+            "priority": t.priority,
+            "status": t.status,
+            "created_at": t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else ""
+        })
+        
+    # 2. Fetch engineer visits in date range
+    from sqlalchemy import cast, Date
+    v_stmt = select(EngineerVisit).where(
+        and_(
+            EngineerVisit.tenant_id == tenant_id,
+            cast(EngineerVisit.checkin_at, Date) >= from_date,
+            cast(EngineerVisit.checkin_at, Date) <= to_date
+        )
+    )
+    res_v = await db.execute(v_stmt)
+    visits = []
+    for v in res_v.scalars().all():
+        visits.append({
+            "id": str(v.id),
+            "visit_date": v.checkin_at.strftime('%Y-%m-%d') if v.checkin_at else "",
+            "visit_type": v.visit_type,
+            "engineer_name": f"Engineer (ID: {v.technician_id})" if v.technician_id else "Technician",
+            "work_done_details": v.work_performed or ""
+        })
+        
+    return {
+        "report_period": {"from_date": str(from_date), "to_date": str(to_date)},
+        "tickets": tickets,
+        "visits": visits,
+        "kpis": {
+            "total_tickets": len(tickets),
+            "resolved_tickets": resolved_count,
+            "open_tickets": len(tickets) - resolved_count
+        }
+    }
+
+
+async def to_pdf_service_report(db: AsyncSession, tenant_id: UUID, company_id: UUID, from_date: date, to_date: date) -> bytes:
+    from app.services.company_template import render_company_document
+    data = await service_consolidated_report(db, tenant_id, company_id, from_date, to_date)
+    return await render_company_document(db, tenant_id, company_id, "CONSOLIDATED_SERVICE_REPORT", data)
+
+
+def to_xlsx_sla_report(data: dict) -> bytes:
+    """Build an Excel workbook for the SLA Compliance Report."""
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = Workbook()
+    ws_summary = wb.active
+    ws_summary.title = "SLA Summary"
+
+    # ── Summary sheet ──────────────────────────────────────────────────────
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="0F2A43")
+
+    period = data.get("period", {})
+    summary_rows = [
+        ["Period From", period.get("from", "")],
+        ["Period To", period.get("to", "")],
+        ["Total Tickets", data.get("total_tickets", 0)],
+        ["SLA Met", data.get("sla_met", 0)],
+        ["SLA Breached", data.get("sla_breached", 0)],
+        ["Compliance %", data.get("compliance_pct", 0)],
+    ]
+    for row in summary_rows:
+        ws_summary.append(row)
+
+    # ── Tickets detail sheet ───────────────────────────────────────────────
+    ws_tickets = wb.create_sheet("Ticket Detail")
+    ticket_headers = ["Ticket #", "Title", "Priority", "Status", "SLA Breached", "Created At", "Resolution Hrs"]
+    ws_tickets.append(ticket_headers)
+    for i, h in enumerate(ticket_headers, 1):
+        cell = ws_tickets.cell(row=1, column=i)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for t in data.get("tickets", []):
+        ws_tickets.append([
+            t.get("ticket_number", ""),
+            t.get("title", ""),
+            t.get("priority", ""),
+            t.get("status", ""),
+            "Yes" if t.get("sla_breached") else "No",
+            t.get("created_at", ""),
+            t.get("resolution_time_hours", 0),
+        ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def to_xlsx_service_report(data: dict) -> bytes:
+    """Build an Excel workbook for the Consolidated Service Report."""
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = Workbook()
+    ws_tickets = wb.active
+    ws_tickets.title = "Service Tickets"
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="0F2A43")
+
+    # ── Tickets sheet ──────────────────────────────────────────────────────
+    ticket_headers = ["Ticket #", "Title", "Priority", "Status", "Created At"]
+    ws_tickets.append(ticket_headers)
+    for i, h in enumerate(ticket_headers, 1):
+        cell = ws_tickets.cell(row=1, column=i)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for t in data.get("tickets", []):
+        ws_tickets.append([
+            t.get("ticket_number", ""),
+            t.get("title", ""),
+            t.get("priority", ""),
+            t.get("status", ""),
+            t.get("created_at", ""),
+        ])
+
+    # ── Visits sheet ───────────────────────────────────────────────────────
+    ws_visits = wb.create_sheet("Engineer Visits")
+    visit_headers = ["Visit Date", "Type", "Engineer", "Work Done"]
+    ws_visits.append(visit_headers)
+    for i, h in enumerate(visit_headers, 1):
+        cell = ws_visits.cell(row=1, column=i)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for v in data.get("visits", []):
+        ws_visits.append([
+            v.get("visit_date", ""),
+            v.get("visit_type", ""),
+            v.get("engineer_name", ""),
+            v.get("work_done_details", ""),
+        ])
+
+    # ── KPI summary sheet ──────────────────────────────────────────────────
+    ws_kpi = wb.create_sheet("KPI Summary")
+    kpis = data.get("kpis", {})
+    period = data.get("report_period", {})
+    ws_kpi.append(["Period From", period.get("from_date", "")])
+    ws_kpi.append(["Period To", period.get("to_date", "")])
+    ws_kpi.append(["Total Tickets", kpis.get("total_tickets", 0)])
+    ws_kpi.append(["Resolved Tickets", kpis.get("resolved_tickets", 0)])
+    ws_kpi.append(["Open Tickets", kpis.get("open_tickets", 0)])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

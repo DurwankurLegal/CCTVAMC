@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message, Input, Card, ConfigProvider, theme } from "antd";
-import { PlusOutlined, EditOutlined, ClockCircleOutlined, FileOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, InputNumber, Select, Tag, Typography, DatePicker, Space, message, Input, Card, ConfigProvider, theme, Tabs } from "antd";
+import { PlusOutlined, EditOutlined, ClockCircleOutlined, FileOutlined, SafetyCertificateOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import apiClient from "../api/client";
 import { fetchCustomers } from "../store/customerSlice";
@@ -8,6 +8,7 @@ import type { AppDispatch, RootState } from "../store";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import DocumentModal from "../components/DocumentModal";
+import { QuotationsTab } from "./QuotationsPage";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -180,6 +181,26 @@ export default function AMCPage() {
     }
   };
 
+  const downloadContractPDF = async (row: AMCContract) => {
+    try {
+      const response = await apiClient.get(`/amc/${row.id}/pdf`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `AMC-${row.contract_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Contract PDF downloaded successfully");
+    } catch (e: any) {
+      message.error("Failed to download contract PDF");
+    }
+  };
+
   const statusColor: Record<string, string> = {
     active: "green", expiring: "gold", terminated: "red", renewed: "cyan", draft: "blue",
   };
@@ -220,6 +241,14 @@ export default function AMCPage() {
           >
             Docs
           </Button>
+          <Button
+            size="small"
+            type="link"
+            icon={<DownloadOutlined />}
+            onClick={() => downloadContractPDF(row)}
+          >
+            PDF
+          </Button>
         </Space>
       ),
     },
@@ -243,31 +272,44 @@ export default function AMCPage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} style={{ background: "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)", border: "none", color: "#fff" }}>New Contract</Button>
         </div>
 
-        <Card
-          id="amc-contracts-panel"
-          className="glass-card"
-          styles={{
-            header: {
-              background: "linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.02) 100%)",
-              borderBottom: "1px solid rgba(20, 184, 166, 0.15)",
-              borderRadius: "12px 12px 0 0"
-            },
-            body: { padding: 0 }
-          }}
-          title={
-            <Space>
-              <SafetyCertificateOutlined style={{ color: "#14b8a6", fontSize: 18 }} />
-              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
-                Active Maintenance Agreements
-              </span>
-              <Tag color="cyan" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(20, 184, 166, 0.12)", border: "1px solid rgba(20, 184, 166, 0.2)" }}>
-                AMC CONTRACTS &amp; SLA
-              </Tag>
-            </Space>
+        <Tabs items={[
+          {
+            key: "agreements",
+            label: "Agreements Ledger",
+            children: (
+              <Card
+                id="amc-contracts-panel"
+                className="glass-card"
+                styles={{
+                  header: {
+                    background: "linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.02) 100%)",
+                    borderBottom: "1px solid rgba(20, 184, 166, 0.15)",
+                    borderRadius: "12px 12px 0 0"
+                  },
+                  body: { padding: 0 }
+                }}
+                title={
+                  <Space>
+                    <SafetyCertificateOutlined style={{ color: "#14b8a6", fontSize: 18 }} />
+                    <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
+                      Active Maintenance Agreements
+                    </span>
+                    <Tag color="cyan" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(20, 184, 166, 0.12)", border: "1px solid rgba(20, 184, 166, 0.2)" }}>
+                      AMC CONTRACTS &amp; SLA
+                    </Tag>
+                  </Space>
+                }
+              >
+                <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
+              </Card>
+            )
+          },
+          {
+            key: "quotations",
+            label: "Quotations Ledger",
+            children: <QuotationsTab />
           }
-        >
-          <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
-        </Card>
+        ]} />
 
       <Modal
         title={editing ? "Edit AMC Contract" : "New AMC Contract"}

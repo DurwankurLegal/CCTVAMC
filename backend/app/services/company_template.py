@@ -6,7 +6,6 @@ from app.models.company_template import CompanyTemplate
 from app.models.company import Company
 from app.repositories.base import TenantRepository
 from app.services.crud_base import make_crud
-from app.schemas.company_template import CompanyTemplateCreate, CompanyTemplateUpdate
 from app.services.tenant import get_tenant
 
 try:
@@ -941,6 +940,495 @@ DEFAULT_HTML_TEMPLATES = {
     """
 }
 
+
+# Style mappings added for Multi-Company dynamic selection
+DEFAULT_HTML_TEMPLATES["QUOTATION_STYLE1"] = DEFAULT_HTML_TEMPLATES.get("QUOTATION_TEMPLATE1", "")
+DEFAULT_HTML_TEMPLATES["QUOTATION_STYLE2"] = DEFAULT_HTML_TEMPLATES.get("QUOTATION_TEMPLATE2", "")
+DEFAULT_HTML_TEMPLATES["TAX_INVOICE_STYLE1"] = DEFAULT_HTML_TEMPLATES.get("TAX_INVOICE", "")
+DEFAULT_HTML_TEMPLATES["TAX_INVOICE_STYLE2"] = """
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 30px; font-size: 12px; color: #333; }
+    .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #3f51b5; padding-bottom: 10px; margin-bottom: 20px; }
+    .title { font-size: 20px; font-weight: bold; color: #3f51b5; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #3f51b5; color: white; }
+    .footer { text-align: center; font-size: 10px; color: #777; margin-top: 50px; }
+  </style>
+</head>
+<body>
+  <div class="invoice-box">
+    <div class="header">
+      <div>
+        {% if company.logo_url %}<img src="{{ company.logo_url }}" style="max-height: 50px;" />{% else %}<h2>{{ company.name }}</h2>{% endif %}
+      </div>
+      <div style="text-align: right;">
+        <div class="title">TAX INVOICE (Modern Style)</div>
+        <div><strong>{{ company.name }}</strong></div>
+        <div>Invoice No: {{ doc.invoice_number }}</div>
+        <div>Date: {{ doc.invoice_date }}</div>
+      </div>
+    </div>
+    <table>
+      <tr>
+        <td><strong>Billed To:</strong><br/>{{ customer.name }}<br/>{{ customer.address or '' }}</td>
+      </tr>
+    </table>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ item.get('description', '') }}</td>
+          <td>{{ item.get('quantity', '') }}</td>
+          <td>{{ item.get('unit_price', '') }}</td>
+          <td>{{ item.get('amount', '') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="footer">Thank you for your business!</div>
+  </div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["NON_GST_INVOICE_STYLE1"] = DEFAULT_HTML_TEMPLATES.get("NON_GST_INVOICE", "")
+DEFAULT_HTML_TEMPLATES["NON_GST_INVOICE_STYLE2"] = """
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 30px; font-size: 12px; color: #333; }
+    .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; }
+    .title { font-size: 20px; font-weight: bold; color: #e91e63; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #e91e63; color: white; }
+  </style>
+</head>
+<body>
+  <div class="invoice-box">
+    <div class="title">INVOICE (Non-GST Modern)</div>
+    <div><strong>{{ company.name }}</strong></div>
+    <hr/>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ item.get('description', '') }}</td>
+          <td>{{ item.get('quantity', '') }}</td>
+          <td>{{ item.get('amount', '') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["AMC_CONTRACT_STYLE1"] = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; font-size: 12px; line-height: 1.5; color: #333; }
+    .header { border-bottom: 2px solid #0f2a43; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+    .title { font-size: 20px; font-weight: bold; color: #0f2a43; }
+    .section-title { font-size: 14px; font-weight: bold; color: #0f2a43; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; font-weight: bold; }
+    .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #777; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {% if company.logo_url %}<img src="{{ company.logo_url }}" style="max-height: 50px;" /><br/>{% endif %}
+    <span class="title">ANNUAL MAINTENANCE CONTRACT AGREEMENT</span>
+  </div>
+  <div>
+    This Agreement is made on <strong>{{ doc.start_date }}</strong> by and between:
+    <br/><br/>
+    <strong>Provider (Company):</strong> {{ company.name }}<br/>
+    Address: {{ company.address or '' }}
+    <br/><br/>
+    <strong>Client (Customer):</strong> {{ customer.name }}<br/>
+    Address: {{ customer.address or '' }}
+  </div>
+  
+  <div class="section-title">1. Contract Duration & Cost</div>
+  <table>
+    <tr>
+      <td><strong>Contract Number</strong></td>
+      <td>{{ doc.contract_number }}</td>
+      <td><strong>Status</strong></td>
+      <td>{{ doc.status }}</td>
+    </tr>
+    <tr>
+      <td><strong>Start Date</strong></td>
+      <td>{{ doc.start_date }}</td>
+      <td><strong>End Date</strong></td>
+      <td>{{ doc.end_date }}</td>
+    </tr>
+    <tr>
+      <td><strong>Preventive Visits / Year</strong></td>
+      <td>{{ doc.preventive_visits_per_year }}</td>
+      <td><strong>Total Value</strong></td>
+      <td>₹{{ doc.total_amount }}</td>
+    </tr>
+  </table>
+
+  {% if items %}
+  <div class="section-title">2. Covered Equipment & Assets</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Serial tracked ID / Name</th>
+        <th>Type</th>
+        <th>Location / Info</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td><strong>{{ item.get('serial_number') or item.get('name') or 'Device' }}</strong></td>
+        <td>{{ item.get('type') or 'CCTV Camera' }}</td>
+        <td>{{ item.get('location') or 'Main Site' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="section-title">3. Terms & Conditions</div>
+  <div>
+    {{ doc.terms | safe if doc.terms else 'Standard maintenance contract terms apply.' }}
+  </div>
+
+  <table style="width: 100%; border: none; margin-top: 40px;">
+    <tr style="border: none;">
+      <td style="width: 50%; border: none; text-align: left;">
+        <div>For <strong>{{ customer.name }}</strong></div>
+        <div style="height: 50px;"></div>
+        <div>Authorized Client Signatory</div>
+      </td>
+      <td style="width: 50%; border: none; text-align: right;">
+        <div>For <strong>{{ company.name }}</strong></div>
+        <div style="height: 50px;">
+          {% if company.authorized_signatory.signature_url %}
+            <img src="{{ company.authorized_signatory.signature_url }}" style="max-height: 40px;" />
+          {% endif %}
+        </div>
+        <div>Authorized Representative ({{ company.authorized_signatory.get('name') }})</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["AMC_CONTRACT_STYLE2"] = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 40px; color: #2c3e50; line-height: 1.6; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .title { font-size: 22px; color: #3182ce; font-weight: bold; text-align: center; margin-bottom: 20px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">AMC Maintenance Contract Agreement (Modern style)</div>
+    <div class="meta-grid">
+      <div><strong>Contract #:</strong> {{ doc.contract_number }}</div>
+      <div><strong>Total Cost:</strong> ₹{{ doc.total_amount }}</div>
+      <div><strong>Validity:</strong> {{ doc.start_date }} to {{ doc.end_date }}</div>
+      <div><strong>Visits:</strong> {{ doc.preventive_visits_per_year }} / Year</div>
+    </div>
+    <hr/>
+    <div style="margin-top: 20px;">
+      <strong>Provider:</strong> {{ company.name }}<br/>
+      <strong>Client:</strong> {{ customer.name }}
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["PAYMENT_RECEIPT_STYLE1"] = DEFAULT_HTML_TEMPLATES.get("PAYMENT_RECEIPT", "")
+DEFAULT_HTML_TEMPLATES["PAYMENT_RECEIPT_STYLE2"] = """
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .receipt-card { border: 1px solid #ccc; padding: 20px; text-align: center; max-width: 500px; margin: auto; }
+  </style>
+</head>
+<body>
+  <div class="receipt-card">
+    <h2>Payment Confirmed</h2>
+    <div>Receipt for payment against Invoice No: {{ doc.invoice_id }}</div>
+    <h3 style="color: #4caf50;">INR {{ doc.amount }}</h3>
+    <div>Date: {{ doc.payment_date }}</div>
+    <div>Method: {{ doc.method }}</div>
+  </div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["AMC_REPORT_STYLE1"] = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 30px; font-size: 11px; color: #333; }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f2a43; padding-bottom: 10px; }
+    .title { font-size: 20px; font-weight: bold; color: #0f2a43; }
+    .kpi-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .kpi-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    .kpi-num { font-size: 18px; font-weight: bold; color: #0f2a43; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <span class="title">CONSOLIDATED AMC PERFORMANCE REPORT</span><br/>
+      <span>Period: {{ report_period.from_date }} to {{ report_period.to_date }}</span>
+    </div>
+  </div>
+  <table class="kpi-table">
+    <tr>
+      <td><strong>Total Service Tickets</strong><br/><span class="kpi-num">{{ kpis.total_tickets }}</span></td>
+      <td><strong>Resolved Tickets</strong><br/><span class="kpi-num">{{ kpis.resolved_tickets }}</span></td>
+      <td><strong>SLA Breached</strong><br/><span class="kpi-num">{{ kpis.sla_breached }}</span></td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["AMC_REPORT_STYLE2"] = """
+<html>
+<body>
+  <h2>Consolidated AMC Performance Report Summary</h2>
+  <div>Contract: {{ contract.contract_number }}</div>
+  <div>Compliance: {{ kpis.compliance_pct }}%</div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["CONSOLIDATED_SERVICE_REPORT_STYLE1"] = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 25px; font-size: 11px; color: #333; }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2e7d32; padding-bottom: 10px; margin-bottom: 20px; }
+    .title { font-size: 18px; font-weight: bold; color: #2e7d32; }
+    .kpi-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+    .kpi-card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; flex: 1; text-align: center; background: #fcfcfc; }
+    .kpi-card .num { font-size: 16px; font-weight: bold; color: #2e7d32; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background-color: #2e7d32; color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <span class="title">CONSOLIDATED SERVICE REPORT</span><br/>
+      <span>Period: {{ report_period.from_date }} to {{ report_period.to_date }}</span>
+    </div>
+    <div style="text-align: right;">
+      <strong>{{ company.name }}</strong><br/>
+      <span>{{ company.address or '' }}</span>
+    </div>
+  </div>
+
+  <div class="kpi-container">
+    <div class="kpi-card">
+      <div>Total Service Tickets</div>
+      <div class="num">{{ kpis.total_tickets or tickets|length }}</div>
+    </div>
+    <div class="kpi-card">
+      <div>Resolved Tickets</div>
+      <div class="num">{{ kpis.resolved_tickets or '0' }}</div>
+    </div>
+    <div class="kpi-card">
+      <div>Total Visits</div>
+      <div class="num">{{ visits|length }}</div>
+    </div>
+  </div>
+
+  <h2>Service Tickets Summary</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticket No.</th>
+        <th>Title</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Created Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td>{{ t.ticket_number or t.id }}</td>
+        <td>{{ t.title }}</td>
+        <td>{{ t.priority }}</td>
+        <td>{{ t.status }}</td>
+        <td>{{ t.created_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Engineer Visits Log</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Visit Date</th>
+        <th>Visit Type</th>
+        <th>Engineer</th>
+        <th>Work Done</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in visits %}
+      <tr>
+        <td>{{ v.visit_date }}</td>
+        <td>{{ v.visit_type }}</td>
+        <td>{{ v.engineer_name or 'Technician' }}</td>
+        <td>{{ v.work_done_details or v.remarks or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["CONSOLIDATED_SERVICE_REPORT_STYLE2"] = """
+<html>
+<body>
+  <h2>Consolidated Service Report Summary</h2>
+  <div>Company: {{ company.name }}</div>
+  <div>Total service tickets: {{ tickets|length }}</div>
+  <div>Total engineer visits: {{ visits|length }}</div>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["SLA_COMPLIANCE_REPORT_STYLE1"] = """
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 25px; font-size: 11px; color: #333; }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #b71c1c; padding-bottom: 10px; margin-bottom: 20px; }
+    .title { font-size: 18px; font-weight: bold; color: #b71c1c; }
+    .kpi-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+    .kpi-card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; flex: 1; text-align: center; background: #fffcfc; }
+    .kpi-card .num { font-size: 16px; font-weight: bold; color: #b71c1c; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background-color: #b71c1c; color: white; font-weight: bold; }
+    .breach-tag { background-color: #ffebee; color: #c62828; padding: 2px 5px; border-radius: 3px; font-weight: bold; }
+    .met-tag { background-color: #e8f5e9; color: #2e7d32; padding: 2px 5px; border-radius: 3px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <span class="title">SLA COMPLIANCE REPORT</span><br/>
+      <span>Period: {{ period.from }} to {{ period.to }}</span>
+    </div>
+    <div style="text-align: right;">
+      <strong>{{ company.name }}</strong><br/>
+      <span>Compliance: <strong>{{ compliance_pct }}%</strong></span>
+    </div>
+  </div>
+
+  <div class="kpi-container">
+    <div class="kpi-card">
+      <div>Total Tickets Evaluated</div>
+      <div class="num">{{ total_tickets }}</div>
+    </div>
+    <div class="kpi-card">
+      <div>SLA Met</div>
+      <div class="num" style="color: #2e7d32;">{{ sla_met }}</div>
+    </div>
+    <div class="kpi-card">
+      <div>SLA Breached</div>
+      <div class="num" style="color: #c62828;">{{ sla_breached }}</div>
+    </div>
+  </div>
+
+  <h2>Ticket Compliance Details</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticket ID</th>
+        <th>Title</th>
+        <th>Priority</th>
+        <th>SLA Status</th>
+        <th>Response Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td>{{ t.ticket_number or t.id }}</td>
+        <td>{{ t.title }}</td>
+        <td>{{ t.priority }}</td>
+        <td>
+          {% if t.sla_breached %}
+            <span class="breach-tag">BREACHED</span>
+          {% else %}
+            <span class="met-tag">MET</span>
+          {% endif %}
+        </td>
+        <td>{{ t.resolution_time_hours or 'N/A' }} hrs</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
+"""
+
+DEFAULT_HTML_TEMPLATES["SLA_COMPLIANCE_REPORT_STYLE2"] = """
+<html>
+<body>
+  <h2>SLA Compliance Summary Report</h2>
+  <div>Company: {{ company.name }}</div>
+  <div>Compliance Ratio: {{ compliance_pct }}%</div>
+  <div>Breached tickets: {{ sla_breached }} / {{ total_tickets }}</div>
+</body>
+</html>
+"""
+
 async def render_company_document(
     db: AsyncSession,
     tenant_id: UUID,
@@ -1030,12 +1518,24 @@ async def render_company_document(
     if template_record and template_record.template_html:
         template_html = template_record.template_html
     else:
-        template_html = DEFAULT_HTML_TEMPLATES.get(document_type)
+        style = template_record.selected_style if template_record else "style1"
+        style_num = "1" if "1" in style else ("2" if "2" in style else "1")
+        fallback_keys = [
+            f"{document_type}_{style.upper()}",
+            f"{document_type}_STYLE{style_num}",
+            f"{document_type}_TEMPLATE{style_num}",
+            document_type
+        ]
+        template_html = None
+        for fk in fallback_keys:
+            if fk in DEFAULT_HTML_TEMPLATES:
+                template_html = DEFAULT_HTML_TEMPLATES[fk]
+                break
 
     if not template_html:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Template formatting for {document_type} could not be resolved."
+            detail=f"Template formatting for {document_type} (style: {style if 'style' in locals() else 'default'}) could not be resolved."
         )
 
     # 4. Render HTML using Jinja2

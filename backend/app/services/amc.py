@@ -1,5 +1,4 @@
 from uuid import UUID
-from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from app.models.amc import AMCContract, AMCAsset, AMCStatus
@@ -83,3 +82,38 @@ async def activate_amc(db, tenant_id, amc_id):
     from app.services.pm_schedule import generate_for_contract
     await generate_for_contract(db, tenant_id, saved)
     return saved
+
+
+async def render_company_amc_contract_pdf(db: AsyncSession, tenant_id: UUID, amc_id: UUID) -> bytes:
+    from app.services.company_template import render_company_document
+    from app.services.customer import get_customer
+    from app.models.asset import CCTVAsset
+    from sqlalchemy import select
+
+    contract = await get_amc(db, tenant_id, amc_id)
+    customer = await get_customer(db, tenant_id, contract.customer_id)
+    
+    # Resolve actual CCTV assets covered
+    covered_assets = []
+    from app.models.amc import AMCAsset
+    res_amc_assets = await db.execute(select(AMCAsset).where(AMCAsset.contract_id == amc_id))
+    amc_assets = res_amc_assets.scalars().all()
+    if amc_assets:
+        asset_ids = [a.asset_id for a in amc_assets]
+        r = await db.execute(select(CCTVAsset).where(CCTVAsset.id.in_(asset_ids)))
+        covered_assets = [
+            {
+                "serial_number": a.serial_number,
+                "name": a.name,
+                "type": a.asset_type,
+                "location": a.location or ""
+            }
+            for a in r.scalars().all()
+        ]
+
+    context = {
+        "doc": contract,
+        "items": covered_assets,
+        "customer": customer
+    }
+    return await render_company_document(db, tenant_id, contract.company_id, "AMC_CONTRACT", context)

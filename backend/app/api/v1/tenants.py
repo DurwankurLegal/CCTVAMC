@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.deps import get_current_user, CurrentUser, require_platform_admin
+from app.core.deps import CurrentUser, require_platform_admin
 from app.schemas.tenant import (
     TenantCreate, TenantUpdate, TenantResponse,
     TenantProvisionRequest, TenantProvisionResponse, ProvisionedAdmin,
@@ -293,3 +293,55 @@ async def update_tenant_modules(
 
     return {"status": "success", "modules": payload.module_codes}
 
+
+# ── Tenant User Management (Platform Admin) ────────────────────────────────
+
+@router.get("/{tenant_id}/users")
+async def list_tenant_users(
+    tenant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Platform-admin: list all users belonging to a tenant."""
+    from app.services.user import list_users_for_tenant
+    users = await list_users_for_tenant(db, tenant_id)
+    return [
+        {
+            "id": str(u.id),
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "is_active": u.is_active,
+            "must_change_password": u.must_change_password,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in users
+    ]
+
+
+class AdminResetPasswordResponse(BaseModel):
+    user_id: str
+    email: str
+    temp_password: str
+    must_change_password: bool
+
+
+@router.post("/{tenant_id}/users/{user_id}/reset-password", response_model=AdminResetPasswordResponse)
+async def admin_reset_tenant_user_password(
+    tenant_id: UUID,
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: CurrentUser = Depends(require_platform_admin),
+):
+    """Platform-admin: force-reset a tenant user's password.
+    Returns the one-time temporary password — store it safely, it is not retrievable.
+    The user will be required to change it on next login.
+    """
+    from app.services.user import admin_reset_password
+    user, temp_password = await admin_reset_password(db, tenant_id, user_id)
+    return AdminResetPasswordResponse(
+        user_id=str(user.id),
+        email=user.email,
+        temp_password=temp_password,
+        must_change_password=user.must_change_password,
+    )

@@ -105,3 +105,101 @@ async def test_platform_metrics(client: AsyncClient, platform_token: str):
     body = resp.json()
     assert "total_tenants" in body
     assert "by_plan" in body and "by_status" in body
+
+
+# ── Platform Admin: User Management & Password Reset ──────────────────────────
+
+@pytest.mark.asyncio
+async def test_platform_admin_list_tenant_users(
+    client: AsyncClient, platform_token: str, db: AsyncSession
+):
+    """Platform admin can list all users for any tenant."""
+    # Provision a fresh tenant with an admin user
+    slug = f"usr-list-{uuid.uuid4().hex[:8]}"
+    resp = await client.post(
+        "/api/v1/tenants/provision",
+        json={
+            "tenant": {"name": "UserList Tenant", "slug": slug},
+            "admin_email": f"adm-{slug}@test.com"
+        },
+        headers=_auth(platform_token),
+    )
+    assert resp.status_code == 201, resp.text
+    tid = resp.json()["tenant"]["id"]
+
+    users_resp = await client.get(f"/api/v1/tenants/{tid}/users", headers=_auth(platform_token))
+    assert users_resp.status_code == 200
+    users = users_resp.json()
+    # Should have at least the provisioned admin
+    assert isinstance(users, list)
+    assert len(users) >= 1
+    # Each user should have required fields
+    for u in users:
+        assert "id" in u
+        assert "email" in u
+        assert "role" in u
+        assert "must_change_password" in u
+
+
+@pytest.mark.asyncio
+async def test_platform_admin_reset_tenant_user_password(
+    client: AsyncClient, platform_token: str, db: AsyncSession
+):
+    """Platform admin can force-reset a tenant user's password.
+    Verifies temp password is returned once and must_change_password is set True.
+    """
+    # Provision tenant
+    slug = f"pwd-reset-{uuid.uuid4().hex[:8]}"
+    provision_resp = await client.post(
+        "/api/v1/tenants/provision",
+        json={
+            "tenant": {"name": "ResetTest Tenant", "slug": slug},
+            "admin_email": f"adm-{slug}@test.com"
+        },
+        headers=_auth(platform_token),
+    )
+    assert provision_resp.status_code == 201, provision_resp.text
+    tid = provision_resp.json()["tenant"]["id"]
+
+    # Get the first user id
+    users_resp = await client.get(f"/api/v1/tenants/{tid}/users", headers=_auth(platform_token))
+    assert users_resp.status_code == 200
+    users = users_resp.json()
+    assert len(users) >= 1
+    uid = users[0]["id"]
+
+    # Reset password
+    reset_resp = await client.post(
+        f"/api/v1/tenants/{tid}/users/{uid}/reset-password",
+        headers=_auth(platform_token),
+    )
+    assert reset_resp.status_code == 200, reset_resp.text
+    body = reset_resp.json()
+    assert "temp_password" in body
+    assert len(body["temp_password"]) >= 12
+    assert body["must_change_password"] is True
+    assert body["user_id"] == uid
+
+    # Confirm must_change_password was persisted
+    users_after = await client.get(f"/api/v1/tenants/{tid}/users", headers=_auth(platform_token))
+    target = next(u for u in users_after.json() if u["id"] == uid)
+    assert target["must_change_password"] is True
+
+
+@pytest.mark.asyncio
+async def test_tenant_admin_cannot_access_platform_user_endpoints(
+    client: AsyncClient, admin_token: str, tenant
+):
+    """Regular tenant admin (is_platform_admin=False) must be denied access to
+    the platform user-listing and password reset endpoints."""
+    tid = str(tenant.id)
+    fake_uid = str(uuid.uuid4())
+
+    list_resp = await client.get(f"/api/v1/tenants/{tid}/users", headers=_auth(admin_token))
+    assert list_resp.status_code == 403
+
+    reset_resp = await client.post(
+        f"/api/v1/tenants/{tid}/users/{fake_uid}/reset-password",
+        headers=_auth(admin_token),
+    )
+    assert reset_resp.status_code == 403

@@ -58,6 +58,92 @@ async def sla_report(
     return await report_service.ticket_sla_report(db, current_user.tenant_id, from_date, to_date)
 
 
+@router.get("/sla/export")
+async def export_sla_report(
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    company_id: UUID = Query(None),
+    fmt: str = Query("pdf", pattern="^(pdf|xlsx)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Export the SLA Compliance Report as PDF or Excel."""
+    from fastapi import HTTPException
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, current_user.tenant_id, company_id)
+    filename_stem = f"SLA-Compliance-Report-{from_date}-to-{to_date}"
+
+    if fmt == "xlsx":
+        data = await report_service.ticket_sla_report(db, current_user.tenant_id, from_date, to_date)
+        content = report_service.to_xlsx_sla_report(data)
+        return Response(
+            content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename_stem}.xlsx"'},
+        )
+
+    # fmt == "pdf"
+    try:
+        content = await report_service.to_pdf_sla_report(db, current_user.tenant_id, comp_id, from_date, to_date)
+    except (OSError, ImportError):
+        raise HTTPException(status_code=503, detail="PDF rendering unavailable.")
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename_stem}.pdf"'},
+    )
+
+
+@router.get("/service-consolidated")
+async def service_consolidated_preview(
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    company_id: UUID = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Consolidated service report preview data."""
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, current_user.tenant_id, company_id)
+    return await report_service.service_consolidated_report(db, current_user.tenant_id, comp_id, from_date, to_date)
+
+
+@router.get("/service-consolidated/export")
+async def export_service_consolidated_report(
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    company_id: UUID = Query(None),
+    fmt: str = Query("pdf", pattern="^(pdf|xlsx)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Export the Consolidated Service Report as PDF or Excel."""
+    from fastapi import HTTPException
+    from app.services.company import resolve_company_id
+    comp_id = await resolve_company_id(db, current_user.tenant_id, company_id)
+    filename_stem = f"Service-Report-{from_date}-to-{to_date}"
+
+    if fmt == "xlsx":
+        data = await report_service.service_consolidated_report(db, current_user.tenant_id, comp_id, from_date, to_date)
+        content = report_service.to_xlsx_service_report(data)
+        return Response(
+            content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename_stem}.xlsx"'},
+        )
+
+    # fmt == "pdf"
+    try:
+        content = await report_service.to_pdf_service_report(db, current_user.tenant_id, comp_id, from_date, to_date)
+    except (OSError, ImportError):
+        raise HTTPException(status_code=503, detail="PDF rendering unavailable.")
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename_stem}.pdf"'},
+    )
+
+
 @router.get("/amc-consolidated")
 async def amc_consolidated_report(
     amc_id: UUID = Query(..., description="AMC contract UUID"),

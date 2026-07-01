@@ -3,7 +3,7 @@ from app.api.v1 import auth, tenants, users, customers, leads, vendors, assets, 
 from app.api.v1 import quotations, amc, service_tickets, engineer_visits
 from app.api.v1 import inventory, sales_orders, invoices, payments, notifications, reports
 from app.api.v1 import documents, installations, portal, tenant_admin, companies, company_templates, cash_collections, help
-from app.core.deps import require_module
+from app.core.deps import require_module, require_module_any
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ router.include_router(customers.router, prefix="/customers", tags=["customers"])
 router.include_router(leads.router, prefix="/leads", tags=["leads"])
 router.include_router(vendors.router, prefix="/vendors", tags=["vendors"], dependencies=[Depends(require_module("inventory"))])
 router.include_router(assets.router, prefix="/assets", tags=["assets"], dependencies=[Depends(require_module("assets"))])
-router.include_router(quotations.router, prefix="/quotations", tags=["quotations"], dependencies=[Depends(require_module("sales"))])
+router.include_router(quotations.router, prefix="/quotations", tags=["quotations"], dependencies=[Depends(require_module_any(["sales", "rental", "amc"]))])
 router.include_router(amc.router, prefix="/amc", tags=["amc"], dependencies=[Depends(require_module("amc"))])
 router.include_router(service_tickets.router, prefix="/service-tickets", tags=["service-tickets"], dependencies=[Depends(require_module("amc"))])
 router.include_router(engineer_visits.router, prefix="/engineer-visits", tags=["engineer-visits"], dependencies=[Depends(require_module("amc"))])

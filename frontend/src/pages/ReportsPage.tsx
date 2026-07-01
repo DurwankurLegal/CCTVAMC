@@ -897,6 +897,23 @@ function SLAReportPanel() {
     }
   };
 
+  const exportPDF = async () => {
+    if (!dateRange) return;
+    try {
+      const response = await apiClient.get("/reports/sla/export", {
+        params: {
+          from_date: dateRange[0].format("YYYY-MM-DD"),
+          to_date: dateRange[1].format("YYYY-MM-DD")
+        },
+        responseType: "blob",
+      });
+      downloadBlob(response.data, `SLA-Compliance-Report-${dateRange[0].format("YYYY-MM-DD")}-to-${dateRange[1].format("YYYY-MM-DD")}.pdf`, "application/pdf");
+      message.success("SLA Report PDF downloaded successfully");
+    } catch (e: any) {
+      message.error("Failed to download PDF report");
+    }
+  };
+
   return (
     <Card
       id="sla-report-panel"
@@ -923,7 +940,7 @@ function SLAReportPanel() {
       }
     >
       <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
-        <Col xs={24} md={18}>
+        <Col xs={24} md={16}>
           <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Report Period
           </Text>
@@ -935,7 +952,7 @@ function SLAReportPanel() {
             format="YYYY-MM-DD"
           />
         </Col>
-        <Col xs={24} md={6} style={{ paddingTop: 22 }}>
+        <Col xs={24} md={8} style={{ paddingTop: 22, display: "flex", gap: "10px" }}>
           <Button
             id="sla-generate-btn"
             type="primary"
@@ -946,10 +963,19 @@ function SLAReportPanel() {
             style={{
               background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
               border: "none",
-              width: "100%"
+              flex: 1
             }}
           >
-            Generate Report
+            Generate
+          </Button>
+          <Button
+            type="default"
+            icon={<DownloadOutlined />}
+            disabled={!data}
+            onClick={exportPDF}
+            style={{ flex: 1 }}
+          >
+            Export PDF
           </Button>
         </Col>
       </Row>
@@ -1011,6 +1037,163 @@ function SLAReportPanel() {
   );
 }
 
+function ConsolidatedServiceReportPanel() {
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const generateReport = async () => {
+    if (!dateRange) {
+      message.warning("Please select a date range");
+      return;
+    }
+    setLoading(true);
+    setData(null);
+    try {
+      const { data: resData } = await apiClient.get("/reports/service-consolidated", {
+        params: {
+          from_date: dateRange[0].format("YYYY-MM-DD"),
+          to_date: dateRange[1].format("YYYY-MM-DD"),
+        },
+      });
+      setData(resData);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || "Failed to generate report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportPDF = async () => {
+    if (!dateRange) return;
+    try {
+      const response = await apiClient.get("/reports/service-consolidated/export", {
+        params: {
+          from_date: dateRange[0].format("YYYY-MM-DD"),
+          to_date: dateRange[1].format("YYYY-MM-DD")
+        },
+        responseType: "blob",
+      });
+      downloadBlob(response.data, `Consolidated-Service-Report-${dateRange[0].format("YYYY-MM-DD")}-to-${dateRange[1].format("YYYY-MM-DD")}.pdf`, "application/pdf");
+      message.success("Service Report PDF downloaded successfully");
+    } catch (e: any) {
+      message.error("Failed to download PDF report");
+    }
+  };
+
+  return (
+    <Card
+      id="service-report-panel"
+      className="glass-card"
+      style={{ marginBottom: 28 }}
+      styles={{
+        header: {
+          background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%)",
+          borderBottom: "1px solid rgba(59, 130, 246, 0.15)",
+          borderRadius: "12px 12px 0 0"
+        },
+        body: { padding: "24px" }
+      }}
+      title={
+        <Space>
+          <BarChartOutlined style={{ color: "#3b82f6", fontSize: 18 }} />
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
+            Consolidated Service Report
+          </span>
+          <Tag color="blue" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+            TICKETS &amp; VISITS
+          </Tag>
+        </Space>
+      }
+    >
+      <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 24 }}>
+        <Col xs={24} md={16}>
+          <Text style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Report Period
+          </Text>
+          <RangePicker
+            style={{ width: "100%" }}
+            value={dateRange}
+            onChange={(v) => setDateRange(v as [Dayjs, Dayjs] | null)}
+            format="YYYY-MM-DD"
+          />
+        </Col>
+        <Col xs={24} md={8} style={{ paddingTop: 22, display: "flex", gap: "10px" }}>
+          <Button
+            type="primary"
+            icon={<FileSearchOutlined />}
+            loading={loading}
+            disabled={!dateRange}
+            onClick={generateReport}
+            style={{
+              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              border: "none",
+              flex: 1
+            }}
+          >
+            Generate
+          </Button>
+          <Button
+            type="default"
+            icon={<DownloadOutlined />}
+            disabled={!data}
+            onClick={exportPDF}
+            style={{ flex: 1 }}
+          >
+            Export PDF
+          </Button>
+        </Col>
+      </Row>
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: "64px 0" }}>
+          <Spin size="large" tip="Compiling service reports..." />
+        </div>
+      )}
+
+      {!loading && data && (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8}>
+            <SmartCard
+              title="Total Service Tickets"
+              value={data.kpis.total_tickets}
+              prefix={<ToolOutlined />}
+            />
+          </Col>
+          <Col xs={24} sm={8}>
+            <SmartCard
+              title="Resolved Tickets"
+              value={data.kpis.resolved_tickets}
+              prefix={<CheckCircleOutlined />}
+              status="success"
+            />
+          </Col>
+          <Col xs={24} sm={8}>
+            <SmartCard
+              title="Total Engineer Visits"
+              value={data.visits.length}
+              prefix={<AuditOutlined />}
+              status="warning"
+            />
+          </Col>
+        </Row>
+      )}
+
+      {!loading && !data && (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span>
+              Select a date range, then click <Text strong style={{ color: "var(--text-primary)" }}>Generate Report</Text> to view service stats.
+            </span>
+          }
+          style={{ padding: "32px 0" }}
+        />
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Reports Hub Page ───────────────────────────────────────────────────
 
 export default function ReportsPage() {
@@ -1036,6 +1219,7 @@ export default function ReportsPage() {
         </div>
 
         {hasAMC && <SLAReportPanel />}
+        {hasAMC && <ConsolidatedServiceReportPanel />}
         {hasAMC && <AMCConsolidatedPanel />}
         <StandardReportsPanel />
       </div>

@@ -233,3 +233,23 @@ def require_module(module_code: str):
             )
         return current_user
     return checker
+
+
+def require_module_any(module_codes: list[str]):
+    """Router dependency to assert the active tenant has subscribed to at least one of the specified modules."""
+    async def checker(
+        current_user: CurrentUser = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ) -> CurrentUser:
+        if current_user.is_platform_admin:
+            return current_user
+
+        active_modules = await get_tenant_active_modules(db, current_user.tenant_id)
+        if not any(m in active_modules for m in module_codes):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Subscription upgrade required. At least one of {module_codes} modules must be active."
+            )
+        return current_user
+    return checker
+

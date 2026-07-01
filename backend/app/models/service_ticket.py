@@ -41,3 +41,11 @@ class ServiceTicket(Base, TenantMixin):
     sla_breached: Mapped[bool] = mapped_column(Boolean, default=False)
     resolved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def resolution_time_hours(self) -> float:
+        if self.resolved_at and self.created_at:
+            delta = self.resolved_at - self.created_at
+            return round(delta.total_seconds() / 3600.0, 2)
+        return 0.0
+

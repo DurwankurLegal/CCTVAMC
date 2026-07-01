@@ -18,7 +18,7 @@ export const ModuleGuard: React.FC<ModuleGuardProps> = ({ moduleCode, children }
   // Active modules list.
   const activeModules = user?.subscription?.active_modules;
   
-  const isEnabled = !!activeModules && activeModules.includes(moduleCode);
+  const isEnabled = !!activeModules && moduleCode.split(",").map(s => s.trim()).some(mod => activeModules.includes(mod));
 
   if (!isEnabled) {
     return (

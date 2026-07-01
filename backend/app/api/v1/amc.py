@@ -93,3 +93,20 @@ async def skip_pm(
 ):
     pm = await pm_service.skip(db, current_user.tenant_id, pm_id, payload.reason)
     return {"id": str(pm.id), "status": pm.status}
+
+
+@router.get("/{amc_id}/pdf")
+async def amc_contract_pdf(
+    amc_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Download the AMC contract agreement as a PDF."""
+    from fastapi import Response
+    contract = await amc_service.get_amc(db, current_user.tenant_id, amc_id)
+    pdf = await amc_service.render_company_amc_contract_pdf(db, current_user.tenant_id, amc_id)
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="AMC-{contract.contract_number}.pdf"'}
+    )

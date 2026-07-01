@@ -56,3 +56,38 @@ async def update_user(db, tenant_id, user_id, payload: UserUpdate) -> User:
     for k, v in payload.model_dump(exclude_none=True).items():
         setattr(obj, k, v)
     return await repo.save(obj)
+
+
+async def list_users_for_tenant(db: AsyncSession, tenant_id: UUID, offset: int = 0, limit: int = 200) -> list[User]:
+    """Platform-admin helper: list all users belonging to any tenant (no RLS isolation)."""
+    result = await db.execute(
+        select(User)
+        .where(User.tenant_id == tenant_id)
+        .order_by(User.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def admin_reset_password(db: AsyncSession, tenant_id: UUID, user_id: UUID) -> tuple[User, str]:
+    """Platform-admin: force-reset a tenant user's password.
+
+    Generates a cryptographically-secure temporary password, stores its hash,
+    and flags the account so the user is prompted to change it on next login.
+    Returns (user, plaintext_temp_password) — the plaintext is shown once only.
+    """
+    import secrets
+    result = await db.execute(
+        select(User).where(User.tenant_id == tenant_id, User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in this tenant")
+
+    temp_password = secrets.token_urlsafe(12)
+    user.hashed_password = hash_password(temp_password)
+    user.must_change_password = True
+    await db.commit()
+    await db.refresh(user)
+    return user, temp_password

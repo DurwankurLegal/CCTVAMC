@@ -8,6 +8,7 @@ class CompanyTemplateBase(BaseModel):
     template_html: str
     header_html: Optional[str] = None
     footer_html: Optional[str] = None
+    selected_style: Optional[str] = "style1"
     is_active: bool = True
 
 class CompanyTemplateCreate(CompanyTemplateBase):
@@ -17,6 +18,7 @@ class CompanyTemplateUpdate(BaseModel):
     template_html: Optional[str] = None
     header_html: Optional[str] = None
     footer_html: Optional[str] = None
+    selected_style: Optional[str] = None
     is_active: Optional[bool] = None
 
 class CompanyTemplateResponse(CompanyTemplateBase):

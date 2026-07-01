@@ -44,7 +44,12 @@ export function filterTenantMenu<T extends MenuEntry>(menu: T[], user: AuthUser 
 
       // Guard by active module subscription (skip check if platform admin)
       if (m.module && !user?.is_platform_admin) {
-        if (!activeModules || !activeModules.includes(m.module)) {
+        if (!activeModules) {
+          return false;
+        }
+        const requiredModules = m.module.split(",").map(s => s.trim());
+        const hasAnyModule = requiredModules.some(mod => activeModules.includes(mod));
+        if (!hasAnyModule) {
           return false;
         }
       }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, DatePicker, Popconfirm, Card, ConfigProvider, theme
+  InputNumber, DatePicker, Popconfirm, Card, ConfigProvider, theme, Tabs
 } from "antd";
 import {
   FileDoneOutlined, PlusOutlined, PlayCircleOutlined,
@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import apiClient from "../api/client";
+import { QuotationsTab } from "./QuotationsPage";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -296,27 +297,40 @@ export default function RentalContractsPage() {
           </Space>
         </div>
 
-        <Card
-          className="glass-card"
-          styles={{
-            header: {
-              background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%)",
-              borderBottom: "1px solid rgba(139, 92, 246, 0.15)",
-              borderRadius: "12px 12px 0 0"
-            },
-            body: { padding: 0 }
-          }}
-          title={
-            <Space>
-              <FileDoneOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
-              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
-                Active Rental Agreements
-              </span>
-            </Space>
+        <Tabs items={[
+          {
+            key: "agreements",
+            label: "Agreements Ledger",
+            children: (
+              <Card
+                className="glass-card"
+                styles={{
+                  header: {
+                    background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%)",
+                    borderBottom: "1px solid rgba(139, 92, 246, 0.15)",
+                    borderRadius: "12px 12px 0 0"
+                  },
+                  body: { padding: 0 }
+                }}
+                title={
+                  <Space>
+                    <FileDoneOutlined style={{ color: "#8b5cf6", fontSize: 18 }} />
+                    <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
+                      Active Rental Agreements
+                    </span>
+                  </Space>
+                }
+              >
+                <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 100 }} />
+              </Card>
+            )
+          },
+          {
+            key: "quotations",
+            label: "Quotations Ledger",
+            children: <QuotationsTab />
           }
-        >
-          <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} pagination={{ pageSize: 100 }} />
-        </Card>
+        ]} />
 
         {/* Modal: Create Contract */}
         <Modal title="New Rental Contract" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={750}>

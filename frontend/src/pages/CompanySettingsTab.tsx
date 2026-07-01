@@ -103,6 +103,7 @@ export const CompanySettingsTab: React.FC = () => {
           template_html: "",
           header_html: "",
           footer_html: "",
+          selected_style: "style1",
           is_active: true
         });
       }
@@ -330,19 +331,38 @@ export const CompanySettingsTab: React.FC = () => {
               options={[
                 { label: "Tax Invoice (GST)", value: "TAX_INVOICE" },
                 { label: "Invoice (Non-GST)", value: "NON_GST_INVOICE" },
-                { label: "Quotation (Standard Fallback)", value: "QUOTATION" },
-                { label: "Quotation Template 1 (GST)", value: "QUOTATION_TEMPLATE1" },
-                { label: "Quotation Template 2 (IOB Receipt)", value: "QUOTATION_TEMPLATE2" },
+                { label: "Quotation", value: "QUOTATION" },
+                { label: "AMC Contract Agreement", value: "AMC_CONTRACT" },
                 { label: "Payment Receipt", value: "PAYMENT_RECEIPT" },
-                { label: "AMC Service Report", value: "AMC_REPORT" }
+                { label: "Consolidated AMC Performance Report", value: "AMC_REPORT" },
+                { label: "Consolidated Service Report", value: "CONSOLIDATED_SERVICE_REPORT" },
+                { label: "SLA Compliance Report", value: "SLA_COMPLIANCE_REPORT" }
               ]}
             />
           </Space>
         </div>
 
         <Form form={templateForm} layout="vertical" onFinish={handleSaveTemplate}>
-          <Form.Item name="template_html" label="HTML Layout Code (Jinja2 format)" rules={[{ required: true }]}>
-            <TextArea rows={12} style={{ fontFamily: "monospace", fontSize: 12 }} placeholder="Enter Jinja2 compatible HTML print layout..." />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="selected_style" label="Active Template Style (Design Layout)" rules={[{ required: true }]}>
+                <Select
+                  options={[
+                    { label: "Style 1 (Standard / GST Layout)", value: "style1" },
+                    { label: "Style 2 (Modern / IOB Card Layout)", value: "style2" }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="is_active" label="Template Status" valuePropName="checked">
+                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="template_html" label="HTML Layout Code (Jinja2 format)" rules={[{ required: false }]} help="Leave HTML Layout Code empty to use the active template style's default layout structure.">
+            <TextArea rows={12} style={{ fontFamily: "monospace", fontSize: 12 }} placeholder="Enter Jinja2 compatible HTML print layout (leave empty to use default style)..." />
           </Form.Item>
 
           <Row gutter={16}>
@@ -362,7 +382,7 @@ export const CompanySettingsTab: React.FC = () => {
             <Text type="secondary" style={{ fontSize: 11 }}>
               <strong>Available Placeholder Variables:</strong><br/>
               <code>{"{{ company.name }}"}</code>, <code>{"{{ company.address }}"}</code>, <code>{"{{ company.gstin }}"}</code>, 
-              <code>{"{{ company.bank.bank_name }}"}</code>, <code>{"{{ company.bank.account_number }}"}</code>, 
+              <code>{"{{ company.bank_details.bank_name }}"}</code>, <code>{"{{ company.bank_details.account_number }}"}</code>, 
               <code>{"{{ doc.invoice_number }}"}</code>, <code>{"{{ doc.invoice_date }}"}</code>, <code>{"{{ customer.name }}"}</code>, 
               <code>{"{{ items }}"}</code> (loop array for lines)
             </Text>

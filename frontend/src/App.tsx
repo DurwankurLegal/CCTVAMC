@@ -94,12 +94,12 @@ const tenantMenu = [
     key: "sales",
     icon: <ShoppingCartOutlined />,
     label: "Sales (Optional)",
-    module: "sales",
+    module: "sales,rental,amc",
     children: [
       { key: "/quotations", label: "Quotations", perm: "quotations:read" },
-      { key: "/sales-orders", label: "Sales Orders", perm: "sales_orders:read" },
-      { key: "/invoices", label: "Invoices", perm: "invoices:read" },
-      { key: "/payments", label: "Payments", perm: "payments:read" },
+      { key: "/sales-orders", label: "Sales Orders", perm: "sales_orders:read", module: "sales" },
+      { key: "/invoices", label: "Invoices", perm: "invoices:read", module: "sales" },
+      { key: "/payments", label: "Payments", perm: "payments:read", module: "sales" },
     ],
   },
   {
@@ -559,7 +559,7 @@ export default function App() {
             <Route path="/sales-orders" element={<RequirePerm perm="sales_orders:read"><ModuleGuard moduleCode="sales"><SalesOrdersPage /></ModuleGuard></RequirePerm>} />
             <Route path="/rentals/units" element={<RequirePerm perm="rentals:read"><ModuleGuard moduleCode="rental"><RentalUnitsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/rentals/contracts" element={<RequirePerm perm="rentals:read"><ModuleGuard moduleCode="rental"><RentalContractsPage /></ModuleGuard></RequirePerm>} />
-            <Route path="/quotations" element={<RequirePerm perm="quotations:read"><ModuleGuard moduleCode="sales"><QuotationsPage /></ModuleGuard></RequirePerm>} />
+            <Route path="/quotations" element={<RequirePerm perm="quotations:read"><ModuleGuard moduleCode="sales,rental,amc"><QuotationsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/installations" element={<RequirePerm perm="installations:read"><ModuleGuard moduleCode="amc"><InstallationsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/visits" element={<RequirePerm perm="engineer_visits:read"><ModuleGuard moduleCode="amc"><EngineerVisitsPage /></ModuleGuard></RequirePerm>} />
             <Route path="/assets" element={<RequirePerm perm="assets:read"><ModuleGuard moduleCode="assets"><AssetsPage /></ModuleGuard></RequirePerm>} />
