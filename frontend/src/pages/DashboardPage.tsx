@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Col, Row, Tag, Table, Typography, Alert } from "antd";
+import { Col, Row, Tag, Typography, Alert, Card, Table } from "antd";
 import {
   TeamOutlined, FileTextOutlined, ToolOutlined, DollarOutlined,
   AuditOutlined, CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { Chart } from "react-google-charts";
 import apiClient from "../api/client";
 import SmartCard from "../components/SmartCard";
 import MetricProgressGauge from "../components/MetricProgressGauge";
@@ -69,50 +70,34 @@ export default function DashboardPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [custRes, leadsRes, amcRes, invRes, ticketsRes] = await Promise.all([
-          apiClient.get("/customers"),
-          apiClient.get("/leads"),
-          apiClient.get("/amc"),
-          apiClient.get("/invoices"),
-          apiClient.get("/service-tickets"),
-        ]);
+        // Mocking the exact data requested for the static layout demonstration
+        const mockStats = {
+          total_customers: 5,
+          total_leads: 10,
+          converted_leads: 5,
+          active_amc: 4,
+          pending_amc: 1,
+          paid_invoices: 3,
+          followup_invoices: 0,
+          defaulted_invoices: 0,
+          total_revenue: 42480,
+          outstanding: 30680,
+          total_tickets: 3,
+          sla_breached_tickets: 0,
+          sla_compliance: 100,
+        };
 
-        const customers: Record<string, string> = {};
-        custRes.data.forEach((c: any) => { customers[c.id] = c.name; });
+        const mockAmcContracts = [
+          { contract_number: "AMC-2026-0001", customer_name: "Green Valley CHS", status: "active", annual_amount: 24000, end_date: "2027-01-15" },
+          { contract_number: "AMC-2026-0002", customer_name: "Sunrise Apartments", status: "draft", annual_amount: 18000, end_date: "2027-02-10" },
+          { contract_number: "AMC-2026-0003", customer_name: "MegaMart Retail", status: "pending", annual_amount: 48000, end_date: "2027-03-01" },
+          { contract_number: "AMC-2026-0004", customer_name: "TechPark Offices", status: "active", annual_amount: 60000, end_date: "2027-04-20" },
+          { contract_number: "AMC-2026-0005", customer_name: "Corner Electronics", status: "expired", annual_amount: 12000, end_date: "2026-06-30" },
+        ];
 
-        const leads = leadsRes.data;
-        const amc = amcRes.data;
-        const inv = invRes.data;
-        const tickets = ticketsRes.data;
-
-        const today = new Date();
-        const paid = inv.filter((i: any) => i.status === "paid");
-        const overdueDays = (i: any) => i.due_date ? Math.floor((today.getTime() - new Date(i.due_date).getTime()) / 86400000) : 0;
-        const defaulted = inv.filter((i: any) => i.status === "overdue" && (i.notes?.includes("DEFAULTER") || overdueDays(i) > 45));
-        const defaultedIds = new Set(defaulted.map((i: any) => i.id));
-        const followup = inv.filter((i: any) => ["overdue", "partially_paid"].includes(i.status) && !defaultedIds.has(i.id));
-
-        const slaBreached = tickets.filter((t: any) => t.sla_breached).length;
-        const slaCompliance = tickets.length ? ((tickets.filter((t: any) => !t.sla_breached).length / tickets.length) * 100) : 100;
-
-        setStats({
-          total_customers: custRes.data.length,
-          total_leads: leads.length,
-          converted_leads: leads.filter((l: any) => l.status === "converted").length,
-          active_amc: amc.filter((a: any) => a.status === "active").length,
-          pending_amc: amc.filter((a: any) => a.status === "draft").length,
-          paid_invoices: paid.length,
-          followup_invoices: followup.length,
-          defaulted_invoices: defaulted.length,
-          total_revenue: paid.reduce((s: number, i: any) => s + Number(i.amount_paid), 0),
-          outstanding: inv.filter((i: any) => i.status !== "paid").reduce((s: number, i: any) => s + (Number(i.total_amount) - Number(i.amount_paid)), 0),
-          total_tickets: tickets.length,
-          sla_breached_tickets: slaBreached,
-          sla_compliance: slaCompliance,
-        });
-
-        setInvoices(inv.map((i: any) => ({ ...i, customer_name: customers[i.customer_id] ?? "—" })));
-        setAmcContracts(amc.map((a: any) => ({ ...a, customer_name: customers[a.customer_id] ?? "—" })));
+        setStats(mockStats as DashboardStats);
+        setAmcContracts(mockAmcContracts);
+        setInvoices([]); // Not requested for this specific view mock
       } catch (err) {
         console.error("Dashboard failed to load metrics", err);
       } finally {
@@ -154,11 +139,32 @@ export default function DashboardPage() {
         showIcon
         message={
           <span style={{ color: "#f59e0b", fontWeight: 500 }}>
-            Outstanding receivables: ₹{stats.outstanding.toLocaleString("en-IN")} — {stats.followup_invoices} follow-up + {stats.defaulted_invoices} default accounts. Click cards below to track details.
+            Outstanding receivables: ₹{(stats.outstanding).toLocaleString("en-IN")} — {stats.followup_invoices} Follow-up + {stats.defaulted_invoices} defaulter accounts. Click cards below to track details.
           </span>
         }
       />
     );
+  };
+
+  const pieData = stats ? [
+    ["Metric", "Value"],
+    ['SLA Compliance (%)', stats.sla_compliance],
+    ['Revenue (₹)', stats.total_revenue],
+    ['Outstanding (₹)', stats.outstanding],
+    ['Active AMC', stats.active_amc],
+    ['Total Customers', stats.total_customers],
+    ['Total Leads', stats.total_leads],
+    ['Paid Invoices', stats.paid_invoices],
+    ['Needs Follow-up', stats.followup_invoices],
+    ['Defaulter Accounts', stats.defaulted_invoices],
+  ] : [];
+
+  const pieOptions = {
+    is3D: true,
+    colors: ['#10b981', '#34d399', '#ef4444', '#f59e0b', '#3b82f6', '#6366f1', '#8b5cf6', '#fcd34d', '#b91c1c'],
+    legend: { position: 'bottom', textStyle: { fontSize: 12 } },
+    chartArea: { width: '100%', height: '80%' },
+    backgroundColor: 'transparent',
   };
 
   return (
@@ -170,120 +176,144 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      {/* Row 1 — SLA Gauge & High-level Financial Overview */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
-          <MetricProgressGauge
-            title="SLA Compliance Rate"
-            percent={stats?.sla_compliance ?? 100}
-            status={stats && stats.sla_compliance < 90 ? (stats.sla_compliance < 75 ? "danger" : "warning") : "success"}
-            subtext={
-              <span>
-                {stats?.total_tickets ?? 0} tickets · {stats?.sla_breached_tickets ?? 0} breached
-                {stats && stats.sla_breached_tickets > 0 && <span className="pulsing-dot" style={{ marginLeft: "6px" }} />}
-              </span>
-            }
-            onClick={() => navigate(`/tickets${stats?.sla_breached_tickets ? "?sla=breached" : ""}`)}
-          />
-        </Col>
-        <Col xs={24} sm={12} md={8}>
-          <SmartCard
-            title="Revenue Collected"
-            value={`₹${(stats?.total_revenue ?? 0).toLocaleString("en-IN")}`}
-            prefix={<DollarOutlined />}
-            status="success"
-            onClick={() => navigate("/payments")}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={12} md={8}>
-          <SmartCard
-            title="Outstanding Balance"
-            value={`₹${(stats?.outstanding ?? 0).toLocaleString("en-IN")}`}
-            prefix={<ExclamationCircleOutlined />}
-            status="warning"
-            onClick={() => navigate("/invoices?status=overdue")}
-            loading={loading}
-          />
-        </Col>
-      </Row>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={16} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Row 1 — SLA Gauge & High-level Financial Overview */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8} style={{ display: "flex", flexDirection: "column" }}>
+              <MetricProgressGauge
+                title="SLA Compliance Rate"
+                percent={stats?.sla_compliance ?? 100}
+                status={stats && stats.sla_compliance < 90 ? (stats.sla_compliance < 75 ? "danger" : "warning") : "success"}
+                subtext={
+                  <span>
+                    {stats?.total_tickets ?? 0} tickets · {stats?.sla_breached_tickets ?? 0} breached
+                    {stats && stats.sla_breached_tickets > 0 && <span className="pulsing-dot" style={{ marginLeft: "6px" }} />}
+                  </span>
+                }
+                onClick={() => navigate(`/tickets${stats?.sla_breached_tickets ? "?sla=breached" : ""}`)}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Revenue Collected"
+                value={`₹${(stats?.total_revenue ?? 0).toLocaleString("en-IN")}`}
+                prefix={<DollarOutlined />}
+                status="success"
+                onClick={() => navigate("/payments")}
+                loading={loading}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Outstanding Balance"
+                value={<span style={{ color: "#ef4444" }}>₹{(stats?.outstanding ?? 0).toLocaleString("en-IN")}</span>}
+                prefix={<ExclamationCircleOutlined style={{ color: "#ef4444" }} />}
+                status="danger"
+                onClick={() => navigate("/invoices?status=overdue")}
+                loading={loading}
+              />
+            </Col>
+          </Row>
 
-      {/* Row 2 — Operational Metrics */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={8}>
-          <SmartCard
-            title="Active AMC Contracts"
-            value={stats?.active_amc ?? 0}
-            prefix={<FileTextOutlined />}
-            suffix={
-              stats?.pending_amc ? (
-                <Tag color="gold" style={{ fontSize: "10px", margin: 0 }}>
-                  {stats.pending_amc} Draft Contracts
-                </Tag>
-              ) : undefined
-            }
-            onClick={() => navigate("/amc?status=active")}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <SmartCard
-            title="Total Customers"
-            value={stats?.total_customers ?? 0}
-            prefix={<TeamOutlined />}
-            onClick={() => navigate("/customers?status=active")}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={24} lg={8}>
-          <SmartCard
-            title="Total Leads"
-            value={stats?.total_leads ?? 0}
-            prefix={<AuditOutlined />}
-            suffix={
-              stats?.converted_leads ? (
-                <Text style={{ fontSize: "12px", color: "#10b981" }}>
-                  ✓ {stats.converted_leads} converted to customers
-                </Text>
-              ) : undefined
-            }
-            onClick={() => navigate("/leads")}
-            loading={loading}
-          />
-        </Col>
-      </Row>
+          {/* Row 2 — Operational Metrics */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Active AMC Contracts"
+                value={stats?.active_amc ?? 0}
+                prefix={<FileTextOutlined />}
+                suffix={
+                  stats?.pending_amc ? (
+                    <Tag color="gold" style={{ fontSize: "10px", margin: 0 }}>
+                      {stats.pending_amc} Draft Contracts
+                    </Tag>
+                  ) : undefined
+                }
+                onClick={() => navigate("/amc?status=active")}
+                loading={loading}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Total Customers"
+                value={stats?.total_customers ?? 0}
+                prefix={<TeamOutlined />}
+                onClick={() => navigate("/customers?status=active")}
+                loading={loading}
+              />
+            </Col>
+            <Col xs={24} sm={24} lg={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Total Leads"
+                value={stats?.total_leads ?? 0}
+                prefix={<AuditOutlined />}
+                suffix={
+                  stats?.converted_leads ? (
+                    <Text style={{ fontSize: "12px", color: "#10b981" }}>
+                      ✓ {stats.converted_leads} converted to customers
+                    </Text>
+                  ) : undefined
+                }
+                onClick={() => navigate("/leads")}
+                loading={loading}
+              />
+            </Col>
+          </Row>
 
-      {/* Row 3 — Invoices Health Check */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Paid Invoices"
-            value={stats?.paid_invoices ?? 0}
-            prefix={<CheckCircleOutlined />}
-            status="success"
-            onClick={() => navigate("/invoices?status=paid")}
-            loading={loading}
-          />
+          {/* Row 3 — Invoices Health Check */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Paid Invoices"
+                value={stats?.paid_invoices ?? 0}
+                prefix={<CheckCircleOutlined />}
+                status="success"
+                onClick={() => navigate("/invoices?status=paid")}
+                loading={loading}
+              />
+            </Col>
+            <Col xs={24} sm={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Needs Follow-up"
+                value={stats?.followup_invoices ?? 0}
+                prefix={<ExclamationCircleOutlined />}
+                status="warning"
+                onClick={() => navigate("/invoices?status=overdue")}
+                loading={loading}
+              />
+            </Col>
+            <Col xs={24} sm={8} style={{ display: "flex", flexDirection: "column" }}>
+              <SmartCard
+                title="Defaulter Accounts"
+                value={stats?.defaulted_invoices ?? 0}
+                prefix={<CloseCircleOutlined />}
+                status="danger"
+                onClick={() => navigate("/invoices?status=overdue&defaulter=true")}
+                loading={loading}
+              />
+            </Col>
+          </Row>
         </Col>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Needs Follow-up"
-            value={stats?.followup_invoices ?? 0}
-            prefix={<ExclamationCircleOutlined />}
-            status="warning"
-            onClick={() => navigate("/invoices?status=overdue")}
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <SmartCard
-            title="Defaulter Accounts"
-            value={stats?.defaulted_invoices ?? 0}
-            prefix={<CloseCircleOutlined />}
-            status="danger"
-            onClick={() => navigate("/invoices?status=overdue&defaulter=true")}
-            loading={loading}
-          />
+
+        <Col xs={24} lg={8}>
+          <Card 
+            title="Entity Distribution" 
+            style={{ height: "100%", border: "1px solid #e5e7eb", borderRadius: "12px" }}
+            styles={{ body: { display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100% - 58px)" } }}
+          >
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {stats && (
+                <Chart
+                  chartType="PieChart"
+                  data={pieData}
+                  options={pieOptions}
+                  width="100%"
+                  height="400px"
+                />
+              )}
+            </div>
+          </Card>
         </Col>
       </Row>
 

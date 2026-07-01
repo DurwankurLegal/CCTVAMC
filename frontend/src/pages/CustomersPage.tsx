@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message } from "antd";
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Tooltip } from "antd";
 import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCustomers, createCustomer, updateCustomer } from "../store/customerSlice";
@@ -26,9 +26,11 @@ const statusColor: Record<string, string> = {
 interface Row { id: string; name: string; category: string; status?: string; phone?: string; email?: string; }
 
 import { useParsedSearchParams } from "../utils/navigation";
+import { useNavigate } from "react-router-dom";
 
 export default function CustomersPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { items, loading } = useSelector((s: RootState) => s.customers);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
@@ -57,13 +59,14 @@ export default function CustomersPage() {
         message.success("Customer updated");
       } else {
         await dispatch(createCustomer({ ...values, is_active: true })).unwrap();
-        message.success("Customer created");
+        message.success("Customer created; redirecting to create contract...");
+        setTimeout(() => {
+          navigate(`/amc?create=true&customer_name=${encodeURIComponent(values.name)}`);
+        }, 800);
       }
       form.resetFields();
       setOpen(false);
     } catch (e: any) {
-      // Form validation errors are objects (errorFields); thrown thunk errors
-      // arrive as a readable string via rejectWithValue.
       if (e?.errorFields) return; // inline field errors already shown
       message.error(typeof e === "string" ? e : e?.message || "Save failed");
     } finally {
@@ -83,8 +86,18 @@ export default function CustomersPage() {
     {
       title: "Actions", key: "actions",
       render: (_: unknown, row: Row) => (
-        <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)}>Edit</Button>
+        <Space size="small">
+          <Tooltip title="Edit Customer">
+            <Button size="small" type="text" icon={<EditOutlined />} onClick={() => openEdit(row)} />
+          </Tooltip>
+          <Tooltip title="Create AMC Contract">
+            <Button
+              size="small"
+              type="text"
+              icon={<PlusOutlined />}
+              onClick={() => navigate(`/amc?create=true&customer_name=${encodeURIComponent(row.name)}`)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -94,17 +107,48 @@ export default function CustomersPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Customers</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Customer</Button>
       </div>
+
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 32,
+          right: 32,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Add Customer"
+      />
 
       <Table rowKey="id" columns={columns} dataSource={filteredItems} loading={loading} />
 
-      <Modal
-        title={editing ? "Edit Customer" : "Add Customer"}
-        open={open} onOk={handleSave} onCancel={() => setOpen(false)} confirmLoading={saving}
+      <Modal centered
+        title={
+          <div style={{ fontSize: "18px", fontWeight: 600, color: "#111827", paddingBottom: "12px", borderBottom: "1px solid #f3f4f6" }}>
+            {editing ? "Edit Customer" : "Add New Customer"}
+          </div>
+        }
+        open={open}
+        onOk={handleSave}
+        onCancel={() => setOpen(false)}
+        confirmLoading={saving}
+        className="scrolling-modal"
         okText={editing ? "Save" : "Create"}
+        okButtonProps={{ size: "large", style: { borderRadius: "6px" } }}
+        cancelButtonProps={{ size: "large", style: { borderRadius: "6px" } }}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -113,11 +157,20 @@ export default function CustomersPage() {
               {CATEGORIES.map(c => <Option key={c.value} value={c.value}>{c.label}</Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="status" label="Status">
+          <Form.Item name="status" label="Status" rules={[{ required: true, message: "Please select status" }]}>
             <Select>{STATUSES.map(s => <Option key={s.value} value={s.value}>{s.label}</Option>)}</Select>
           </Form.Item>
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}>
+          <Form.Item name="phone" label="Phone" rules={[{ required: true, message: "Please enter phone number" }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: "Please enter email address" },
+              { type: "email", message: "Enter a valid email address" }
+            ]}
+          >
             <Input type="email" />
           </Form.Item>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Layout, Menu, Button, theme } from "antd";
+import { Layout, Menu, Button, theme, Input, Avatar } from "antd";
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -20,6 +20,8 @@ import {
   BarChartOutlined,
   BellOutlined,
   VideoCameraOutlined,
+  SearchOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import NotificationBell from "./components/NotificationBell";
 import { useEffect, type ReactNode } from "react";
@@ -60,27 +62,57 @@ const { Header, Sider, Content } = Layout;
 // `perm` gates menu visibility against the user's effective permissions from
 // /auth/me. Items without a perm are always shown (e.g. Dashboard).
 const tenantMenu = [
-  { key: "/dashboard",        icon: <DashboardOutlined />,    label: "Dashboard" },
-  { key: "/customers",        icon: <TeamOutlined />,         label: "Customers",       perm: "customers:read" },
-  { key: "/quotations",       icon: <SolutionOutlined />,     label: "Quotations",      perm: "quotations:read" },
-  { key: "/amc",              icon: <FileTextOutlined />,     label: "AMC Contracts",   perm: "amc:read" },
-  { key: "/tickets",          icon: <ToolOutlined />,         label: "Service Tickets", perm: "service_tickets:read" },
-  { key: "/visits",           icon: <CarOutlined />,          label: "Engineer Visits", perm: "engineer_visits:read" },
-  { key: "/installations",    icon: <BuildOutlined />,        label: "Installations",   perm: "installations:read" },
-  { key: "/assets",           icon: <VideoCameraOutlined />,  label: "Assets",          perm: "assets:read" },
-  { key: "/leads",            icon: <AuditOutlined />,        label: "Leads",           perm: "leads:read" },
-  { key: "/vendors",          icon: <ShopOutlined />,         label: "Vendors",         perm: "vendors:read" },
-  { key: "/inventory",        icon: <DatabaseOutlined />,     label: "Inventory",       perm: "inventory:read" },
-  { key: "/invoices",         icon: <ShoppingCartOutlined />, label: "Invoices",        perm: "invoices:read" },
-  { key: "/payments",         icon: <DollarOutlined />,       label: "Payments",        perm: "payments:read" },
-  { key: "/reports",          icon: <BarChartOutlined />,     label: "Reports",         perm: "reports:read" },
-  { key: "/notifications",    icon: <BellOutlined />,         label: "Notifications",   perm: "notifications:write" },
-  { key: "/users",            icon: <UsergroupAddOutlined />, label: "Users & Roles",   perm: "users:write" },
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+  { 
+    key: "sub_customers", 
+    icon: <TeamOutlined />, 
+    label: "Customers", 
+    children: [
+      { key: "/customers", label: "All Customers", perm: "customers:read" },
+      { key: "/leads", label: "Leads", perm: "leads:read" },
+      { key: "/quotations", label: "Quotations", perm: "quotations:read" }
+    ]
+  },
+  { 
+    key: "sub_contracts", 
+    icon: <FileTextOutlined />, 
+    label: "Contracts", 
+    children: [
+      { key: "/amc", label: "AMC Contracts", perm: "amc:read" },
+      { key: "/tickets", label: "Service Tickets", perm: "service_tickets:read" }
+    ]
+  },
+  { key: "/visits", icon: <CarOutlined />, label: "Engineer Visits", perm: "engineer_visits:read" },
+  { key: "/installations", icon: <BuildOutlined />, label: "Installations", perm: "installations:read" },
+  { key: "/assets", icon: <VideoCameraOutlined />, label: "Assets", perm: "assets:read" },
+  { 
+    key: "sub_vendors", 
+    icon: <ShopOutlined />, 
+    label: "Vendors", 
+    children: [
+      { key: "/vendors", label: "All Vendors", perm: "vendors:read" },
+      { key: "/purchase-orders", label: "Purchase Orders", perm: "vendors:read" }
+    ]
+  },
+  { 
+    key: "sub_vendor_services", 
+    icon: <ToolOutlined />, 
+    label: "Vendor Services", 
+    children: [
+      { key: "/vendor-services", label: "All Services", perm: "vendors:read" },
+      { key: "/inventory", label: "Inventory", perm: "inventory:read" },
+      { key: "/invoices", label: "Invoices", perm: "invoices:read" }
+    ]
+  },
+  { key: "/payments", icon: <DollarOutlined />, label: "Payments", perm: "payments:read" },
+  { key: "/reports", icon: <BarChartOutlined />, label: "Reports", perm: "reports:read" },
+  { key: "/notifications", icon: <BellOutlined />, label: "Notifications", perm: "notifications:write" },
+  { key: "/users", icon: <UsergroupAddOutlined />, label: "Users & Roles", perm: "users:write" },
 ];
 
 const platformMenu = [
-  { key: "/platform",         icon: <CloudServerOutlined />,  label: "Platform Overview" },
-  { key: "/platform/tenants", icon: <ApartmentOutlined />,    label: "Tenants" },
+  { key: "/platform", icon: <CloudServerOutlined />, label: "Platform Overview" },
+  { key: "/platform/tenants", icon: <ApartmentOutlined />, label: "Tenants" },
 ];
 
 function ProtectedLayout() {
@@ -105,7 +137,15 @@ function ProtectedLayout() {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider width={220} theme="dark">
-        <div style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16, borderBottom: "1px solid #1d2b3a" }}>
+        <div 
+          style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16, borderBottom: "1px solid #1d2b3a", cursor: "pointer" }}
+          onClick={() => navigate(onPlatform ? "/platform" : "/dashboard")}
+        >
+          {!onPlatform && (
+            <div style={{ width: 32, height: 32, overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: 4, marginRight: 10 }}>
+              <img src="/logo.png" alt="Logo" style={{ width: "220%", height: "auto", marginTop: "-25%" }} />
+            </div>
+          )}
           {onPlatform ? "Platform Admin" : "CCTV AMC"}
         </div>
         <Menu
@@ -125,16 +165,28 @@ function ProtectedLayout() {
         )}
       </Sider>
       <Layout>
-        <Header style={{ background: token.colorBgContainer, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
-          {!onPlatform && <NotificationBell />}
-          <span style={{ margin: "0 16px", color: token.colorTextSecondary }}>{user?.email}</span>
-          <Button
-            icon={<LogoutOutlined />}
-            type="text"
-            onClick={() => { dispatch(logout()); navigate("/login"); }}
-          >
-            Sign Out
-          </Button>
+        <Header style={{ background: token.colorBgContainer, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+          <div style={{ flex: 1 }} /> {/* Left spacer if logo is in Sider */}
+          
+          {/* Center Space */}
+          <div style={{ flex: 2 }} />
+
+          {/* Right Profile Section */}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 16 }}>
+            {!onPlatform && <NotificationBell />}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Avatar style={{ backgroundColor: "#1890ff" }} icon={<UserOutlined />} />
+              <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>{user?.email || 'admin@durwankur.ai'}</span>
+            </div>
+            <Button
+              icon={<LogoutOutlined />}
+              type="text"
+              onClick={() => { dispatch(logout()); navigate("/login"); }}
+              style={{ color: "#ff4d4f" }}
+            >
+              Sign Out
+            </Button>
+          </div>
         </Header>
         <Content style={{ margin: 24, padding: 24, background: token.colorBgContainer, borderRadius: token.borderRadius, minHeight: 360 }}>
           <Outlet />
@@ -189,6 +241,7 @@ export default function App() {
           <Route path="/payments" element={<RequirePerm perm="payments:read"><PaymentsPage /></RequirePerm>} />
           <Route path="/users" element={<RequirePerm perm="users:write"><UsersPage /></RequirePerm>} />
           <Route path="/vendors" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
+          <Route path="/purchase-orders" element={<RequirePerm perm="vendors:read"><VendorsPage /></RequirePerm>} />
           <Route path="/inventory" element={<RequirePerm perm="inventory:read"><InventoryPage /></RequirePerm>} />
           <Route path="/quotations" element={<RequirePerm perm="quotations:read"><QuotationsPage /></RequirePerm>} />
           <Route path="/installations" element={<RequirePerm perm="installations:read"><InstallationsPage /></RequirePerm>} />

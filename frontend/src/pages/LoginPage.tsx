@@ -27,8 +27,11 @@ export default function LoginPage() {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5" }}>
       <Card style={{ width: 400, boxShadow: "0 4px 24px rgba(0,0,0,0.1)" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Title level={3} style={{ margin: 0 }}>CCTV AMC Platform</Title>
-          <Typography.Text type="secondary">Sign in to your account</Typography.Text>
+          <div style={{ width: 140, height: 140, margin: "0 auto 16px", overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: 8 }}>
+            <img src="/logo.png" alt="CCTV AMC Logo" style={{ width: "220%", height: "auto", marginTop: "-25%" }} />
+          </div>
+          <Title level={3} style={{ margin: 0, fontWeight: 600 }}>Welcome Back</Title>
+          <Typography.Text type="secondary" style={{ fontSize: 16 }}>Login to manage your account</Typography.Text>
         </div>
         {error && <Alert message={error} type="error" style={{ marginBottom: 16 }} />}
         <Form layout="vertical" onFinish={onFinish} size="large">

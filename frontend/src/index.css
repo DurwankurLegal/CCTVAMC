@@ -28,13 +28,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Glassmorphic Components */
+/* Glassmorphic Components - Refactored for Premium Light Theme with Cyan Tint */
 .glass-card {
-  background: var(--glass-bg) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 4px 18px 0 rgba(0, 0, 0, 0.05) !important;
   border-radius: 12px !important;
   transition: var(--transition-smooth) !important;
 }
@@ -60,36 +58,38 @@ body {
 }
 
 .interactive-card:hover {
-  transform: translateY(-4px) scale(1.015);
-  box-shadow: 0 12px 40px 0 rgba(59, 130, 246, 0.25) !important;
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 10px 24px 0 rgba(6, 182, 212, 0.12) !important;
+  background: #e0f7fa !important;
+  border-color: #a5f3fc !important;
 }
 
 .interactive-card:hover::after {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: rgba(6, 182, 212, 0.3);
 }
 
 /* Critical alert glow card */
 .interactive-card-danger:hover {
-  box-shadow: 0 12px 40px 0 rgba(239, 68, 68, 0.25) !important;
+  box-shadow: 0 10px 24px 0 rgba(239, 68, 68, 0.08) !important;
 }
 .interactive-card-danger:hover::after {
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 /* Warning alert glow card */
 .interactive-card-warning:hover {
-  box-shadow: 0 12px 40px 0 rgba(245, 158, 11, 0.25) !important;
+  box-shadow: 0 10px 24px 0 rgba(245, 158, 11, 0.08) !important;
 }
 .interactive-card-warning:hover::after {
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 /* Success alert glow card */
 .interactive-card-success:hover {
-  box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 10px 24px 0 rgba(16, 185, 129, 0.08) !important;
 }
 .interactive-card-success:hover::after {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 /* Pulsing warning dot indicator */
@@ -151,3 +151,20 @@ body {
 .interactive-table-row:hover > td {
   background-color: rgba(59, 130, 246, 0.08) !important;
 }
+
+/* Custom scrolling slide-down animation for centered Modals */
+.scrolling-modal .ant-modal-content {
+  animation: scroll-down-modal 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+}
+
+@keyframes scroll-down-modal {
+  from {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+

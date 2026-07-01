@@ -147,7 +147,7 @@ export default function TenantDetailPage() {
           locale={{ emptyText: "No subscription invoices yet" }} pagination={false} />
       </Card>
 
-      <Modal title="Generate Subscription Invoice" open={open} onOk={generateInvoice}
+      <Modal centered title="Generate Subscription Invoice" open={open} onOk={generateInvoice}
         onCancel={() => setOpen(false)} confirmLoading={saving} okText="Generate">
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}
           initialValues={{ period: [dayjs().startOf("month"), dayjs().endOf("month")] }}>

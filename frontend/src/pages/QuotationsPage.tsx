@@ -99,12 +99,24 @@ function QuotationsTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Quotation</Button>
-      </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        style={{ position: "fixed", bottom: 40, right: 40, zIndex: 1000, width: 56, height: 56, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+      />
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
 
-      <Modal title="New Quotation" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
+      <Modal centered
+        title="New Quotation"
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={save}
+        confirmLoading={saving}
+        okText="Create"
+        width={680}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
             <Select showSearch optionFilterProp="children" placeholder="Select customer">
@@ -131,7 +143,7 @@ function QuotationsTab() {
         </Form>
       </Modal>
 
-      <Modal title={`Convert ${convert?.quotation_number ?? ""} to AMC`} open={!!convert} onOk={doConvert} onCancel={() => setConvert(null)} confirmLoading={saving} okText="Convert">
+      <Modal centered title={`Convert ${convert?.quotation_number ?? ""} to AMC`} open={!!convert} onOk={doConvert} onCancel={() => setConvert(null)} confirmLoading={saving} okText="Convert">
         <Form form={cForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="range" label="Contract Period" rules={[{ required: true }]}><DatePicker.RangePicker style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="preventive_visits_per_year" label="Preventive Visits / Year" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
@@ -184,12 +196,30 @@ function SalesOrdersTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New Sales Order</Button>
-      </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="New Sales Order"
+      />
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No sales orders" }} />
 
-      <Modal title="New Sales Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
+      <Modal centered title="New Sales Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
             <Select showSearch optionFilterProp="children">{customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}</Select>

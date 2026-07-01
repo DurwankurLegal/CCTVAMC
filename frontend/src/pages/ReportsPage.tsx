@@ -236,15 +236,24 @@ function AMCConsolidatedPanel() {
         </Col>
         <Col xs={24} md={10}>
           <Text type="secondary" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
-            Report Period
+            Report Period <span style={{ color: "red" }}>*</span>
           </Text>
-          <RangePicker
-            id="amc-report-date-range"
-            style={{ width: "100%" }}
-            value={dateRange}
-            onChange={(v) => setDateRange(v as [Dayjs, Dayjs] | null)}
-            format="YYYY-MM-DD"
-          />
+          <Space style={{ display: "flex", width: "100%" }}>
+            <DatePicker
+              style={{ flex: 1 }}
+              placeholder="Start Date"
+              value={dateRange?.[0] || null}
+              onChange={(v) => setDateRange(prev => v ? [v, prev?.[1] as Dayjs] : null)}
+              format="YYYY-MM-DD"
+            />
+            <DatePicker
+              style={{ flex: 1 }}
+              placeholder="End Date"
+              value={dateRange?.[1] || null}
+              onChange={(v) => setDateRange(prev => v ? [prev?.[0] as Dayjs, v] : null)}
+              format="YYYY-MM-DD"
+            />
+          </Space>
         </Col>
         <Col xs={24} md={6} style={{ paddingTop: 20 }}>
           <Space wrap>
@@ -253,32 +262,10 @@ function AMCConsolidatedPanel() {
               type="primary"
               icon={<FileSearchOutlined />}
               loading={generating}
-              disabled={!canGenerate}
               onClick={generatePreview}
-              style={{ background: "#0f2a43", borderColor: "#0f2a43" }}
             >
-              Generate Preview
+              Generate Report
             </Button>
-            <Tooltip title="Download PDF">
-              <Button
-                id="amc-export-pdf-btn"
-                icon={<FilePdfOutlined />}
-                loading={exporting === "pdf"}
-                disabled={!canExport}
-                onClick={() => doExport("pdf")}
-                danger
-              />
-            </Tooltip>
-            <Tooltip title="Download Excel">
-              <Button
-                id="amc-export-excel-btn"
-                icon={<FileExcelOutlined />}
-                loading={exporting === "xlsx"}
-                disabled={!canExport}
-                onClick={() => doExport("xlsx")}
-                style={{ color: "#16a34a", borderColor: "#16a34a" }}
-              />
-            </Tooltip>
           </Space>
         </Col>
       </Row>
@@ -695,7 +682,7 @@ function AMCConsolidatedPanel() {
           description={
             <span>
               Select a contract and date range, then click{" "}
-              <Text strong>Generate Preview</Text> to load the consolidated report.
+              <Text strong>Generate Report</Text> to load the consolidated report.
             </span>
           }
           style={{ padding: "32px 0" }}

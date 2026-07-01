@@ -47,8 +47,9 @@ export default function MetricProgressGauge({
     <Card 
       className={classes.join(" ")}
       onClick={onClick}
+      style={{ height: "100%", width: "100%", background: "#ecfeff", border: "1px solid #cffafe" }}
       styles={{
-        body: { padding: "20px 24px", display: "flex", alignItems: "center", gap: "20px" }
+        body: { padding: "20px 24px", display: "flex", alignItems: "center", gap: "20px", height: "100%" }
       }}
     >
       {/* Gauge SVG Circle */}
@@ -67,7 +68,7 @@ export default function MetricProgressGauge({
             cy="40"
             r={radius}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.05)"
+            stroke="rgba(0, 0, 0, 0.06)"
             strokeWidth={strokeWidth}
           />
           
@@ -98,7 +99,7 @@ export default function MetricProgressGauge({
           justifyContent: "center",
           flexDirection: "column"
         }}>
-          <span style={{ fontSize: "16px", fontWeight: 700, color: "#f3f4f6" }}>
+          <span style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
             {percent.toFixed(0)}%
           </span>
         </div>
@@ -106,7 +107,7 @@ export default function MetricProgressGauge({
 
       {/* Info details */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        <span style={{ fontSize: "14px", fontWeight: 500, color: "#9ca3af" }}>
+        <span style={{ fontSize: "14px", fontWeight: 500, color: "#4b5563" }}>
           {title}
         </span>
         {subtext && (

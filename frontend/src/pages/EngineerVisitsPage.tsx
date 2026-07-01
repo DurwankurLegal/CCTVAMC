@@ -213,10 +213,28 @@ export default function EngineerVisitsPage() {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Engineer Visits</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Schedule Visit
-        </Button>
       </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Schedule Visit"
+      />
 
       <Table
         rowKey="id"
@@ -227,7 +245,7 @@ export default function EngineerVisitsPage() {
       />
 
       {/* ── Create / Edit modal ──────────────────────────────────────────── */}
-      <Modal
+      <Modal centered
         title={editing ? "Edit Visit" : "Schedule Visit"}
         open={formOpen}
         onOk={handleSave}
@@ -299,7 +317,7 @@ export default function EngineerVisitsPage() {
       </Modal>
 
       {/* ── View detail modal ───────────────────────────────────────────── */}
-      <Modal
+      <Modal centered
         title="Visit Details"
         open={!!detail}
         footer={null}

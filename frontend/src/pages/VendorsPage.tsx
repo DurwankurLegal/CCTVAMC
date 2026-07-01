@@ -83,12 +83,30 @@ function VendorsTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Vendor</Button>
-      </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Add Vendor"
+      />
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
 
-      <Modal title={editing ? "Edit Vendor" : "Add Vendor"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
+      <Modal centered title={editing ? "Edit Vendor" : "Add Vendor"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="vendor_type" label="Type">
@@ -103,7 +121,7 @@ function VendorsTab() {
         </Form>
       </Modal>
 
-      <Modal title={`Record Payment — ${payOpen?.name ?? ""}`} open={!!payOpen} onOk={recordPayment} onCancel={() => setPayOpen(null)} confirmLoading={saving} okText="Record">
+      <Modal centered title={`Record Payment — ${payOpen?.name ?? ""}`} open={!!payOpen} onOk={recordPayment} onCancel={() => setPayOpen(null)} confirmLoading={saving} okText="Record">
         <Form form={payForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="amount" label="Amount (₹)" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="method" label="Method"><Select allowClear><Option value="neft">NEFT</Option><Option value="upi">UPI</Option><Option value="cheque">Cheque</Option><Option value="cash">Cash</Option></Select></Form.Item>
@@ -168,11 +186,31 @@ function PurchaseOrdersTab() {
     <>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
         <Button icon={<ReloadOutlined />} onClick={reorder}>Reorder Low Stock</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Create PO</Button>
       </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Create PO"
+      />
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No purchase orders" }} />
 
-      <Modal title="Create Purchase Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={640}>
+      <Modal centered title="Create Purchase Order" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={640}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="vendor_id" label="Vendor" rules={[{ required: true }]}>
             <Select showSearch optionFilterProp="children" placeholder="Select vendor">
@@ -201,14 +239,24 @@ function PurchaseOrdersTab() {
   );
 }
 
+import { useLocation, useNavigate } from "react-router-dom";
+
 export default function VendorsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeKey = location.pathname === "/purchase-orders" ? "pos" : "vendors";
+
   return (
     <div>
       <Title level={4}>Vendors & Procurement</Title>
-      <Tabs items={[
-        { key: "vendors", label: "Vendors", children: <VendorsTab /> },
-        { key: "pos", label: "Purchase Orders", children: <PurchaseOrdersTab /> },
-      ]} />
+      <Tabs 
+        activeKey={activeKey}
+        onChange={(key) => navigate(key === "pos" ? "/purchase-orders" : "/vendors")}
+        items={[
+          { key: "vendors", label: "Vendors", children: <VendorsTab /> },
+          { key: "pos", label: "Purchase Orders", children: <PurchaseOrdersTab /> },
+        ]} 
+      />
     </div>
   );
 }

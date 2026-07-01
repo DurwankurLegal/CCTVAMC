@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CCTV AMC</string>
+    <string name="title_activity_main">CCTV AMC</string>
+    <string name="package_name">com.durwankur.cctvamc</string>
+    <string name="custom_url_scheme">com.durwankur.cctvamc</string>
+</resources>

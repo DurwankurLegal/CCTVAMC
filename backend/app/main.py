@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 import sentry_sdk
-
+import os
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware, RateLimitMiddleware
@@ -47,3 +49,12 @@ app.include_router(api_v1_router, prefix="/api/v1")
 @app.get("/health", tags=["health"])
 async def health():
     return {"status": "ok"}
+
+# Serve frontend build
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist")
+if os.path.isdir(frontend_path):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        return FileResponse(os.path.join(frontend_path, "index.html"))

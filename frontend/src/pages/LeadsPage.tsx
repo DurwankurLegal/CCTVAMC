@@ -115,8 +115,28 @@ export default function LeadsPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Leads</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Lead</Button>
       </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Add Lead"
+      />
       <Table rowKey="id" columns={columns} dataSource={items} loading={loading} />
       <Modal
         title={editing ? "Edit Lead" : "Add Lead"}

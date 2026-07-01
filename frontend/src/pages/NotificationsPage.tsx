@@ -54,12 +54,30 @@ function TemplatesTab() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Template</Button>
-      </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Add Template"
+      />
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} locale={{ emptyText: "No templates" }} />
 
-      <Modal title="Add Template" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create">
+      <Modal centered title="Add Template" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create">
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="event_type" label="Event" rules={[{ required: true }]}>
             <Select showSearch>{EVENTS.map(e => <Option key={e} value={e}>{e}</Option>)}</Select>

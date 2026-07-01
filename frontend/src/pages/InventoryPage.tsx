@@ -94,14 +94,34 @@ export default function InventoryPage() {
         <Space>
           <Segmented value={view} onChange={(v) => setView(v as "all" | "low")}
             options={[{ label: "All Items", value: "all" }, { label: "Low Stock", value: "low" }]} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add Item</Button>
         </Space>
       </div>
+      <Button
+        type="primary"
+        shape="circle"
+        icon={<PlusOutlined />}
+        onClick={openCreate}
+        size="large"
+        style={{
+          position: "fixed",
+          bottom: 40,
+          right: 40,
+          width: 56,
+          height: 56,
+          zIndex: 1000,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px"
+        }}
+        title="Add Item"
+      />
 
       <Table rowKey="id" columns={columns} dataSource={rows} loading={loading}
         locale={{ emptyText: view === "low" ? "No low-stock items 🎉" : "No items" }} />
 
-      <Modal title={editing ? "Edit Item" : "Add Item"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
+      <Modal centered title={editing ? "Edit Item" : "Add Item"} open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText={editing ? "Save" : "Create"}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
           {!editing && <Form.Item name="part_number" label="Part Number"><Input /></Form.Item>}
@@ -113,7 +133,7 @@ export default function InventoryPage() {
         </Form>
       </Modal>
 
-      <Modal title={`Adjust Stock — ${adjust?.name ?? ""}`} open={!!adjust} onOk={doAdjust} onCancel={() => setAdjust(null)} confirmLoading={saving} okText="Apply">
+      <Modal centered title={`Adjust Stock — ${adjust?.name ?? ""}`} open={!!adjust} onOk={doAdjust} onCancel={() => setAdjust(null)} confirmLoading={saving} okText="Apply">
         <Form form={adjForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="quantity" label="Quantity (+ in / − out)" rules={[{ required: true }]}>
             <InputNumber style={{ width: "100%" }} placeholder="e.g. 10 or -3" />
