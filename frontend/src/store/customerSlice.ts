@@ -43,6 +43,18 @@ export const updateCustomer = createAsyncThunk(
   },
 );
 
+export const deleteCustomer = createAsyncThunk(
+  "customers/delete",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/customers/${id}`);
+      return id;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, "Failed to delete customer"));
+    }
+  },
+);
+
 const customerSlice = createSlice({
   name: "customers",
   initialState,
@@ -56,6 +68,9 @@ const customerSlice = createSlice({
       .addCase(updateCustomer.fulfilled, (s, a) => {
         const i = s.items.findIndex(c => c.id === a.payload.id);
         if (i !== -1) s.items[i] = a.payload;
+      })
+      .addCase(deleteCustomer.fulfilled, (s, a) => {
+        s.items = s.items.filter(c => c.id !== a.payload);
       });
   },
 });

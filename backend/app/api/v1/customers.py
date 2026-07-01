@@ -66,6 +66,15 @@ async def update_customer(
     return await customer_service.update_customer(db, current_user.tenant_id, customer_id, payload)
 
 
+@router.delete("/{customer_id}", status_code=204)
+async def delete_customer(
+    customer_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("customers:write")),
+):
+    await customer_service.delete_customer(db, current_user.tenant_id, customer_id)
+
+
 @router.get("/{customer_id}/contacts", response_model=List[ContactResponse])
 async def list_contacts(
     customer_id: UUID,

@@ -44,6 +44,14 @@ async def update_customer(db: AsyncSession, tenant_id: UUID, customer_id: UUID, 
     return await repo.save(obj)
 
 
+async def delete_customer(db: AsyncSession, tenant_id: UUID, customer_id: UUID) -> None:
+    repo = CustomerRepository(db, tenant_id)
+    obj = await repo.get(customer_id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    await repo.delete(obj)
+
+
 async def add_contact(db: AsyncSession, tenant_id: UUID, customer_id: UUID, payload: ContactCreate) -> CustomerContact:
     # Ensure the customer exists / is in-tenant.
     if not await CustomerRepository(db, tenant_id).get(customer_id):

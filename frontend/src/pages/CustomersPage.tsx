@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message, Tooltip, Popconfirm } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCustomers, createCustomer, updateCustomer } from "../store/customerSlice";
+import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer } from "../store/customerSlice";
 import type { AppDispatch, RootState } from "../store";
 
 const { Title } = Typography;
@@ -98,6 +98,29 @@ export default function CustomersPage() {
               onClick={() => navigate(`/amc?create=true&customer_name=${encodeURIComponent(row.name)}`)}
             />
           </Tooltip>
+          <Popconfirm
+            title="Delete Customer"
+            description="Are you sure you want to delete this customer? This cannot be undone."
+            onConfirm={async () => {
+              try {
+                const res = await dispatch(deleteCustomer(row.id));
+                if (deleteCustomer.fulfilled.match(res)) {
+                  message.success("Customer deleted successfully");
+                } else {
+                  throw new Error(res.payload as string || "Failed to delete customer");
+                }
+              } catch (err: any) {
+                message.error(err.message);
+              }
+            }}
+            okText="Yes, delete"
+            cancelText="No"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Delete Customer">
+              <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
