@@ -183,7 +183,14 @@ export default function CustomersPage() {
               { pattern: /^[a-zA-Z0-9@.]+$/, message: "Special characters are not allowed (only @ and .)" }
             ]}
           >
-            <Input type="email" />
+            <Input 
+              type="email" 
+              onKeyPress={(e) => {
+                if (!/^[a-zA-Z0-9@.]+$/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
           </Form.Item>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
           <Form.Item 
@@ -194,7 +201,13 @@ export default function CustomersPage() {
               { pattern: /^[A-Za-z\s]+$/, message: "Only alphabets and spaces are allowed" }
             ]}
           >
-            <Input />
+            <Input 
+              onKeyPress={(e) => {
+                if (!/^[A-Za-z\s]+$/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+            />
           </Form.Item>
         </Form>
       </Modal>
