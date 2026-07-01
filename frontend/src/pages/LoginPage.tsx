@@ -38,22 +38,22 @@ export default function LoginPage() {
             <div style={{ width: 140, height: 140, margin: "0 auto 16px", overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: 8 }}>
               <img src="/logo.png" alt="CCTV AMC Logo" style={{ width: "220%", height: "auto", marginTop: "-25%" }} />
             </div>
-            <Title level={3} style={{ margin: 0, fontWeight: 600 }}>Welcome Back</Title>
-            <Typography.Text type="secondary" style={{ fontSize: 16 }}>Login to manage your account</Typography.Text>
+            <Title level={3} style={{ margin: 0, fontWeight: 600, color: "#fff" }}>Welcome Back</Title>
+            <Typography.Text type="secondary" style={{ fontSize: 16, color: "rgba(255, 255, 255, 0.65)" }}>Login to manage your account</Typography.Text>
           </div>
           {error && <Alert message={error} type="error" style={{ marginBottom: 16 }} />}
           <Form layout="vertical" onFinish={onFinish} size="large">
             <Form.Item name="email" rules={[{ required: true, type: "email", message: "Enter a valid email" }]}>
-              <Input prefix={<MailOutlined />} placeholder="Email" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+              <Input prefix={<MailOutlined style={{color: "rgba(255,255,255,0.65)"}}/>} placeholder="Email" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", color: "#fff" }} />
             </Form.Item>
             <Form.Item name="password" rules={[{ required: true, message: "Enter your password" }]}>
-               <Input.Password prefix={<LockOutlined />} placeholder="Password" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+               <Input.Password prefix={<LockOutlined style={{color: "rgba(255,255,255,0.65)"}}/>} placeholder="Password" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", color: "#fff" }} />
             </Form.Item>
             <Form.Item
               name="tenant_slug"
               tooltip="Only needed if your email is registered with more than one company"
             >
-                <Input prefix={<ShopOutlined />} placeholder="Company code (optional, e.g. durwankur)" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+                <Input prefix={<ShopOutlined style={{color: "rgba(255,255,255,0.65)"}}/>} placeholder="Company code (optional, e.g. durwankur)" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", color: "#fff" }} />
               </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
               <Button type="primary" htmlType="submit" block loading={loading}>
