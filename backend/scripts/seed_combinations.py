@@ -238,7 +238,50 @@ async def seed_base_metadata(session) -> tuple[dict, dict]:
         content_markdown="Welcome to the **SaaS ERP Help Center**!\n\nThis application is designed to help you manage your sales, device rentals, AMC service contracts, service tickets, and site installations seamlessly from a single dashboard.\n\n### Main Features\n- **CRM**: Track leads and manage customer directories.\n- **Sales**: Complete invoicing, quotations, and payments.\n- **Rentals**: Track serial-tracked items and monthly billing cycles.\n- **AMC**: Manage annual maintenance contracts and service ticket lifecycles.\n- **Inventory**: Stay updated on parts reorder warnings.\n\n> [!NOTE]\n> Ensure your profile configuration is complete before processing transactions.",
         applicable_module="core", required_permission=None, is_active=True, status="published"
     )
-    session.add(art_intro)
+    
+    art_login = HelpArticle(
+        category_id=cat_gs.id, title="Login & 2FA Setup", slug="login-and-2fa",
+        purpose="Instructions on logging in and setting up two-factor authentication.",
+        content_markdown="Details on how to log in and configure 2FA.",
+        applicable_module="core", required_permission=None, is_active=True, status="published"
+    )
+    
+    art_leads = HelpArticle(
+        category_id=cat_crm.id, title="Lead Management Guide", slug="lead-management",
+        purpose="Instructions on managing leads.",
+        content_markdown="Details on tracking and managing leads.",
+        applicable_module="core", required_permission=None, is_active=True, status="published"
+    )
+    
+    art_quotes = HelpArticle(
+        category_id=cat_sales.id, title="Creating Quotations", slug="creating-quotations",
+        purpose="Instructions on creating quotations.",
+        content_markdown="Details on generating quotations.",
+        applicable_module="sales", required_permission=None, is_active=True, status="published"
+    )
+    
+    art_orders = HelpArticle(
+        category_id=cat_sales.id, title="Sales Orders", slug="sales-orders",
+        purpose="Instructions on managing sales orders.",
+        content_markdown="Details on sales orders processing.",
+        applicable_module="sales", required_permission=None, is_active=True, status="published"
+    )
+    
+    art_rental_ag = HelpArticle(
+        category_id=cat_rental.id, title="Rental Agreements", slug="rental-agreements",
+        purpose="Instructions on rental contracts.",
+        content_markdown="Details on managing rentals.",
+        applicable_module="rental", required_permission=None, is_active=True, status="published"
+    )
+    
+    art_visits = HelpArticle(
+        category_id=cat_amc.id, title="Technician Site Visits", slug="engineer-visits",
+        purpose="Instructions on managing site visits.",
+        content_markdown="Details on tracking technician site visits.",
+        applicable_module="amc", required_permission=None, is_active=True, status="published"
+    )
+    
+    session.add_all([art_intro, art_login, art_leads, art_quotes, art_orders, art_rental_ag, art_visits])
     return modules_map, plans_map
 
 async def seed_templates(session, tenant_id) -> None:

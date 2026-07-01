@@ -14,13 +14,13 @@ test.describe("Help Center E2E Tests", () => {
   test("Company A (Sales only) menu filtering and article feedback", async ({ page }) => {
     // 1. Login as Company A Admin
     await page.goto("/login");
-    await page.fill("input[type='email'], input#email", "admin@company-a.com");
+    await page.fill("input[type='email'], input#email", "admin@tenant2.com");
     await page.fill("input[type='password']", "Passw0rd@123");
     
     // Fill tenant slug
     const tenantInput = page.locator("input[name='tenant_slug'], input[placeholder*='tenant' i]");
     if (await tenantInput.count() > 0) {
-      await tenantInput.fill("company-a");
+      await tenantInput.fill("tenant2");
     }
     
     await page.click("button[type='submit']");
@@ -66,13 +66,13 @@ test.describe("Help Center E2E Tests", () => {
   test("Company C (AMC only) hides Sales & Rental", async ({ page }) => {
     // 1. Login as Company C Admin
     await page.goto("/login");
-    await page.fill("input[type='email'], input#email", "admin@company-c.com");
+    await page.fill("input[type='email'], input#email", "admin@tenant3.com");
     await page.fill("input[type='password']", "Passw0rd@123");
     
     // Fill tenant slug
     const tenantInput = page.locator("input[name='tenant_slug'], input[placeholder*='tenant' i]");
     if (await tenantInput.count() > 0) {
-      await tenantInput.fill("company-c");
+      await tenantInput.fill("tenant3");
     }
     
     await page.click("button[type='submit']");
@@ -100,13 +100,13 @@ test.describe("Help Center E2E Tests", () => {
   test("Global Help Search and Context Help Button", async ({ page }) => {
     // 1. Login as Company E Admin (all modules active)
     await page.goto("/login");
-    await page.fill("input[type='email'], input#email", "admin@company-e.com");
+    await page.fill("input[type='email'], input#email", "admin@tenant5.com");
     await page.fill("input[type='password']", "Passw0rd@123");
     
     // Fill tenant slug
     const tenantInput = page.locator("input[name='tenant_slug'], input[placeholder*='tenant' i]");
     if (await tenantInput.count() > 0) {
-      await tenantInput.fill("company-e");
+      await tenantInput.fill("tenant5");
     }
     
     await page.click("button[type='submit']");

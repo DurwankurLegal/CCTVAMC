@@ -111,6 +111,8 @@ test("logout clears session and redirects to /login", async ({ page }) => {
 
   // Click Sign Out
   await page.locator("button:has-text('Sign Out')").or(page.locator("text=Sign Out")).first().click();
+  // Handle Ant Design confirm modal
+  await page.locator(".ant-modal-confirm-btns button:has-text('Sign Out')").click();
   await expect(page).toHaveURL(/login/, { timeout: 8_000 });
 
   // localStorage must be cleared

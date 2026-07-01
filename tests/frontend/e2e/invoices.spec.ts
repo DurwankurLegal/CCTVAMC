@@ -62,7 +62,7 @@ test("invoices page renders without error", async ({ page }) => {
 
 test("payments page loads from sidebar", async ({ page }) => {
   await login(page);
-  await page.click("text=Payments");
+  await page.click("text=Receipt");
   await expect(page).toHaveURL(/payments/);
 });
 
