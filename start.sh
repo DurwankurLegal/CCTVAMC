@@ -202,7 +202,7 @@ log "Starting app services…"
 echo ""
 
 # ── Free ports if still in use (stale processes from a prior run) ─
-for PORT in 8000 5175; do
+for PORT in 8000 5173; do
   PIDS=$(lsof -ti:"$PORT" 2>/dev/null || true)
   if [[ -n "$PIDS" ]]; then
     warn "Port $PORT in use – killing stale process(es): $PIDS"
@@ -237,12 +237,12 @@ echo -e "${CYAN}${BOLD}[backend]${RESET}  started  →  ${BLUE}http://localhost:
       echo -e "${MAGENTA}${BOLD}[frontend]${RESET} $line"
       # Auto-open Chrome once Vite is ready
       if [[ "$line" == *"ready in"* || "$line" == *"Local:"* ]]; then
-        open -a "Google Chrome" "http://localhost:5175" 2>/dev/null || true
+        open -a "Google Chrome" "http://localhost:5173" 2>/dev/null || true
       fi
     done
 ) &
 FRONTEND_PID=$!
-echo -e "${MAGENTA}${BOLD}[frontend]${RESET} started  →  ${BLUE}http://localhost:5175${RESET}  (PID $FRONTEND_PID)"
+echo -e "${MAGENTA}${BOLD}[frontend]${RESET} started  →  ${BLUE}http://localhost:5173${RESET}  (PID $FRONTEND_PID)"
 
 echo ""
 echo -e "${GREEN}${BOLD}All services are running.${RESET}  Press ${BOLD}Ctrl+C${RESET} to stop."

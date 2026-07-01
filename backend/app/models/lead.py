@@ -27,6 +27,9 @@ class LeadCategory(str, Enum):
     CHS = "chs"
     COMMERCIAL = "commercial"
     SINGLE_SHOP = "single_shop"
+    CONSUMER = "consumer"
+    OFFICE = "office"
+    HOME = "home"
 
 
 class InterestType(str, Enum):
@@ -40,6 +43,7 @@ class Lead(Base, TenantMixin):
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    company_name: Mapped[str] = mapped_column(String(255), nullable=True)
     phone: Mapped[str] = mapped_column(String(20), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     address: Mapped[str] = mapped_column(Text, nullable=True)

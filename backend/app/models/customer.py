@@ -10,6 +10,9 @@ class CustomerCategory(str, Enum):
     CHS = "chs"                    # Cooperative Housing Society
     COMMERCIAL = "commercial"
     SINGLE_SHOP = "single_shop"
+    CONSUMER = "consumer"
+    OFFICE = "office"
+    HOME = "home"
 
 
 class CustomerStatus(str, Enum):

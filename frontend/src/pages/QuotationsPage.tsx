@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Tabs, Table, Button, Modal, Form, Input, Select, Tag, Space, Typography, message,
-  InputNumber, DatePicker, Popconfirm, Card, ConfigProvider, theme
+  InputNumber, DatePicker, Popconfirm, Card, ConfigProvider, theme, Radio
 } from "antd";
 import { PlusOutlined, CheckOutlined, CloseOutlined, SwapOutlined, MinusCircleOutlined, FileTextOutlined, ShopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -20,13 +20,29 @@ interface SalesOrder { id: string; order_number: string; customer_id: string; st
 
 function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  useEffect(() => { apiClient.get("/customers", { params: { limit: 200 } }).then(({ data }) => setCustomers(data)).catch(() => undefined); }, []);
-  const name = (id: string) => customers.find(c => c.id === id)?.name || id.slice(0, 8);
-  return { customers, name };
+  const [leads, setLeads] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiClient.get("/customers", { params: { limit: 200 } }).then(({ data }) => setCustomers(data)).catch(() => undefined);
+    apiClient.get("/leads", { params: { limit: 200 } }).then(({ data }) => setLeads(data)).catch(() => undefined);
+  }, []);
+
+  const name = (id: string, row: any) => {
+    if (row && row.customer_id) {
+      return customers.find(c => c.id === row.customer_id)?.name || row.customer_id.slice(0, 8);
+    }
+    if (row && row.lead_id) {
+      return (leads.find(l => l.id === row.lead_id)?.name || row.lead_id.slice(0, 8)) + " (Lead)";
+    }
+    return "—";
+  };
+
+  return { customers, leads, name };
 }
 
 export function QuotationsTab() {
-  const { customers, name } = useCustomers();
+  const { customers, leads, name } = useCustomers();
+  const [clientType, setClientType] = useState<"customer" | "lead">("customer");
   const [rows, setRows] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -44,6 +60,7 @@ export function QuotationsTab() {
   useEffect(() => { load(); }, [load]);
 
   const openCreate = async () => {
+    setClientType("customer");
     form.resetFields();
     form.setFieldsValue({
       line_items: [{ description: "", quantity: 1, unit_price: 0, gst_rate: 18 }],
@@ -69,8 +86,18 @@ export function QuotationsTab() {
       ...li, amount: Number(li.quantity) * Number(li.unit_price),
     }));
     setSaving(true);
+    const payload: any = {
+      line_items,
+      terms: v.terms,
+      notes: v.notes,
+    };
+    if (clientType === "customer") {
+      payload.customer_id = v.customer_id;
+    } else {
+      payload.lead_id = v.lead_id;
+    }
     try {
-      await apiClient.post("/quotations", { customer_id: v.customer_id, line_items, terms: v.terms, notes: v.notes });
+      await apiClient.post("/quotations", payload);
       message.success("Quotation created"); setOpen(false); load();
     } catch (e: any) { message.error(e?.response?.data?.detail || "Failed"); }
     finally { setSaving(false); }
@@ -117,7 +144,7 @@ export function QuotationsTab() {
 
   const columns = [
     { title: "Quote #", dataIndex: "quotation_number", key: "quotation_number" },
-    { title: "Customer", dataIndex: "customer_id", key: "customer_id", render: name },
+    { title: "Customer", key: "customer_id", render: (_: any, row: Quotation) => name(row.customer_id, row) },
     { title: "Status", dataIndex: "status", key: "status", render: (v: string) => <Tag color={qStatusColor[v] ?? "default"}>{v}</Tag> },
     { title: "Total", dataIndex: "total_amount", key: "total_amount", render: inr },
     {
@@ -168,26 +195,73 @@ export function QuotationsTab() {
         <Table rowKey="id" columns={columns} dataSource={rows} loading={loading} />
       </Card>
 
-      <Modal title="New Quotation" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={680}>
+      <Modal title="New Quotation" open={open} onOk={save} onCancel={() => setOpen(false)} confirmLoading={saving} okText="Create" width={720}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="customer_id" label="Customer" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="children" placeholder="Select customer">
-              {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
-            </Select>
+          <Form.Item label="Client Type" required style={{ marginBottom: 12 }}>
+            <Radio.Group value={clientType} onChange={e => setClientType(e.target.value)}>
+              <Radio value="customer">Customer</Radio>
+              <Radio value="lead">Lead</Radio>
+            </Radio.Group>
           </Form.Item>
+
+          {clientType === "customer" ? (
+            <Form.Item name="customer_id" label="Customer" rules={[{ required: true, message: "Please select a customer" }]}>
+              <Select showSearch optionFilterProp="children" placeholder="Select customer">
+                {customers.map(c => <Option key={c.id} value={c.id}>{c.name}</Option>)}
+              </Select>
+            </Form.Item>
+          ) : (
+            <Form.Item name="lead_id" label="Lead" rules={[{ required: true, message: "Please select a lead" }]}>
+              <Select showSearch optionFilterProp="children" placeholder="Select lead">
+                {leads.map(l => <Option key={l.id} value={l.id}>{l.name}</Option>)}
+              </Select>
+            </Form.Item>
+          )}
+
+          <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 600 }}>Line Items</div>
           <Form.List name="line_items">
             {(fields, { add, remove }) => (
               <>
+                {fields.length > 0 && (
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "4px", fontWeight: "bold" }}>
+                    <div style={{ width: 220 }}>Description</div>
+                    <div style={{ width: 80 }}>Quantity</div>
+                    <div style={{ width: 100 }}>Rate</div>
+                    <div style={{ width: 80 }}>Tax (%)</div>
+                    <div style={{ width: 100 }}>Total</div>
+                    <div style={{ width: 32 }}></div>
+                  </div>
+                )}
                 {fields.map(({ key, name: n, ...rest }) => (
                   <Space key={key} align="baseline" style={{ display: "flex", marginBottom: 8 }} wrap>
-                    <Form.Item {...rest} name={[n, "description"]} rules={[{ required: true, message: "desc" }]}><Input placeholder="Description" style={{ width: 200 }} /></Form.Item>
-                    <Form.Item {...rest} name={[n, "quantity"]} rules={[{ required: true }]}><InputNumber min={1} placeholder="Qty" /></Form.Item>
-                    <Form.Item {...rest} name={[n, "unit_price"]} rules={[{ required: true }]}><InputNumber min={0} placeholder="Unit ₹" /></Form.Item>
-                    <Form.Item {...rest} name={[n, "gst_rate"]} rules={[{ required: true }]}><InputNumber min={0} max={28} placeholder="GST%" /></Form.Item>
-                    <MinusCircleOutlined onClick={() => remove(n)} />
+                    <Form.Item {...rest} name={[n, "description"]} rules={[{ required: true, message: "Required" }]}>
+                      <Input placeholder="Description" style={{ width: 220 }} />
+                    </Form.Item>
+                    <Form.Item {...rest} name={[n, "quantity"]} rules={[{ required: true }]}>
+                      <InputNumber min={1} placeholder="Qty" style={{ width: 80 }} />
+                    </Form.Item>
+                    <Form.Item {...rest} name={[n, "unit_price"]} rules={[{ required: true }]}>
+                      <InputNumber min={0} placeholder="Rate ₹" style={{ width: 100 }} />
+                    </Form.Item>
+                    <Form.Item {...rest} name={[n, "gst_rate"]} rules={[{ required: true }]}>
+                      <InputNumber min={0} max={28} placeholder="Tax %" style={{ width: 80 }} />
+                    </Form.Item>
+                    <Form.Item noStyle dependencies={[[n, "quantity"], [n, "unit_price"]]}>
+                      {() => {
+                        const qty = form.getFieldValue(["line_items", n, "quantity"]) || 0;
+                        const rate = form.getFieldValue(["line_items", n, "unit_price"]) || 0;
+                        const total = qty * rate;
+                        return (
+                          <div style={{ width: 100 }}>
+                            <Input value={inr(total)} disabled style={{ width: "100%" }} />
+                          </div>
+                        );
+                      }}
+                    </Form.Item>
+                    <MinusCircleOutlined onClick={() => remove(n)} style={{ color: "red", fontSize: 16, cursor: "pointer", marginLeft: 4 }} />
                   </Space>
                 ))}
-                <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ description: "", quantity: 1, unit_price: 0, gst_rate: 18 })}>Add line item</Button>
+                <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ description: "", quantity: 1, unit_price: 0, gst_rate: 18 })} style={{ marginTop: 8 }}>Add line item</Button>
               </>
             )}
           </Form.List>

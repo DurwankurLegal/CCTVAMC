@@ -52,7 +52,7 @@ const customerSlice = createSlice({
       .addCase(fetchCustomers.pending, (s) => { s.loading = true; })
       .addCase(fetchCustomers.fulfilled, (s, a) => { s.loading = false; s.items = a.payload; })
       .addCase(fetchCustomers.rejected, (s, a) => { s.loading = false; s.error = a.error.message ?? null; })
-      .addCase(createCustomer.fulfilled, (s, a) => { s.items.push(a.payload); })
+      .addCase(createCustomer.fulfilled, (s, a) => { s.items.unshift(a.payload); })
       .addCase(updateCustomer.fulfilled, (s, a) => {
         const i = s.items.findIndex(c => c.id === a.payload.id);
         if (i !== -1) s.items[i] = a.payload;

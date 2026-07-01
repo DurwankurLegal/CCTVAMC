@@ -78,11 +78,22 @@ async def convert_to_amc(db, tenant_id, qid, start_date, end_date, preventive_vi
     """Convert an approved quotation into an AMC contract without re-entry (SRS 4.12)."""
     from fastapi import HTTPException, status
     from app.models.quotation import QuotationStatus
-    obj = await QuotationRepository(db, tenant_id).get(qid)
+    repo = QuotationRepository(db, tenant_id)
+    obj = await repo.get(qid)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quotation not found")
     if obj.status != QuotationStatus.APPROVED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Quotation must be approved first")
+
+    # If quotation belongs to a lead directly, convert the lead first
+    if not obj.customer_id:
+        if obj.lead_id:
+            from app.services.lead import convert_to_customer
+            customer = await convert_to_customer(db, tenant_id, obj.lead_id)
+            obj.customer_id = customer.id
+            await repo.save(obj)
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quotation has no customer or lead associated")
 
     from app.services.amc import AMCRepository, AMCStatus
     from app.models.amc import AMCContract
@@ -124,8 +135,26 @@ async def update_quotation(db, tenant_id, qid, payload: QuotationUpdate):
 
 async def render_company_quotation_pdf(db: AsyncSession, quotation: Quotation, template_name: str = "template1") -> bytes:
     from app.services.company_template import render_company_document, get_template_by_type
-    from app.services.customer import get_customer
-    customer = await get_customer(db, quotation.tenant_id, quotation.customer_id)
+    
+    if quotation.customer_id:
+        from app.services.customer import get_customer
+        customer = await get_customer(db, quotation.tenant_id, quotation.customer_id)
+    elif quotation.lead_id:
+        from app.services.lead import get_lead
+        lead = await get_lead(db, quotation.tenant_id, quotation.lead_id)
+        class LeadAdapter:
+            def __init__(self, l):
+                self.name = l.name
+                self.phone = l.phone
+                self.email = l.email
+                self.address = l.address
+                self.gstin = None
+                self.billing_address = l.address
+                self.shipping_address = l.address
+        customer = LeadAdapter(lead)
+    else:
+        customer = None
+
     context = {
         "doc": quotation,
         "items": quotation.line_items or [],

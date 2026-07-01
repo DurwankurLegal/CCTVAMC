@@ -1,3 +1,10 @@
+import os
+import sys
+
+# Ensure Homebrew library search path is set for WeasyPrint on macOS
+if sys.platform == "darwin":
+    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/opt/homebrew/lib:/usr/local/lib:" + os.environ.get("DYLD_FALLBACK_LIBRARY_PATH", "")
+
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -10,7 +17,7 @@ from app.services.tenant import get_tenant
 
 try:
     from weasyprint import HTML
-except ImportError:
+except (ImportError, OSError):
     HTML = None
 
 

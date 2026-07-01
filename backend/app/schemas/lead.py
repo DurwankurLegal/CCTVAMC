@@ -8,6 +8,7 @@ from app.models.lead import LeadStatus, LeadSource, LeadCategory, InterestType
 class LeadCreate(BaseModel):
     company_id: Optional[UUID] = None
     name: str
+    company_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     address: Optional[str] = None
@@ -21,6 +22,7 @@ class LeadCreate(BaseModel):
 
 class LeadUpdate(BaseModel):
     name: Optional[str] = None
+    company_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     category: Optional[LeadCategory] = None
@@ -39,6 +41,7 @@ class LeadResponse(BaseModel):
     tenant_id: UUID
     company_id: UUID
     name: str
+    company_name: Optional[str]
     phone: Optional[str]
     email: Optional[str]
     category: Optional[str]

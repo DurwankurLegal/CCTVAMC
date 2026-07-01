@@ -10,6 +10,7 @@ const { Option } = Select;
 interface Lead {
   id: string;
   name: string;
+  company_name: string | null;
   phone: string | null;
   email: string | null;
   category: string | null;
@@ -27,7 +28,12 @@ const statusColor: Record<string, string> = {
 const SOURCES = ["referral", "walk_in", "social_media", "website", "cold_call", "other"];
 const STATUSES = ["new", "contacted", "quoted", "converted", "lost"];
 const CATEGORIES = [
-  { value: "chs", label: "CHS" }, { value: "commercial", label: "Commercial" }, { value: "single_shop", label: "Single Shop" },
+  { value: "chs", label: "CHS" },
+  { value: "commercial", label: "Commercial" },
+  { value: "single_shop", label: "Single Shop" },
+  { value: "consumer", label: "Consumer" },
+  { value: "office", label: "Office" },
+  { value: "home", label: "Home" }
 ];
 const INTERESTS = [
   { value: "new_installation", label: "New Installation" }, { value: "amc", label: "AMC" }, { value: "upgrade", label: "Upgrade" },
@@ -88,6 +94,7 @@ export default function LeadsPage() {
 
   const columns = [
     { title: "Name", dataIndex: "name", key: "name" },
+    { title: "Company", dataIndex: "company_name", key: "company_name", render: (v: string) => v || "—" },
     { title: "Phone", dataIndex: "phone", key: "phone", render: (v: string) => v || "—" },
     { title: "Category", dataIndex: "category", key: "category", render: (v: string) => v ? <Tag>{v}</Tag> : "—" },
     { title: "Source", dataIndex: "source", key: "source", render: (v: string) => <Tag>{v}</Tag> },
@@ -162,6 +169,7 @@ export default function LeadsPage() {
         >
           <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
             <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="company_name" label="Company Name"><Input /></Form.Item>
             <Form.Item name="phone" label="Phone"><Input /></Form.Item>
             <Form.Item name="email" label="Email" rules={[{ type: "email", message: "Enter a valid email address" }]}><Input /></Form.Item>
             <Form.Item name="category" label="Category">

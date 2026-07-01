@@ -162,7 +162,7 @@ export default function PaymentsPage() {
   const tabItems = [
     {
       key: "payments",
-      label: "Payments History",
+      label: "Receipts History",
       children: (
         <Card
           id="payments-history-panel"
@@ -179,7 +179,7 @@ export default function PaymentsPage() {
             <Space>
               <CheckCircleOutlined style={{ color: "#10b981", fontSize: 18 }} />
               <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
-                Payment Transactions History
+                Receipt Transactions History
               </span>
               <Tag color="green" style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
                 TRANSACTIONS LEDGER
@@ -250,7 +250,7 @@ export default function PaymentsPage() {
             <Title level={4} style={{ margin: 0, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
               <CheckCircleOutlined style={{ color: "#10b981" }} />
               <span className="gradient-text" style={{ background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #34d399 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Payments Ledger
+                Receipts Ledger
               </span>
             </Title>
             <Text style={{ color: "var(--text-secondary)", fontSize: "13.5px" }}>
@@ -267,7 +267,7 @@ export default function PaymentsPage() {
               color: "#fff"
             }}
           >
-            Record Payment
+            Record Receipt
           </Button>
         </div>
 
@@ -275,7 +275,7 @@ export default function PaymentsPage() {
 
         {/* Modal Form */}
         <Modal
-          title={editing ? "Edit Payment" : "Record Payment"}
+          title={editing ? "Edit Receipt" : "Record Receipt"}
           open={open} onOk={handleSave} onCancel={() => { setOpen(false); setFilteredInvoices([]); }} confirmLoading={saving}
           okText={editing ? "Save" : "Record"}
         >

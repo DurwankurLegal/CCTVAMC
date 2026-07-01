@@ -99,7 +99,7 @@ const tenantMenu = [
       { key: "/quotations", label: "Quotations", perm: "quotations:read" },
       { key: "/sales-orders", label: "Sales Orders", perm: "sales_orders:read", module: "sales" },
       { key: "/invoices", label: "Invoices", perm: "invoices:read", module: "sales" },
-      { key: "/payments", label: "Payments", perm: "payments:read", module: "sales" },
+      { key: "/payments", label: "Receipt", perm: "payments:read", module: "sales" },
     ],
   },
   {
@@ -290,7 +290,7 @@ function ProtectedLayout() {
               onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}
               style={{ color: token.colorText, borderColor: token.colorBorder }}
             >
-              {onPlatform ? "Tenant App →" : "Platform Console →"}
+              {onPlatform ? "Tenant App →" : `Platform Console - ${tenantConfig?.name || ""} →`}
             </Button>
           </div>
         )}
@@ -311,7 +311,7 @@ function ProtectedLayout() {
               onClick={() => navigate(onPlatform ? "/dashboard" : "/platform")}
               style={{ color: token.colorTextSecondary, marginRight: "auto", display: "flex", alignItems: "center", gap: "6px" }}
             >
-              {onPlatform ? "← Back to Tenant App" : "Platform Console →"}
+              {onPlatform ? "← Back to Tenant App" : `Platform Console - ${tenantConfig?.name || ""} →`}
             </Button>
           )}
           {!onPlatform && <NotificationBell />}

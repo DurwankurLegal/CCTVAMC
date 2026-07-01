@@ -20,7 +20,7 @@ class Quotation(Base, TenantMixin):
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     quotation_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
+    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=True)
     lead_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default=QuotationStatus.DRAFT)
     line_items: Mapped[list] = mapped_column(JSON, default=list)

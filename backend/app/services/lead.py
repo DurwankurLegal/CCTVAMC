@@ -23,6 +23,9 @@ _LEAD_TO_CUSTOMER_CATEGORY = {
     "chs": CustomerCategory.CHS,
     "commercial": CustomerCategory.COMMERCIAL,
     "single_shop": CustomerCategory.SINGLE_SHOP,
+    "consumer": CustomerCategory.CONSUMER,
+    "office": CustomerCategory.OFFICE,
+    "home": CustomerCategory.HOME,
 }
 
 

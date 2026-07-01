@@ -55,11 +55,11 @@ class TenantRepository(Generic[ModelT]):
 
     async def list(self, offset: int = 0, limit: int = 50) -> List[ModelT]:
         await self._set_rls_context()
+        stmt = select(self.model).where(self.model.tenant_id == self.tenant_id)
+        if hasattr(self.model, "created_at"):
+            stmt = stmt.order_by(self.model.created_at.desc())
         result = await self.session.execute(
-            select(self.model)
-            .where(self.model.tenant_id == self.tenant_id)
-            .offset(offset)
-            .limit(limit)
+            stmt.offset(offset).limit(limit)
         )
         return list(result.scalars().all())
 
