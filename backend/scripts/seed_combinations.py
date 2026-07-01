@@ -48,7 +48,7 @@ DEFAULT_PASSWORD = "Passw0rd@123"
 TENANTS_CONFIG = [
     {
         "slug": "tenant1",
-        "name": "Apex Security Solutions",
+        "name": "Redstar Automation",
         "plan": "enterprise",
         "custom_domain": "apex-cctv.com",
         "custom_email_sender": "billing@apex-cctv.com",
