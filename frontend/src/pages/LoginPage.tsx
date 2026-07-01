@@ -1,4 +1,4 @@
-import { Form, Input, Button, Card, Typography, Alert } from "antd";
+import { Form, Input, Button, Card, Typography, Alert, ConfigProvider, theme } from "antd";
 import { LockOutlined, MailOutlined, ShopOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -23,44 +23,46 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0b0f19" }}>
-      <Card 
-        style={{ 
-          width: 400, 
-          background: "rgba(22, 28, 45, 0.6)", 
-          border: "1px solid var(--glass-border)", 
-          borderRadius: 16,
-          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
-          backdropFilter: "blur(8px)"
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 140, height: 140, margin: "0 auto 16px", overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: 8 }}>
-            <img src="/logo.png" alt="CCTV AMC Logo" style={{ width: "220%", height: "auto", marginTop: "-25%" }} />
+      <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
+        <Card 
+          style={{ 
+            width: 400, 
+            background: "rgba(22, 28, 45, 0.6)", 
+            border: "1px solid var(--glass-border)", 
+            borderRadius: 16,
+            boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+            backdropFilter: "blur(8px)"
+          }}
+        >
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ width: 140, height: 140, margin: "0 auto 16px", overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center", borderRadius: 8 }}>
+              <img src="/logo.png" alt="CCTV AMC Logo" style={{ width: "220%", height: "auto", marginTop: "-25%" }} />
+            </div>
+            <Title level={3} style={{ margin: 0, fontWeight: 600 }}>Welcome Back</Title>
+            <Typography.Text type="secondary" style={{ fontSize: 16 }}>Login to manage your account</Typography.Text>
           </div>
-          <Title level={3} style={{ margin: 0, fontWeight: 600 }}>Welcome Back</Title>
-          <Typography.Text type="secondary" style={{ fontSize: 16 }}>Login to manage your account</Typography.Text>
-        </div>
-        {error && <Alert message={error} type="error" style={{ marginBottom: 16 }} />}
-        <Form layout="vertical" onFinish={onFinish} size="large">
-          <Form.Item name="email" rules={[{ required: true, type: "email", message: "Enter a valid email" }]}>
-            <Input prefix={<MailOutlined />} placeholder="Email" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
-          </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: "Enter your password" }]}>
-             <Input.Password prefix={<LockOutlined />} placeholder="Password" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
-          </Form.Item>
-          <Form.Item
-            name="tenant_slug"
-            tooltip="Only needed if your email is registered with more than one company"
-          >
-              <Input prefix={<ShopOutlined />} placeholder="Company code (optional, e.g. durwankur)" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+          {error && <Alert message={error} type="error" style={{ marginBottom: 16 }} />}
+          <Form layout="vertical" onFinish={onFinish} size="large">
+            <Form.Item name="email" rules={[{ required: true, type: "email", message: "Enter a valid email" }]}>
+              <Input prefix={<MailOutlined />} placeholder="Email" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
             </Form.Item>
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button type="primary" htmlType="submit" block loading={loading}>
-              Sign In
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+            <Form.Item name="password" rules={[{ required: true, message: "Enter your password" }]}>
+               <Input.Password prefix={<LockOutlined />} placeholder="Password" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+            </Form.Item>
+            <Form.Item
+              name="tenant_slug"
+              tooltip="Only needed if your email is registered with more than one company"
+            >
+                <Input prefix={<ShopOutlined />} placeholder="Company code (optional, e.g. durwankur)" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)" }} />
+              </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button type="primary" htmlType="submit" block loading={loading}>
+                Sign In
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </ConfigProvider>
     </div>
   );
 }
