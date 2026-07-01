@@ -41,12 +41,13 @@ services:
       target: production
     restart: unless-stopped
     env_file: ../.env
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # Port 8000 exposed only internally to Nginx proxy
 
   worker:
     build:
