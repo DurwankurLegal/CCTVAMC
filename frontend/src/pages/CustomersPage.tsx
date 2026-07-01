@@ -77,7 +77,7 @@ export default function CustomersPage() {
   const columns = [
     { title: "Name", dataIndex: "name", key: "name" },
     { title: "Category", dataIndex: "category", key: "category", render: (v: string) => <Tag>{v}</Tag> },
-    { title: "Phone", dataIndex: "phone", key: "phone", render: (v: string) => v || "—" },
+    { title: "Mobile number", dataIndex: "phone", key: "phone", render: (v: string) => v || "—" },
     { title: "Email", dataIndex: "email", key: "email", render: (v: string) => v || "—" },
     {
       title: "Status", dataIndex: "status", key: "status",
@@ -160,21 +160,42 @@ export default function CustomersPage() {
           <Form.Item name="status" label="Status" rules={[{ required: true, message: "Please select status" }]}>
             <Select>{STATUSES.map(s => <Option key={s.value} value={s.value}>{s.label}</Option>)}</Select>
           </Form.Item>
-          <Form.Item name="phone" label="Phone" rules={[{ required: true, message: "Please enter phone number" }]}>
-            <Input />
+          <Form.Item 
+            name="phone" 
+            label="Mobile number" 
+            rules={[
+              { required: true, message: "Please enter mobile number" },
+              { pattern: /^\d{10}$/, message: "Please enter exactly 10 digits" }
+            ]}
+          >
+            <Input 
+              placeholder="10 digits accepted" 
+              maxLength={10} 
+              onKeyPress={(e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }} 
+            />
           </Form.Item>
           <Form.Item
             name="email"
             label="Email"
             rules={[
               { required: true, message: "Please enter email address" },
-              { type: "email", message: "Enter a valid email address" }
+              { type: "email", message: "Enter a valid email address" },
+              { pattern: /^[a-zA-Z0-9@.]+$/, message: "Special characters are not allowed (only @ and .)" }
             ]}
           >
             <Input type="email" />
           </Form.Item>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="contact_person_name" label="Contact Person"><Input /></Form.Item>
+          <Form.Item 
+            name="contact_person_name" 
+            label="Contact Person"
+            rules={[
+              { required: true, message: "Please enter contact person name" },
+              { pattern: /^[A-Za-z\s]+$/, message: "Only alphabets and spaces are allowed" }
+            ]}
+          >
+            <Input />
+          </Form.Item>
         </Form>
       </Modal>
     </div>
