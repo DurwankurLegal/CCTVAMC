@@ -104,9 +104,9 @@ async def render_company_amc_contract_pdf(db: AsyncSession, tenant_id: UUID, amc
         covered_assets = [
             {
                 "serial_number": a.serial_number,
-                "name": a.name,
+                "name": f"{a.make} {a.model}" if a.make and a.model else (a.make or a.model or a.asset_type or "CCTV Asset"),
                 "type": a.asset_type,
-                "location": a.location or ""
+                "location": a.location_description or ""
             }
             for a in r.scalars().all()
         ]
