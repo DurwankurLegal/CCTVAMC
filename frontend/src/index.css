@@ -7,6 +7,13 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  
+  /* Brand accents */
+  --brand-indigo: #6366f1;
+  --brand-blue: #3b82f6;
+  --brand-violet: #8b5cf6;
+  --brand-teal: #14b8a6;
   
   /* Status Colors */
   --color-success: #10b981;
