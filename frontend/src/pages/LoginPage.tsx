@@ -1,7 +1,7 @@
 import { Form, Input, Button, Card, Typography, Alert, ConfigProvider, theme } from "antd";
 import { LockOutlined, MailOutlined, ShopOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { login } from "../store/authSlice";
 import type { AppDispatch, RootState } from "../store";
 
@@ -55,11 +55,16 @@ export default function LoginPage() {
             >
                 <Input prefix={<ShopOutlined style={{color: "rgba(255,255,255,0.65)"}}/>} placeholder="Company code (optional, e.g. durwankur)" style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", color: "#fff" }} />
               </Form.Item>
-            <Form.Item style={{ marginBottom: 0 }}>
+            <Form.Item style={{ marginBottom: 16 }}>
               <Button type="primary" htmlType="submit" block loading={loading}>
                 Sign In
               </Button>
             </Form.Item>
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <Typography.Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
+                Don't have an account? <Link to="/signup" style={{ color: "var(--primary-color)" }}>Sign up</Link>
+              </Typography.Text>
+            </div>
           </Form>
         </Card>
       </ConfigProvider>

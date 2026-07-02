@@ -10,8 +10,12 @@ from app.models.auth_session import AuthSession
 from app.core.security import (
     verify_password, create_access_token, create_refresh_token, decode_token,
 )
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest
-
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, SignUpRequest
+from app.schemas.tenant import TenantCreate
+from app.schemas.user import UserCreate
+from app.services.tenant import create_tenant
+from app.services.user import create_user
+from app.models.user import TenantRole
 
 def _token_payload(user: User) -> dict:
     return {
@@ -155,4 +159,26 @@ async def refresh(db: AsyncSession, payload: RefreshRequest) -> TokenResponse:
     # Rotate: revoke the presented token before issuing a new one.
     session.revoked = True
     await db.flush()
+    return await _issue_tokens(db, user)
+
+
+async def signup(db: AsyncSession, payload: SignUpRequest) -> TokenResponse:
+    # 1. Create a new tenant
+    tenant_payload = TenantCreate(
+        name=payload.company_name,
+        slug=payload.company_slug,
+    )
+    # This will check slug uniqueness and raise HTTP 409 if taken.
+    tenant = await create_tenant(db, tenant_payload)
+
+    # 2. Create the admin user for the tenant
+    user_payload = UserCreate(
+        email=payload.email,
+        full_name=payload.full_name,
+        password=payload.password,
+        role=TenantRole.ADMIN,
+    )
+    user = await create_user(db, tenant.id, user_payload)
+
+    # 3. Issue tokens and log them in
     return await _issue_tokens(db, user)

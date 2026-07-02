@@ -49,6 +49,25 @@ export const login = createAsyncThunk(
   }
 );
 
+export const signup = createAsyncThunk(
+  "auth/signup",
+  async (
+    dataObj: { company_name: string; company_slug: string; full_name: string; email: string; password: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { data } = await apiClient.post("/auth/signup", dataObj);
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      const me = await apiClient.get("/auth/me");
+      localStorage.setItem("user", JSON.stringify(me.data));
+      return me.data as AuthUser;
+    } catch (err) {
+      return rejectWithValue(apiErrorMessage(err, "Sign up failed"));
+    }
+  }
+);
+
 export const fetchMe = createAsyncThunk("auth/me", async () => {
   const { data } = await apiClient.get("/auth/me");
   localStorage.setItem("user", JSON.stringify(data));
@@ -69,6 +88,9 @@ const authSlice = createSlice({
       .addCase(login.pending, (s) => { s.loading = true; s.error = null; })
       .addCase(login.fulfilled, (s, a) => { s.loading = false; s.user = a.payload; })
       .addCase(login.rejected, (s, a) => { s.loading = false; s.error = (a.payload as string) ?? a.error.message ?? "Login failed"; })
+      .addCase(signup.pending, (s) => { s.loading = true; s.error = null; })
+      .addCase(signup.fulfilled, (s, a) => { s.loading = false; s.user = a.payload; })
+      .addCase(signup.rejected, (s, a) => { s.loading = false; s.error = (a.payload as string) ?? a.error.message ?? "Sign up failed"; })
       .addCase(fetchMe.fulfilled, (s, a) => { s.user = a.payload; });
   },
 });

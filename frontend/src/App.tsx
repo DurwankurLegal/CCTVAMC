@@ -27,6 +27,7 @@ import NotificationBell from "./components/NotificationBell";
 import { useEffect, type ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import LoginPage from "./pages/LoginPage";
+import SignUpPage from "./pages/SignUpPage";
 import DashboardPage from "./pages/DashboardPage";
 import CustomersPage from "./pages/CustomersPage";
 import AMCPage from "./pages/AMCPage";
@@ -220,6 +221,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
 
         {/* Customer self-service portal — separate identity/token from staff app */}
         <Route path="/portal/login" element={<PortalLoginPage />} />

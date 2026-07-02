@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user, CurrentUser
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, SignUpRequest
 from app.services import auth as auth_service
 
 router = APIRouter()
@@ -16,6 +16,11 @@ class Verify2FARequest(BaseModel):
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     return await auth_service.login(db, payload)
+
+
+@router.post("/signup", response_model=TokenResponse, status_code=201)
+async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_db)):
+    return await auth_service.signup(db, payload)
 
 
 @router.post("/refresh", response_model=TokenResponse)
