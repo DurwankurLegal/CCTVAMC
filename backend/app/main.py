@@ -57,4 +57,9 @@ if os.path.isdir(frontend_path):
     
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
+        # Serve static files from the root of the dist folder (e.g. logo.png, favicon.ico)
+        file_path = os.path.join(frontend_path, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Fallback to index.html for SPA routing
         return FileResponse(os.path.join(frontend_path, "index.html"))
